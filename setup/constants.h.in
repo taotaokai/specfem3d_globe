@@ -276,6 +276,27 @@
 ! time function. Set to false by default.
   logical, parameter :: EXTERNAL_SOURCE_TIME_FUNCTION = .false.
 
+! ktao: flag if CMTSOLUTION is in ECEF coordinate
+! this is used with source derivative to update source model
+! source time function is stf(t;t0,tau) = erf((t-t0)/tau)
+!```
+!PDE 1994  6  9  0 33 16.40 -13.8300  -67.5600 637.0 6.9 6.8 NORTHERN BOLIVIA
+!event name:        060994A
+!time shift:        29.0000
+!tau:               20.0000
+!x:                -13.8200
+!y:                -67.2500
+!z:                647.1000
+!Mxx:               -7.590000e+27
+!Myy:                7.750000e+27
+!Mzz:               -1.600000e+26
+!Mxy:               -2.503000e+28
+!Mxz:                4.200000e+26
+!Myz:               -2.480000e+27
+!```           |value field must be after 15 spaces
+! unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
+  logical, parameter :: USE_ECEF_CMTSOLUTION = .true.
+
 !!-----------------------------------------------------------
 !!
 !! for attenuation

@@ -29,7 +29,8 @@
                      DT,NSOURCES,min_tshift_src_original)
 
   use constants, only: IIN,IMAIN,EXTERNAL_SOURCE_TIME_FUNCTION, &
-    RHOAV,R_EARTH,PI,GRAV,TINYVAL,MAX_STRING_LEN,mygroup
+    RHOAV,R_EARTH,PI,GRAV,TINYVAL,MAX_STRING_LEN,mygroup, &
+    USE_ECEF_CMTSOLUTION, SOURCE_DECAY_MIMIC_TRIANGLE ! ktao: add
 
   use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS,NOISE_TOMOGRAPHY
 
@@ -333,6 +334,12 @@
   endif
 
   close(IIN)
+
+  ! ktao: change tau back to hdur
+  if (USE_ECEF_CMTSOLUTION) then
+    ! tau instead of hdur read from CMTSOLUTON_ECEF file
+    hdur = hdur * SOURCE_DECAY_MIMIC_TRIANGLE
+  endif
 
   ! Sets tshift_src to zero to initiate the simulation!
   if (NSOURCES == 1) then

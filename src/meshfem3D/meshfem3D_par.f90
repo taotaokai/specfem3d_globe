@@ -43,7 +43,8 @@
 
   use shared_input_parameters, only: &
     ELLIPTICITY,GRAVITY,ROTATION,TOPOGRAPHY,OCEANS, &
-    ATTENUATION,USE_FULL_TISO_MANTLE
+    ATTENUATION,USE_FULL_TISO_MANTLE, &
+    USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220 ! ktao: add
 
   use shared_compute_parameters, only: &
     REFERENCE_1D_MODEL,THREE_D_MODEL, &

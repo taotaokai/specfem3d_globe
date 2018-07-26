@@ -230,6 +230,12 @@
   if (ier /= 0) stop 'an error occurred while reading the parameter file: APPROXIMATE_HESS_KL'
   call read_value_logical(USE_FULL_TISO_MANTLE, 'USE_FULL_TISO_MANTLE', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_FULL_TISO_MANTLE'
+  ! ktao: add USE_FULL_TISO_CRUST_UPPER_MANTLE
+  call read_value_logical(USE_FULL_TISO_CRUST_UPPER_MANTLE, 'USE_FULL_TISO_CRUST_UPPER_MANTLE', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_FULL_TISO_CRUST_UPPER_MANTLE'
+  ! ktao: add USE_FULL_TISO_CRUST_220
+  call read_value_logical(USE_FULL_TISO_CRUST_220, 'USE_FULL_TISO_CRUST_220', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_FULL_TISO_CRUST_220'
   call read_value_logical(SAVE_SOURCE_MASK, 'SAVE_SOURCE_MASK', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: SAVE_SOURCE_MASK'
   call read_value_logical(SAVE_REGULAR_KL, 'SAVE_REGULAR_KL', ier)

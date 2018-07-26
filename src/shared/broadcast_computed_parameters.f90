@@ -36,8 +36,9 @@
   ! broadcast parameter arrays
   integer, parameter :: nparam_i = 45
   integer, dimension(nparam_i) :: bcast_integer
-
-  integer, parameter :: nparam_l = 64
+  ! ktao: change nparam_l from 64 to 66 for USE_FULL_TISO_CRUST_UPPER_MANTLE and USE_FULL_TISO_CRUST_220
+  !integer, parameter :: nparam_l = 64
+  integer, parameter :: nparam_l = 66
   logical, dimension(nparam_l) :: bcast_logical
 
   integer, parameter :: nparam_dp = 34
@@ -99,7 +100,8 @@
             ADIOS_FOR_MPI_ARRAYS,ADIOS_FOR_ARRAYS_SOLVER, &
             ADIOS_FOR_SOLVER_MESHFILES,ADIOS_FOR_AVS_DX, &
             ADIOS_FOR_KERNELS,ADIOS_FOR_MODELS,ADIOS_FOR_UNDO_ATTENUATION, &
-            CEM_REQUEST,CEM_ACCEPT,BROADCAST_SAME_MESH_AND_MODEL /)
+            CEM_REQUEST,CEM_ACCEPT,BROADCAST_SAME_MESH_AND_MODEL, &
+            USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220 /) ! ktao: add
 
     bcast_double_precision = (/ &
             DT,ANGULAR_WIDTH_XI_IN_DEGREES,ANGULAR_WIDTH_ETA_IN_DEGREES,CENTER_LONGITUDE_IN_DEGREES, &
@@ -268,6 +270,9 @@
     CEM_REQUEST = bcast_logical(62)
     CEM_ACCEPT = bcast_logical(63)
     BROADCAST_SAME_MESH_AND_MODEL = bcast_logical(64)
+    ! ktao: add 
+    USE_FULL_TISO_CRUST_UPPER_MANTLE = bcast_logical(65)
+    USE_FULL_TISO_CRUST_220 = bcast_logical(66)
 
     ! double precisions
     DT = bcast_double_precision(1)

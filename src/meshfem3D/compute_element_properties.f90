@@ -44,7 +44,8 @@
   use meshfem3D_models_par, only: myrank, &
     TOPOGRAPHY,ELLIPTICITY,CRUSTAL,CASE_3D, &
     TRANSVERSE_ISOTROPY,USE_FULL_TISO_MANTLE,REFERENCE_1D_MODEL,THREE_D_MODEL, &
-    ibathy_topo,nspl,rspl,espl,espl2
+    ibathy_topo,nspl,rspl,espl,espl2, &
+    USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220 ! ktao: add
 
   implicit none
 
@@ -151,6 +152,26 @@
         if (elem_in_mantle) then
           elem_is_tiso = .true.
         endif
+        
+      ! ktao: add to have tiso in both crust and upper mantle
+      else if (USE_FULL_TISO_CRUST_UPPER_MANTLE) then
+        ! assigns TI to elements from surface down to 670
+        if (   idoubling(ispec)==IFLAG_670_220 &
+          .or. idoubling(ispec)==IFLAG_220_80  &
+          .or. idoubling(ispec)==IFLAG_80_MOHO &
+          .or. idoubling(ispec)==IFLAG_CRUST ) then
+          elem_is_tiso = .true.
+        endif
+
+      ! ktao: add to have tiso in both crust and upper mantle
+      else if (USE_FULL_TISO_CRUST_220) then
+        ! assigns TI to elements from surface down to 220
+        if (   idoubling(ispec)==IFLAG_220_80  &
+          .or. idoubling(ispec)==IFLAG_80_MOHO &
+          .or. idoubling(ispec)==IFLAG_CRUST ) then
+          elem_is_tiso = .true.
+        endif
+
       else if (REFERENCE_1D_MODEL == REFERENCE_MODEL_1DREF) then
         ! transverse isotropic mantle between fictitious moho to 670km depth
         ! preferred for Harvard (Kustowski's) models using STW 1D reference, i.e.

@@ -266,18 +266,54 @@
       isource = isource_in_this_subset + isources_already_done
 
       ! convert geographic latitude lat (degrees) to geocentric colatitude theta (radians)
-      call lat_2_geocentric_colat_dble(lat(isource),theta)
+      ! ktao: handle USE_ECEF_CMTSOLUTION 
+      if (USE_ECEF_CMTSOLUTION) then
 
-      phi = long(isource)*DEGREES_TO_RADIANS
-      call reduce(theta,phi)
+        ! non-dimensionalization
+        x_target_source = lat(isource)/R_EARTH
+        y_target_source = long(isource)/R_EARTH
+        z_target_source = depth(isource)/R_EARTH
+        r_target_source = sqrt(x_target_source**2 + y_target_source**2 + z_target_source**2)
 
-      ! get the moment tensor
-      Mrr = moment_tensor(1,isource)
-      Mtt = moment_tensor(2,isource)
-      Mpp = moment_tensor(3,isource)
-      Mrt = moment_tensor(4,isource)
-      Mrp = moment_tensor(5,isource)
-      Mtp = moment_tensor(6,isource)
+        theta = asin(z_target_source/r_target_source)
+        phi = atan2(y_target_source, x_target_source)
+        call reduce(theta,phi)
+
+      else
+
+        call lat_2_geocentric_colat_dble(lat(isource),theta)
+
+        phi = long(isource)*DEGREES_TO_RADIANS
+        call reduce(theta,phi)
+
+        ! normalized source radius
+        r0 = R_UNIT_SPHERE
+
+        ! finds elevation of position
+        if (TOPOGRAPHY) then
+          call get_topo_bathy(lat(isource),long(isource),elevation,ibathy_topo)
+          r0 = r0 + elevation/R_EARTH
+        endif
+        if (ELLIPTICITY) then
+          dcost = dcos(theta)
+! this   is the Legendre polynomial of degree two, P2(cos(theta)), see the discussion above eq (14.4) in Dahlen and Tromp (1998)
+          p20 = 0.5d0*(3.0d0*dcost*dcost-1.0d0)
+          radius = r0 - depth(isource)*1000.0d0/R_EARTH
+! get   ellipticity using spline evaluation
+          call spline_evaluation(rspl,espl,espl2,nspl,radius,ell)
+! this   is eq (14.4) in Dahlen and Tromp (1998)
+          r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
+        endif
+
+        ! subtracts source depth (given in km)
+        r_target_source = r0 - depth(isource)*1000.0d0/R_EARTH
+
+        ! compute the Cartesian position of the source
+        x_target_source = r_target_source*dsin(theta)*dcos(phi)
+        y_target_source = r_target_source*dsin(theta)*dsin(phi)
+        z_target_source = r_target_source*dcos(theta)
+
+      endif !if (USE_ECEF_CMTSOLUTION) then
 
       ! convert from a spherical to a Cartesian representation of the moment tensor
       st=dsin(theta)
@@ -285,30 +321,59 @@
       sp=dsin(phi)
       cp=dcos(phi)
 
-      Mxx(isource)=st*st*cp*cp*Mrr+ct*ct*cp*cp*Mtt+sp*sp*Mpp &
-          +2.0d0*st*ct*cp*cp*Mrt-2.0d0*st*sp*cp*Mrp-2.0d0*ct*sp*cp*Mtp
-      Myy(isource)=st*st*sp*sp*Mrr+ct*ct*sp*sp*Mtt+cp*cp*Mpp &
-          +2.0d0*st*ct*sp*sp*Mrt+2.0d0*st*sp*cp*Mrp+2.0d0*ct*sp*cp*Mtp
-      Mzz(isource)=ct*ct*Mrr+st*st*Mtt-2.0d0*st*ct*Mrt
-      Mxy(isource)=st*st*sp*cp*Mrr+ct*ct*sp*cp*Mtt-sp*cp*Mpp &
-          +2.0d0*st*ct*sp*cp*Mrt+st*(cp*cp-sp*sp)*Mrp+ct*(cp*cp-sp*sp)*Mtp
-      Mxz(isource)=st*ct*cp*Mrr-st*ct*cp*Mtt &
-          +(ct*ct-st*st)*cp*Mrt-ct*sp*Mrp+st*sp*Mtp
-      Myz(isource)=st*ct*sp*Mrr-st*ct*sp*Mtt &
-          +(ct*ct-st*st)*sp*Mrt+ct*cp*Mrp-st*cp*Mtp
+      ! get the moment tensor
+      ! ktao: handle USE_ECEF_CMTSOLUTION
+      if (USE_ECEF_CMTSOLUTION) then
+
+        Mxx(isource) = moment_tensor(1,isource)
+        Myy(isource) = moment_tensor(2,isource)
+        Mzz(isource) = moment_tensor(3,isource)
+        Mxy(isource) = moment_tensor(4,isource)
+        Mxz(isource) = moment_tensor(5,isource)
+        Myz(isource) = moment_tensor(6,isource)
+
+      else
+
+        Mrr = moment_tensor(1,isource)
+        Mtt = moment_tensor(2,isource)
+        Mpp = moment_tensor(3,isource)
+        Mrt = moment_tensor(4,isource)
+        Mrp = moment_tensor(5,isource)
+        Mtp = moment_tensor(6,isource)
+
+        ! rx(r.dot.x) = st*cp, tx = ct*cp, px = -sp
+        Mxx(isource)=st*st*cp*cp*Mrr+ct*ct*cp*cp*Mtt+sp*sp*Mpp &
+            +2.0d0*st*ct*cp*cp*Mrt-2.0d0*st*sp*cp*Mrp-2.0d0*ct*sp*cp*Mtp
+        ! ry = st*sp, ty = ct*sp, py = cp
+        Myy(isource)=st*st*sp*sp*Mrr+ct*ct*sp*sp*Mtt+cp*cp*Mpp &
+            +2.0d0*st*ct*sp*sp*Mrt+2.0d0*st*sp*cp*Mrp+2.0d0*ct*sp*cp*Mtp
+        ! rz = ct, tz = -st, pz = 0
+        Mzz(isource)=ct*ct*Mrr+st*st*Mtt-2.0d0*st*ct*Mrt
+        Mxy(isource)=st*st*sp*cp*Mrr+ct*ct*sp*cp*Mtt-sp*cp*Mpp &
+            +2.0d0*st*ct*sp*cp*Mrt+st*(cp*cp-sp*sp)*Mrp+ct*(cp*cp-sp*sp)*Mtp
+        Mxz(isource)=st*ct*cp*Mrr-st*ct*cp*Mtt &
+            +(ct*ct-st*st)*cp*Mrt-ct*sp*Mrp+st*sp*Mtp
+        Myz(isource)=st*ct*sp*Mrr-st*ct*sp*Mtt &
+            +(ct*ct-st*st)*sp*Mrt+ct*cp*Mrp-st*cp*Mtp
+
+      endif !if (USE_ECEF_CMTSOLUTION) then
 
       ! record three components for each station
-      do iorientation = 1,3
+      ! ktao: coordinate transformation at this source location
+      ! from local basis (n,e,u=up) to ECEF(x,y,z)
+      ! the code does this in two steps: (n,e,u) -> (r,t,p) -> (x,y,z)
+      do iorientation = 1,3 ! ktao: corresponds to n,e,u 
 
-        !   North
+        ! (n,e,u) -> (r,t,p)
+        ! North
         if (iorientation == 1) then
           stazi = 0.d0
           stdip = 0.d0
-        !   East
+        ! East
         else if (iorientation == 2) then
           stazi = 90.d0
           stdip = 0.d0
-        !   Vertical
+        ! Vertical
         else if (iorientation == 3) then
           stazi = 0.d0
           stdip = - 90.d0
@@ -316,52 +381,26 @@
           call exit_MPI(myrank,'incorrect orientation')
         endif
 
-        !   get the orientation of the seismometer
+        ! get the orientation of the seismometer
         thetan=(90.0d0+stdip)*DEGREES_TO_RADIANS
         phin=stazi*DEGREES_TO_RADIANS
 
         ! we use the same convention as in Harvard normal modes for the orientation
 
-        !   vertical component
-        n(1) = dcos(thetan)
-        !   N-S component
-        n(2) = - dsin(thetan)*dcos(phin)
-        !   E-W component
-        n(3) = dsin(thetan)*dsin(phin)
+        ! vertical component, ktao: ( iorientation .dot. r^)
+        n(1) = dcos(thetan) 
+        ! N-S component, ktao: ( iorientation .dot. theta^)
+        n(2) = - dsin(thetan)*dcos(phin) 
+        ! E-W component, ktao: ( iorientation .dot. phi^)
+        n(3) = dsin(thetan)*dsin(phin) 
 
-        !   get the Cartesian components of n in the model: nu
-        nu_source(iorientation,1,isource) = n(1)*st*cp+n(2)*ct*cp-n(3)*sp
-        nu_source(iorientation,2,isource) = n(1)*st*sp+n(2)*ct*sp+n(3)*cp
-        nu_source(iorientation,3,isource) = n(1)*ct-n(2)*st
+        ! ktao: (n,e,u) -> (r,t,p) -> (x,y,z)
+        ! get the Cartesian components of n in the model: nu
+        nu_source(iorientation,1,isource) = n(1)*st*cp+n(2)*ct*cp-n(3)*sp ! ktao: iorientation .dot. x^
+        nu_source(iorientation,2,isource) = n(1)*st*sp+n(2)*ct*sp+n(3)*cp ! iorientation .dot. y^
+        nu_source(iorientation,3,isource) = n(1)*ct-n(2)*st ! iorientation .dot. z^
 
       enddo
-
-      ! normalized source radius
-      r0 = R_UNIT_SPHERE
-
-      ! finds elevation of position
-      if (TOPOGRAPHY) then
-        call get_topo_bathy(lat(isource),long(isource),elevation,ibathy_topo)
-        r0 = r0 + elevation/R_EARTH
-      endif
-      if (ELLIPTICITY) then
-        dcost = dcos(theta)
-! this is the Legendre polynomial of degree two, P2(cos(theta)), see the discussion above eq (14.4) in Dahlen and Tromp (1998)
-        p20 = 0.5d0*(3.0d0*dcost*dcost-1.0d0)
-        radius = r0 - depth(isource)*1000.0d0/R_EARTH
-! get ellipticity using spline evaluation
-        call spline_evaluation(rspl,espl,espl2,nspl,radius,ell)
-! this is eq (14.4) in Dahlen and Tromp (1998)
-        r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
-      endif
-
-      ! subtracts source depth (given in km)
-      r_target_source = r0 - depth(isource)*1000.0d0/R_EARTH
-
-      ! compute the Cartesian position of the source
-      x_target_source = r_target_source*dsin(theta)*dcos(phi)
-      y_target_source = r_target_source*dsin(theta)*dsin(phi)
-      z_target_source = r_target_source*dcos(theta)
 
       ! set distance to huge initial value
       distmin_squared = HUGEVAL
@@ -672,10 +711,18 @@
         enddo
         final_distance_source(isource) = distmin_not_squared
 
+        ! ktao: record source location actually used (ECEF)
+        ! only used in save_kernel.F90 to output source locations
+        x_source(isource) = x_found_source(isource_in_this_subset)
+        y_source(isource) = y_found_source(isource_in_this_subset)
+        z_source(isource) = z_found_source(isource_in_this_subset)
+
         write(IMAIN,*)
         write(IMAIN,*) '*************************************'
         write(IMAIN,*) ' locating source ',isource
         write(IMAIN,*) '*************************************'
+        write(IMAIN,*)
+        write(IMAIN,*) 'USE_ECEF_CMTSOLUTION = ', USE_ECEF_CMTSOLUTION
         write(IMAIN,*)
         write(IMAIN,*) 'source located in slice ',islice_selected_source(isource_in_this_subset)
         write(IMAIN,*) '               in element ',ispec_selected_source(isource_in_this_subset)
@@ -760,17 +807,32 @@
         write(IMAIN,*)
         write(IMAIN,*) 'original (requested) position of the source:'
         write(IMAIN,*)
-        write(IMAIN,*) '      latitude: ',lat(isource)
-        write(IMAIN,*) '     longitude: ',long(isource)
-        write(IMAIN,*) '         depth: ',depth(isource),' km'
+
+        ! ktao: modifies
+        if (USE_ECEF_CMTSOLUTION) then
+          write(IMAIN,*) '             x(m): ',lat(isource)
+          write(IMAIN,*) '             y(m): ',long(isource)
+          write(IMAIN,*) '             z(m): ',depth(isource)
+        else
+          write(IMAIN,*) '      latitude: ',lat(isource)
+          write(IMAIN,*) '     longitude: ',long(isource)
+          write(IMAIN,*) '         depth: ',depth(isource),' km'
+        endif
         write(IMAIN,*)
 
         ! compute real position of the source
         write(IMAIN,*) 'position of the source that will be used:'
         write(IMAIN,*)
-        write(IMAIN,*) '      latitude: ',(PI_OVER_TWO-colat_source)*RADIANS_TO_DEGREES
-        write(IMAIN,*) '     longitude: ',phi_source(isource)*RADIANS_TO_DEGREES
-        write(IMAIN,*) '         depth: ',(r0-r_found_source)*R_EARTH/1000.0d0,' km'
+        ! ktao: modifies
+        if (USE_ECEF_CMTSOLUTION) then
+          write(IMAIN,*) '             x(m): ',x_found_source(isource_in_this_subset)*R_EARTH
+          write(IMAIN,*) '             y(m): ',y_found_source(isource_in_this_subset)*R_EARTH
+          write(IMAIN,*) '             z(m): ',z_found_source(isource_in_this_subset)*R_EARTH
+        else
+          write(IMAIN,*) '      latitude: ',(PI_OVER_TWO-colat_source)*RADIANS_TO_DEGREES
+          write(IMAIN,*) '     longitude: ',phi_source(isource)*RADIANS_TO_DEGREES
+          write(IMAIN,*) '         depth: ',(r0-r_found_source)*R_EARTH/1000.0d0,' km'
+        endif
         write(IMAIN,*)
 
         ! display error in location estimate
@@ -830,7 +892,7 @@
   call bcast_all_dp(eta_source,NSOURCES)
   call bcast_all_dp(gamma_source,NSOURCES)
 
-  ! Broadcast mantitude and scalar moment to all processers
+  ! Broadcast magnitude and scalar moment to all processers
   call bcast_all_singledp(M0)
   call bcast_all_singledp(Mw)
 

@@ -62,6 +62,7 @@
 
   ! local parameters
   double precision :: btime
+  double precision :: MSEC ! ktao: add
   real, dimension(NTSTEP_BETWEEN_OUTPUT_SEISMOS) :: tmp
   integer :: time_sec,isample
   character(len=MAX_STRING_LEN) :: sisname_2
@@ -263,7 +264,12 @@
 
   ! adds time-shift to get the CMT time in the headers as origin time of events
   NZSEC  = int(sec+t_shift)
-  NZMSEC = int((sec+t_shift-int(sec+t_shift))*1000)
+  ! ktao: modified to account for sub milli-second precision of origin time in CMTSOLUTION 
+  MSEC = (sec+t_shift- NZSEC)*1000
+  !NZMSEC = int((sec+t_shift-int(sec+t_shift))*1000)
+  NZMSEC = int(MSEC)
+  B = B + sngl((MSEC-NZMSEC)/1000.0)
+  O = O + sngl((MSEC-NZMSEC)/1000.0)
 
   !NZSEC  =int(sec)
   !NZMSEC =int((sec-int(sec))*1000)

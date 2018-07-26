@@ -126,7 +126,9 @@
 
   ! adjoint kernels
   logical :: SAVE_REGULAR_KL,ANISOTROPIC_KL,SAVE_TRANSVERSE_KL_ONLY, &
-             APPROXIMATE_HESS_KL,USE_FULL_TISO_MANTLE,SAVE_SOURCE_MASK
+             APPROXIMATE_HESS_KL,USE_FULL_TISO_MANTLE,SAVE_SOURCE_MASK, &
+             USE_FULL_TISO_CRUST_UPPER_MANTLE, & ! ktao: add
+             USE_FULL_TISO_CRUST_220 ! ktao: add
 
   ! for simultaneous runs from the same batch job
   integer :: NUMBER_OF_SIMULTANEOUS_RUNS

@@ -235,8 +235,10 @@
       enddo
 
       ! reads in station information
-      read(string(1:len_trim(string)),*,iostat=ier) station_name(irec),network_name(irec), &
-                                                    stlat(irec),stlon(irec),stele(irec),stbur(irec)
+      ! ktao: change the order to comply with IRIS, i.e. net.sta.loc.chan
+      read(string(1:len_trim(string)),*,iostat=ier) &
+        network_name(irec),station_name(irec), &
+        stlat(irec),stlon(irec),stele(irec),stbur(irec)
       if (ier /= 0) then
         write(IMAIN,*) 'Error reading in station ',irec
         call exit_MPI(myrank,'Error reading in station in STATIONS file')
