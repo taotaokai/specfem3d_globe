@@ -179,6 +179,27 @@ NTSTEP_BETWEEN_OUTPUT_INFO      = 500
 NTSTEP_BETWEEN_OUTPUT_SEISMOS   = 5000000
 NTSTEP_BETWEEN_READ_ADJSRC      = 1000
 
+# use CMTSOLUTION in ECEF coordinate
+#|---example-CMTSOLUTION_ECEF---
+#|PDE 1994  6  9  0 33 16.40 -13.8300  -67.5600 637.0 6.9 6.8 NORTHERN BOLIVIA
+#|event name:        060994A 
+#|time shift:         1.0000 
+#|tau:                2.0000
+#|x:                -13.8200
+#|y:                -67.2500
+#|z:                647.1000
+#|Mxx:               -7.590000e+27
+#|Myy:                7.750000e+27
+#|Mzz:               -1.600000e+26
+#|Mxy:               -2.503000e+28
+#|Mxz:                4.200000e+26
+#|Myz:               -2.480000e+27
+#|------------------------------
+# value field must be after 15 spaces
+# unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
+# source time function: stf(t;t0,tau) = erf((t-t0)/tau)
+USE_ECEF_CMTSOLUTION            = .true.
+
 # use a (tilted) FORCESOLUTION force point source (or several) instead of a CMTSOLUTION moment-tensor source.
 # # This can be useful e.g. for asteroid simulations
 # # in which the source is a vertical force, normal force, tilted force, impact etc.

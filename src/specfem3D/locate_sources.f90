@@ -35,7 +35,8 @@
 
   use constants_solver
 
-  use shared_input_parameters, only: OUTPUT_FILES
+  use shared_input_parameters, only: OUTPUT_FILES, &
+    USE_ECEF_CMTSOLUTION ! ktao: add USE_ECEF_CMTSOLUTION
 
   use specfem_par, only: &
     NSOURCES, &

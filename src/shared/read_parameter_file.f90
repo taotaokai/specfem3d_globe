@@ -186,6 +186,10 @@
   call read_value_integer(NTSTEP_BETWEEN_READ_ADJSRC, 'NTSTEP_BETWEEN_READ_ADJSRC', ier)
   if (ier /= 0) return
 
+  ! ktao: add flag for CMTSOLUTION_ECEF sourse
+  call read_value_logical(USE_ECEF_CMTSOLUTION, 'USE_ECEF_CMTSOLUTION', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_ECEF_CMTSOLUTION'
+
   ! point force sourse
   call read_value_logical(USE_FORCE_POINT_SOURCE, 'USE_FORCE_POINT_SOURCE', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_FORCE_POINT_SOURCE'

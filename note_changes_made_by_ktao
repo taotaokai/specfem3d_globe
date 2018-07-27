@@ -95,21 +95,54 @@
   src/shared/: shared_par.f90, read_parameter_file.f90, broadcast_computed_parameters.f90
   src/meshfem3D/: compute_element_properties.f90, meshfem3D_par.f90
 
-11. allow the direct use of CMTSOLUTION in ECEF coordinate
-  setup/constants.h.in: 
-    logical, parameter :: USE_ECEF_CMTSOLUTION = .true.
-  src/specfem3D/
-    get_cmt.f90, 
-    locate_sources.f90, 
-    [FIXME] save_kernels.f90: save_kernels_source()
+#-----------------------------------------------
+11. add flag in Par_file to allow use of CMTSOLUTION in ECEF coordinate
+#-----------------------------------------------
+---CMTSOLUTION_ECEF--- example
+PDE 1994  6  9  0 33 16.40 -13.8300  -67.5600 637.0 6.9 6.8 NORTHERN BOLIVIA
+event name:        060994A
+time shift:         1.0000
+tau:                2.0000
+x:                -13.8200
+y:                -67.2500
+z:                647.1000
+Mxx:               -7.590000e+27
+Myy:                7.750000e+27
+Mzz:               -1.600000e+26
+Mxy:               -2.503000e+28
+Mxz:                4.200000e+26
+Myz:               -2.480000e+27
+----------------------
+value field must be after 15 spaces
+unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
+source time function: stf(t;t0,tau) = erf((t-t0)/tau)
 
+DATA/Par_file:
+  logical, parameter :: USE_ECEF_CMTSOLUTION = .true.
+
+src/shared/
+  shared_par.f90: shared_input_parameters: logical :: USE_ECEF_CMTSOLUTION
+  read_parameter_file.f90: read_value_logical(USE_ECEF_CMTSOLUTION, 'USE_ECEF_CMTSOLUTION', ier)
+  broadcast_computed_parameters.f90: USE_ECEF_CMTSOLUTION = bcast_logical(67)
+
+src/specfem3D/
+  get_cmt.f90
+  locate_sources.f90
+  [TODO] save_kernels.f90: save_kernels_source()
+
+#-----------------------------------------------
 12. modified 1dref model for NEChina  
+#-----------------------------------------------
   src/meshfem3D/model_1dref.f90
 
+#-----------------------------------------------
 #13. allow using external 410-/660-km topography map 
+#-----------------------------------------------
 #  setup/constants.h.in: 
 #    logical,parameter :: USE_EXTERNAL_TOPO_410_660 = .true.
 #  src/meshfem3D/model_s362ani.f90
 
+#-----------------------------------------------
 14. change model_1dref.f90 to be the regional model 
+#-----------------------------------------------
   src/meshfem3D/model_1dref.f90.stage09.iter16.vsv_vpv_fitted_polyfit_mtz
