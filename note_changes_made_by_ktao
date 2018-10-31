@@ -137,7 +137,9 @@ src/shared/
 src/specfem3D/
   get_cmt.f90
   locate_sources.f90
-  [TODO] save_kernels.f90: save_kernels_source()
+  save_kernels.f90: save_kernels_source_derivative()
+  specfem3D_par.F90: add x_source
+  finalize_simulation.F90: x_source
 
 #-----------------------------------------------
 12. modified 1dref model for NEChina  

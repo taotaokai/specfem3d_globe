@@ -281,6 +281,7 @@ module specfem_par
   double precision, dimension(:,:,:) ,allocatable:: nu_source
 
   double precision, dimension(:), allocatable :: Mxx,Myy,Mzz,Mxy,Mxz,Myz
+  double precision, dimension(:), allocatable :: x_source, y_source, z_source !ktao added for USE_ECEF_CMTSOLUTION
   double precision, dimension(:), allocatable :: xi_source,eta_source,gamma_source
   double precision, dimension(:), allocatable :: tshift_src,hdur,hdur_Gaussian
   double precision, dimension(:), allocatable :: theta_source,phi_source

@@ -255,7 +255,8 @@
   ! sources
   deallocate(islice_selected_source, &
              ispec_selected_source, &
-             Mxx,Myy,Mzz,Mxy,Mxz,Myz)
+             Mxx,Myy,Mzz,Mxy,Mxz,Myz, &
+             x_source,y_source,z_source) ! ktao: add x|y|z_source
   deallocate(xi_source,eta_source,gamma_source)
   deallocate(tshift_src,hdur,hdur_Gaussian)
   deallocate(nu_source)

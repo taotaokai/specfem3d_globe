@@ -13,20 +13,20 @@ SAVE_FORWARD                    = .false.   # save last frame of forward simulat
 NCHUNKS                         = 1
 
 # angular width of the first chunk (not used if full sphere with six chunks)
-ANGULAR_WIDTH_XI_IN_DEGREES     = 20.d0   # angular size of a chunk
-ANGULAR_WIDTH_ETA_IN_DEGREES    = 20.d0
-CENTER_LATITUDE_IN_DEGREES      = 40.d0
-CENTER_LONGITUDE_IN_DEGREES     = 25.d0
+ANGULAR_WIDTH_XI_IN_DEGREES     = 15.d0   # angular size of a chunk
+ANGULAR_WIDTH_ETA_IN_DEGREES    = 15.d0
+CENTER_LATITUDE_IN_DEGREES      = 27.5d0
+CENTER_LONGITUDE_IN_DEGREES     = 102.d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
 
 # number of elements at the surface along the two sides of the first chunk
 # (must be multiple of 16 and 8 * multiple of NPROC below)
-NEX_XI                          = 64
-NEX_ETA                         = 64
+NEX_XI                          = 80
+NEX_ETA                         = 80
 
 # number of MPI processors along the two sides of the first chunk
-NPROC_XI                        = 2
-NPROC_ETA                       = 2
+NPROC_XI                        = 10
+NPROC_ETA                       = 10
 
 #-----------------------------------------------------------
 #
@@ -49,7 +49,7 @@ NPROC_ETA                       = 2
 #                          to take the 1D crustal model from the
 #                          associated reference model rather than the default 3D crustal model
 # e.g. s20rts_1Dcrust, s362ani_1Dcrust, etc.
-MODEL                           = 1D_isotropic_prem
+MODEL                           = s362ani
 
 # parameters describing the Earth model
 OCEANS                          = .true.
@@ -63,12 +63,12 @@ ATTENUATION                     = .true.
 ABSORBING_CONDITIONS            = .true.
 
 # record length in minutes
-RECORD_LENGTH_IN_MINUTES        = 2.5d0
+RECORD_LENGTH_IN_MINUTES        = 20.d0
 
 # to undo attenuation for sensitivity kernel calculations or forward runs with SAVE_FORWARD
 # use one (and only one) of the two flags below. UNDO_ATTENUATION is much better (it is exact)
 # but requires a significant amount of disk space for temporary storage.
-PARTIAL_PHYS_DISPERSION_ONLY    = .true.
+PARTIAL_PHYS_DISPERSION_ONLY    = .false.
 UNDO_ATTENUATION                = .false.
 # How much memory (in GB) is installed on your machine per CPU core (only used for UNDO_ATTENUATION, can be ignored otherwise)
 #         (or per GPU card or per INTEL MIC Phi board)
@@ -80,6 +80,7 @@ UNDO_ATTENUATION                = .false.
 #   -  2 GB on the machine used by Christina Morency
 #   -  2 GB on the TACC machine used by Min Chen
 #   -  1.5 GB on the GPU cluster in Marseille
+#   -  1.4 GB on Stampede2 (96GB RAM/68 core/node)
 # When running on GPU machines, it is simpler to set PERCENT_OF_MEM_TO_USE_PER_CORE = 100.d0
 # and then set MEMORY_INSTALLED_PER_CORE_IN_GB to the amount of memory that you estimate is free (rather than installed)
 # on the host of the GPU card while running your GPU job.
@@ -87,7 +88,7 @@ UNDO_ATTENUATION                = .false.
 # and run your job with "aprun -n$NPROC -N1 -S1 -j1"
 # (each host has 32 GB on Titan, each GPU has 6 GB, thus even if all the GPU arrays are duplicated on the host
 #  this leaves 32 - 6 = 26 GB free on the host; leaving 1 GB for the Linux system, we can safely use 100% of 25 GB)
-MEMORY_INSTALLED_PER_CORE_IN_GB = 4.d0
+MEMORY_INSTALLED_PER_CORE_IN_GB = 1.4d0
 # What percentage of this total do you allow us to use for arrays to undo attenuation, keeping in mind that you
 # need to leave some memory available for the GNU/Linux system to run
 #   (a typical value is 85%; any value below is fine but the code will then save a lot of data to disk;
@@ -106,7 +107,7 @@ PERCENT_OF_MEM_TO_USE_PER_CORE  = 85.d0
 # Set it to .true. if you have ABSORBING_CONDITIONS above, because in that case the code will use the three mass matrices anyway
 # and thus there is no additional cost.
 # this flag is of course unused if ROTATION above is set to .false.
-EXACT_MASS_MATRIX_FOR_ROTATION  = .false.
+EXACT_MASS_MATRIX_FOR_ROTATION  = .true.
 
 #-----------------------------------------------------------
 
@@ -134,7 +135,7 @@ RATIO_BY_WHICH_TO_INCREASE_IT   = 1.5d0
 #MOVIE_COARSE does not work with create_movie_AVS_DX
 MOVIE_SURFACE                   = .false.
 MOVIE_VOLUME                    = .false.
-MOVIE_COARSE                    = .true.
+MOVIE_COARSE                    = .false.
 NTSTEP_BETWEEN_FRAMES           = 50
 HDUR_MOVIE                      = 0.d0
 
@@ -155,7 +156,7 @@ MOVIE_START                     = 0
 MOVIE_STOP                      = 40000
 
 # save mesh files to check the mesh
-SAVE_MESH_FILES                 = .false.
+SAVE_MESH_FILES                 = .true.
 
 # restart files (number of runs can be 1 or higher, choose 1 for no restart files)
 NUMBER_OF_RUNS                  = 1
@@ -224,9 +225,9 @@ SAVE_SEISMOGRAMS_STRAIN         = .false.
 SAVE_SEISMOGRAMS_IN_ADJOINT_RUN = .false.
 
 # output format for the seismograms (one can use either or all of the three formats)
-OUTPUT_SEISMOS_ASCII_TEXT       = .true.
+OUTPUT_SEISMOS_ASCII_TEXT       = .false.
 OUTPUT_SEISMOS_SAC_ALPHANUM     = .false.
-OUTPUT_SEISMOS_SAC_BINARY       = .false.
+OUTPUT_SEISMOS_SAC_BINARY       = .true.
 OUTPUT_SEISMOS_ASDF             = .false.
 
 # rotate seismograms to Radial-Transverse-Z or use default North-East-Z reference frame
@@ -244,7 +245,7 @@ USE_BINARY_FOR_LARGE_FILE       = .false.
 RECEIVERS_CAN_BE_BURIED         = .true.
 
 # print source time function
-PRINT_SOURCE_TIME_FUNCTION      = .false.
+PRINT_SOURCE_TIME_FUNCTION      = .true.
 
 #-----------------------------------------------------------
 #
@@ -258,7 +259,7 @@ READ_ADJSRC_ASDF                = .false.
 # this parameter must be set to .true. to compute anisotropic kernels
 # in crust and mantle (related to the 21 Cij in geographical coordinates)
 # default is .false. to compute isotropic kernels (related to alpha and beta)
-ANISOTROPIC_KL                  = .false.
+ANISOTROPIC_KL                  = .true.
 
 # output only transverse isotropic kernels (alpha_v,alpha_h,beta_v,beta_h,eta,rho)
 # rather than fully anisotropic kernels when ANISOTROPIC_KL above is set to .true.

@@ -100,7 +100,11 @@
            Mzz(NSOURCES), &
            Mxy(NSOURCES), &
            Mxz(NSOURCES), &
-           Myz(NSOURCES),stat=ier)
+           Myz(NSOURCES), &
+           x_source(NSOURCES), &
+           y_source(NSOURCES), &
+           z_source(NSOURCES), &
+           stat=ier)
   if (ier /= 0 ) call exit_MPI(myrank,'Error allocating source arrays')
 
   allocate(xi_source(NSOURCES), &

@@ -955,39 +955,50 @@
   ! local parameters
   real(kind=CUSTOM_REAL),parameter :: scale_mass = RHOAV * (R_EARTH**3)
   integer :: irec_local
+  integer :: irec_glob !ktao: for USE_ECEF_CMTSOLUTION 
   character(len=MAX_STRING_LEN) :: outputname
+  real(kind=CUSTOM_REAL) :: scale_moment !ktao: moment tensor non-dim scale 
 
   !scale_mass = RHOAV * (R_EARTH**3)
+  scale_moment = scale_mass * scale_displ**2 / scale_t**2 !ktao: moment tensor non-dim scale 
 
   ! computes derivatives
   do irec_local = 1, nrec_local
-    ! rotate and scale the location derivatives to correspond to dn,de,dz
-    sloc_der(:,irec_local) = matmul(transpose(nu_source(:,:,irec_local)),sloc_der(:,irec_local)) &
-                             * scale_displ * scale_t
 
-    ! rotate scale the moment derivatives to correspond to M[n,e,z][n,e,z]
-    moment_der(:,:,irec_local) = matmul(matmul(transpose(nu_source(:,:,irec_local)),moment_der(:,:,irec_local)), &
-               nu_source(:,:,irec_local)) * scale_t ** 3 / scale_mass
+    !ktao: add case for USE_ECEF_CMTSOLUTION
+    !only rotate to ENZ when using geodetic coordinate for the source
+    if (.not.(USE_ECEF_CMTSOLUTION)) then
 
-    ! *nu_source* is the rotation matrix from ECEF to local N-E-UP as defined in src/specfem3D/locate_sources.f90
+      ! rotate and scale the location derivatives to correspond to dn,de,dz
+      sloc_der(:,irec_local) = matmul(transpose(nu_source(:,:,irec_local)),sloc_der(:,irec_local)) &
+                               * scale_displ * scale_t
+  
+      ! rotate scale the moment derivatives to correspond to M[n,e,z][n,e,z]
+      moment_der(:,:,irec_local) = matmul(matmul(transpose(nu_source(:,:,irec_local)),moment_der(:,:,irec_local)), &
+                 nu_source(:,:,irec_local)) * scale_t ** 3 / scale_mass
+  
+      ! *nu_source* is the rotation matrix from ECEF to local N-E-UP as defined in src/specfem3D/locate_sources.f90
+  
+      ! From Qinya Liu, Toronto University, Canada:
+      ! these derivatives are basically derivatives of the misfit function phi with respect to
+      ! source parameters, which means, if the nu is the rotation matrix that
+      ! transforms coordinates from the global system (x,y,z) to the local
+      ! coordinate system (N,E,V), e.g., the moment tensor is transformed as
+      !
+      ! M_L = \nu * M_g * \nu^T,
+      !
+      ! then the derivative should be transformed as
+      !
+      ! \partial{\phi}{M_L} = \nu^T \partial{\phi}{M_g} \nu
+      !
+      ! which is in the opposite sense from the transformation of M.
 
-! From Qinya Liu, Toronto University, Canada:
-! these derivatives are basically derivatives of the misfit function phi with respect to
-! source parameters, which means, if the nu is the rotation matrix that
-! transforms coordinates from the global system (x,y,z) to the local
-! coordinate system (N,E,V), e.g., the moment tensor is transformed as
-!
-! M_L = \nu * M_g * \nu^T,
-!
-! then the derivative should be transformed as
-!
-! \partial{\phi}{M_L} = \nu^T \partial{\phi}{M_g} \nu
-!
-! which is in the opposite sense from the transformation of M.
+      ! derivatives for time shift and hduration
+      stshift_der(irec_local) = stshift_der(irec_local) * scale_displ**2
+      shdur_der(irec_local) = shdur_der(irec_local) * scale_displ**2
 
-    ! derivatives for time shift and hduration
-    stshift_der(irec_local) = stshift_der(irec_local) * scale_displ**2
-    shdur_der(irec_local) = shdur_der(irec_local) * scale_displ**2
+    endif ! USE_ECEF_CMTSOLUTION
+
   enddo
 
   ! writes out kernels to file
@@ -996,30 +1007,49 @@
   else
     ! kernel file output
     do irec_local = 1, nrec_local
-      write(outputname,'(a,i6.6)') trim(OUTPUT_FILES)//'/src_frechet.',number_receiver_global(irec_local)
+      irec_glob = number_receiver_global(irec_local) ! ktao: added
+      !ktao: modified
+      !write(outputname,'(a,i6.6)') trim(OUTPUT_FILES)//'/src_frechet.',number_receiver_global(irec_local)
+      write(outputname,'(a,i6.6)') trim(OUTPUT_FILES)//'/src_frechet.', irec_glob
       open(unit=IOUT,file=trim(outputname),status='unknown',action='write')
-      !
-      ! r -> z, theta -> -n, phi -> e, plus factor 2 for Mrt,Mrp,Mtp, and 1e-7 to dyne.cm
-      !  Mrr =  Mzz
-      !  Mtt =  Mnn
-      !  Mpp =  Mee
-      !  Mrt = -Mzn
-      !  Mrp =  Mze
-      !  Mtp = -Mne
-      ! for consistency, location derivatives are in the order of [Xr,Xt,Xp]
-      ! minus sign for sloc_der(3,irec_local) to get derivative for depth instead of radius
-      write(IOUT,'(g16.5)') moment_der(3,3,irec_local) * 1e-7
-      write(IOUT,'(g16.5)') moment_der(1,1,irec_local) * 1e-7
-      write(IOUT,'(g16.5)') moment_der(2,2,irec_local) * 1e-7
-      write(IOUT,'(g16.5)') -2*moment_der(1,3,irec_local) * 1e-7
-      write(IOUT,'(g16.5)') 2*moment_der(2,3,irec_local) * 1e-7
-      write(IOUT,'(g16.5)') -2*moment_der(1,2,irec_local) * 1e-7
-      write(IOUT,'(g16.5)') sloc_der(2,irec_local)
-      write(IOUT,'(g16.5)') sloc_der(1,irec_local)
-      write(IOUT,'(g16.5)') -sloc_der(3,irec_local)
 
-      write(IOUT,'(g16.5)') stshift_der(irec_local)
-      write(IOUT,'(g16.5)') shdur_der(irec_local)
+      if (USE_ECEF_CMTSOLUTION) then
+        !ktao: add case for USE_ECEF_CMTSOLUTION
+        ! tshift_cmt, hdur_gaussian are not non-dimensionalized
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# t0(s)    D_t0 ")') tshift_src(irec_glob), stshift_der(irec_local)/scale_t
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# tau(s)   D_tau")') hdur_gaussian(irec_glob), shdur_der(irec_local)/scale_t
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# x(m)     D_x  ")') x_source(irec_glob)*scale_displ, sloc_der(1,irec_local)/scale_displ
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# y(m)     D_y  ")') y_source(irec_glob)*scale_displ, sloc_der(2,irec_local)/scale_displ
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# z(m)     D_z  ")') z_source(irec_glob)*scale_displ, sloc_der(3,irec_local)/scale_displ
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxx(N*m) D_Mxx")') Mxx(irec_glob)*scale_moment, moment_der(1,1,irec_local)/scale_moment
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# Myy(N*m) D_Myy")') Myy(irec_glob)*scale_moment, moment_der(2,2,irec_local)/scale_moment
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# Mzz(N*m) D_Mzz")') Mzz(irec_glob)*scale_moment, moment_der(3,3,irec_local)/scale_moment
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxy(N*m) D_Mxy")') Mxy(irec_glob)*scale_moment, 2*moment_der(1,2,irec_local)/scale_moment
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxz(N*m) D_Mxz")') Mxz(irec_glob)*scale_moment, 2*moment_der(1,3,irec_local)/scale_moment
+        write(IOUT,'(E16.7,2X,E16.7,2X,"# Myz(N*m) D_Myz")') Myz(irec_glob)*scale_moment, 2*moment_der(2,3,irec_local)/scale_moment
+      else
+        !
+        ! r -> z, theta -> -n, phi -> e, plus factor 2 for Mrt,Mrp,Mtp, and 1e-7 to dyne.cm
+        !  Mrr =  Mzz
+        !  Mtt =  Mnn
+        !  Mpp =  Mee
+        !  Mrt = -Mzn
+        !  Mrp =  Mze
+        !  Mtp = -Mne
+        ! for consistency, location derivatives are in the order of [Xr,Xt,Xp]
+        ! minus sign for sloc_der(3,irec_local) to get derivative for depth instead of radius
+        write(IOUT,'(g16.5)') moment_der(3,3,irec_local) * 1e-7
+        write(IOUT,'(g16.5)') moment_der(1,1,irec_local) * 1e-7
+        write(IOUT,'(g16.5)') moment_der(2,2,irec_local) * 1e-7
+        write(IOUT,'(g16.5)') -2*moment_der(1,3,irec_local) * 1e-7
+        write(IOUT,'(g16.5)') 2*moment_der(2,3,irec_local) * 1e-7
+        write(IOUT,'(g16.5)') -2*moment_der(1,2,irec_local) * 1e-7
+        write(IOUT,'(g16.5)') sloc_der(2,irec_local)
+        write(IOUT,'(g16.5)') sloc_der(1,irec_local)
+        write(IOUT,'(g16.5)') -sloc_der(3,irec_local)
+        write(IOUT,'(g16.5)') stshift_der(irec_local)
+        write(IOUT,'(g16.5)') shdur_der(irec_local)
+      endif !USE_ECEF_CMTSOLUTION
 
       close(IOUT)
     enddo

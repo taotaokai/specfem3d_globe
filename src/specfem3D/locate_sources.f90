@@ -42,6 +42,7 @@
     NSOURCES, &
     tshift_src,theta_source,phi_source, &
     DT,hdur,Mxx,Myy,Mzz,Mxy,Mxz,Myz,Mw,M0, &
+    x_source, y_source, z_source, & !ktao added for USE_ECEF_CMTSOLUTION
     rspl,espl,espl2,nspl,ibathy_topo, &
     LOCAL_TMP_PATH,SIMULATION_TYPE,TOPOGRAPHY, &
     xigll,yigll,zigll, &
@@ -428,7 +429,7 @@
         endif
 
         ! define the interval in which we look for points
-    !-------------POINT FORCE-----------------------------------------------
+        !-------------POINT FORCE-----------------------------------------------
         if (USE_FORCE_POINT_SOURCE) then
           ! force sources will be put on an exact GLL point
           !imin = 1
@@ -450,7 +451,6 @@
           kmin = 2
           kmax = NGLLZ - 1
         else
-    !-------------POINT FORCE-----------------------------------------------
           ! double-couple CMTSOLUTION
           ! loop only on points inside the element
           ! exclude edges to ensure this point is not shared with other elements
@@ -519,7 +519,7 @@
 
 !      ! for point sources, the location will be exactly at a GLL point
 !      ! otherwise this tries to find best location
-!    !-------------POINT FORCE-----------------------------------------------
+!      !-------------POINT FORCE-----------------------------------------------
 !      if (USE_FORCE_POINT_SOURCE) then
 !        ! store xi,eta,gamma and x,y,z of point found
 !        ! note: they have range [1.0d0,NGLLX/Y/Z], used for point sources
@@ -541,7 +541,7 @@
 !                (z_target_source-z_found_source(isource_in_this_subset))**2)*R_EARTH/1000.d0
 !
 !      else
-!    !-------------POINT FORCE-----------------------------------------------
+!      !-------------POINT FORCE-----------------------------------------------
 
         ! use initial guess in xi, eta and gamma
         xi = xigll(ix_initial_guess_source)
@@ -714,6 +714,7 @@
 
         ! ktao: record source location actually used (ECEF)
         ! only used in save_kernel.F90 to output source locations
+        ! NOTE THIS IS NOT USED IN THIS NEW VERSION
         x_source(isource) = x_found_source(isource_in_this_subset)
         y_source(isource) = y_found_source(isource_in_this_subset)
         z_source(isource) = z_found_source(isource_in_this_subset)
@@ -729,7 +730,7 @@
         write(IMAIN,*) '               in element ',ispec_selected_source(isource_in_this_subset)
         write(IMAIN,*)
         ! different output for force point sources
-    !-------------POINT FORCE-----------------------------------------------
+        !-------------POINT FORCE-----------------------------------------------
         if (USE_FORCE_POINT_SOURCE) then
           write(IMAIN,*) 'using force point source: '
           write(IMAIN,*) '  xi coordinate of source in that element: ',xi_source(isource)
@@ -764,7 +765,7 @@
           write(IMAIN,*)
           write(IMAIN,*) '  half duration in frequency: ',hdur(isource),' seconds**(-1)'
         else
-    !-------------POINT FORCE-----------------------------------------------
+        !------------- CMTSOLUTION -----------------------------------------------
           write(IMAIN,*) '   xi coordinate of source in that element: ',xi_source(isource)
           write(IMAIN,*) '  eta coordinate of source in that element: ',eta_source(isource)
           write(IMAIN,*) 'gamma coordinate of source in that element: ',gamma_source(isource)
