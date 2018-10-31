@@ -90,7 +90,15 @@
     if (r > R220/R_EARTH .or. r < R771/R_EARTH) cycle
 
     ! compute topography on 410 and 650 at current point
-    call model_s362ani_subtopo(xcolat,xlon,topo410out,topo650out)
+    ! call model_s362ani_subtopo(xcolat,xlon,topo410out,topo650out)
+    !! ktao add case for user defined topo
+    if (USE_EXTERNAL_TOPO_410_660) then
+      call model_s362ani_subtopo_external(sngl(lon),sngl(lat),topo410out,topo650out)
+      ! ktao: debug
+      !print *,'topo410/650: ', lon,lat, topo410out, topo650out
+    else
+      call model_s362ani_subtopo(xcolat,xlon,topo410out,topo650out)
+    end if
 
     ! min/max statistics
     if (DEBUG_STATISTICS) then

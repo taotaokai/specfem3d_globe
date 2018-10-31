@@ -68,9 +68,9 @@
 #    the approximated illumination amplitude.
 #  - further modification needed. 
 
-6. about the compiler flags (2015-08-14T19:07:43)
-  - Simple optimization flag -O 3 is enough. So other flags may confuse the
-    compiler and result in less effecient code (e.g. upto 5 X slower).
+#6. about the compiler flags (2015-08-14T19:07:43)
+#  - Simple optimization flag -O 3 is enough. So other flags may confuse the
+#    compiler and result in less effecient code (e.g. upto 5 X slower).
 
 7. locate_receivers.f90: 
   - switch the network/station order in the STATION files
@@ -79,21 +79,30 @@
 #8. comp_source_time_function.f90:
 #    - change to do while loop and read less than NSTEP time samples without error.
 
-9. compute_seismograms.F90 and save_kernels.f90
-  - fix scale_displ, scale_t in source frechet derivative Kp_delta
-  - fix units scaling problem in save_kernels_source()
+##-----------------------------------------------
+#9. compute_seismograms.F90 and save_kernels.f90
+##-----------------------------------------------
+#  - fix scale_displ, scale_t in source frechet derivative Kp_delta
+#  - fix units scaling problem in save_kernels_source()
+#  - [2018-07-27] this is not needed as the newest version has corrected for this issue.
+ 
 
-#====== the following changes are documented on 2017-02-11T13:48:10 
+#### the following changes are documented on 2017-02-11T13:48:10 
 
+#-----------------------------------------------
 10. allow transverse isotropy in different regions: 
-  Par_file:
-    # forces transverse isotropy in certain types of elements
-    # when all false use tiso only between MOHO and 220 or 670(if reference model is 1D_REF)
-    USE_FULL_TISO_CRUST_220                = .true.  # tiso between surface and 220
-    USE_FULL_TISO_CRUST_UPPER_MANTLE       = .false. # tiso between surface and 670
-    USE_FULL_TISO_MANTLE                   = .false. # tiso between moho and CMB 
-  src/shared/: shared_par.f90, read_parameter_file.f90, broadcast_computed_parameters.f90
-  src/meshfem3D/: compute_element_properties.f90, meshfem3D_par.f90
+#-----------------------------------------------
+ 
+DATA/Par_file:
+  # forces transverse isotropy in certain types of elements
+  # when all false use tiso only between MOHO and 220 or 670(if reference model is 1D_REF)
+  USE_FULL_TISO_CRUST_220                = .true.  # tiso between surface and 220
+  USE_FULL_TISO_CRUST_UPPER_MANTLE       = .false. # tiso between surface and 670
+  USE_FULL_TISO_MANTLE                   = .false. # tiso between moho and CMB 
+
+src/shared/: shared_par.f90, read_parameter_file.f90, broadcast_computed_parameters.f90
+
+src/meshfem3D/: compute_element_properties.f90, meshfem3D_par.f90
 
 #-----------------------------------------------
 11. add flag in Par_file to allow use of CMTSOLUTION in ECEF coordinate
@@ -113,7 +122,7 @@ Mxy:               -2.503000e+28
 Mxz:                4.200000e+26
 Myz:               -2.480000e+27
 ----------------------
-value field must be after 15 spaces
+value field must be after 15 white spaces
 unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
 source time function: stf(t;t0,tau) = erf((t-t0)/tau)
 
@@ -133,7 +142,7 @@ src/specfem3D/
 #-----------------------------------------------
 12. modified 1dref model for NEChina  
 #-----------------------------------------------
-  src/meshfem3D/model_1dref.f90
+  src/meshfem3D/model_1dref.f90 --> src/meshfem3D/customized_1d_model/FWEA18/model_1dref.f90.stage09.iter16.polyfit_um.linfit_mtz.vp_vs_voigt 
 
 #-----------------------------------------------
 #13. allow using external 410-/660-km topography map 
@@ -142,7 +151,7 @@ src/specfem3D/
 #    logical,parameter :: USE_EXTERNAL_TOPO_410_660 = .true.
 #  src/meshfem3D/model_s362ani.f90
 
-#-----------------------------------------------
-14. change model_1dref.f90 to be the regional model 
-#-----------------------------------------------
-  src/meshfem3D/model_1dref.f90.stage09.iter16.vsv_vpv_fitted_polyfit_mtz
+##-----------------------------------------------
+#14. change model_1dref.f90 to be the regional model 
+##-----------------------------------------------
+#  src/meshfem3D/model_1dref.f90.stage09.iter16.vsv_vpv_fitted_polyfit_mtz

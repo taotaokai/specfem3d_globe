@@ -8,3 +8,6 @@ git pull
 git fetch upstream
 git merge upstream/master 
 git push
+
+# use SSH to enable password-less push 
+git remote set-url origin git@github.com:taotaokai/specfem3d_globe.git
