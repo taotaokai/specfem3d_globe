@@ -498,6 +498,7 @@
 
       ! enforce 3 element layers
       NER_CRUST = 3
+      !NER_CRUST = 4 !ktao: modified for SETibet
 
       ! increased stability, empirical
       DT = DT*(1.d0 + 0.5d0)

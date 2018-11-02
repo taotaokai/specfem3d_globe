@@ -333,6 +333,10 @@
 ! (i.e. creates mesh without 410/660 topography for Harvard model (s362ani,..))
   logical,parameter :: SUPPRESS_INTERNAL_TOPOGRAPHY = .false.
 
+! ktao: (S362ani) use external topo map for 410-/660-km instead of s362ani topo
+! need topo map file "DATA/s362ani/external_topo_410_660.txt"
+  logical,parameter :: USE_EXTERNAL_TOPO_410_660 = .false.
+
 !!-----------------------------------------------------------
 !!
 !! GPU optimization

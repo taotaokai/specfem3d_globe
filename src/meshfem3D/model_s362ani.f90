@@ -76,7 +76,7 @@
   character(len=80) :: hsplfl(maxhpa)
   character(len=40) :: dskker(maxker)
 
-  ! ktao: external 410-/660-km topo map
+  !------ ktao: below is added for external 410-/660-km topo map
   type topo_map
     integer :: nlon, nlat
     real(kind=4),dimension(:),allocatable :: lon1, lat1
@@ -94,7 +94,7 @@
 
   subroutine read_model_file(this, filename)
 
-    use constants,only: IMAIN, IIN ! ktao add
+    use constants,only: IMAIN, IIN
 
     implicit none
 
@@ -196,7 +196,7 @@
     d660 = r3*y1 + r4*y2
 
   end subroutine
-
+  !------ ktao: above is added for external 410-/660-km topo map
 
   end module model_s362ani_par
 

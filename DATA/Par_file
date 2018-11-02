@@ -16,17 +16,17 @@ NCHUNKS                         = 1
 ANGULAR_WIDTH_XI_IN_DEGREES     = 15.d0   # angular size of a chunk
 ANGULAR_WIDTH_ETA_IN_DEGREES    = 15.d0
 CENTER_LATITUDE_IN_DEGREES      = 27.5d0
-CENTER_LONGITUDE_IN_DEGREES     = 102.d0
+CENTER_LONGITUDE_IN_DEGREES     = 101.5d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
 
 # number of elements at the surface along the two sides of the first chunk
 # (must be multiple of 16 and 8 * multiple of NPROC below)
-NEX_XI                          = 80
-NEX_ETA                         = 80
+NEX_XI                          = 224
+NEX_ETA                         = 224
 
 # number of MPI processors along the two sides of the first chunk
-NPROC_XI                        = 10
-NPROC_ETA                       = 10
+NPROC_XI                        = 14
+NPROC_ETA                       = 14
 
 #-----------------------------------------------------------
 #
@@ -63,7 +63,7 @@ ATTENUATION                     = .true.
 ABSORBING_CONDITIONS            = .true.
 
 # record length in minutes
-RECORD_LENGTH_IN_MINUTES        = 20.d0
+RECORD_LENGTH_IN_MINUTES        = 10.d0
 
 # to undo attenuation for sensitivity kernel calculations or forward runs with SAVE_FORWARD
 # use one (and only one) of the two flags below. UNDO_ATTENUATION is much better (it is exact)
