@@ -40,16 +40,16 @@ replace src/meshfem3D/model_1dref.f90 with src/meshfem3D/customized_1d_model/FWE
 - correct the sub milli-second error
 
 #-----------------------------------------------
-# src/specfem3D/get_cmt.f90:
+# change to list-directed I/O when reading CMTSOLUTION
 #-----------------------------------------------
-- change to list-directed I/O for the CMTSOLUTION info
+- src/specfem3D/get_cmt.f90:
+  ! read time shift
+  !read(IIN,"(a)",iostat=ier) string
+  read(IIN,*,iostat=ier) string, t_shift(isource)
+  
+  "time shift:" should either be replaced by "time_shift:" or be quoted.
 
-! read time shift
-!read(IIN,"(a)",iostat=ier) string
-read(IIN,*,iostat=ier) string, t_shift(isource)
-
-the first comment string should not have spaces, that is
-"time shift:" --> "time_shift:", otherwise it should be quoted.
+- src/specfem3D/get_event_info.f90:
 
 #-----------------------------------------------
 # src/specfem3D/locate_receivers.f90: 

@@ -215,7 +215,7 @@
     read(IIN,"(a)",iostat=ier) string
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading event name in source ',isource
-      stop 'Error reading event name in station in CMTSOLUTION file'
+      stop 'Error reading event name in CMTSOLUTION file'
     endif
 
     ! read time shift
@@ -225,7 +225,7 @@
     read(IIN,*,iostat=ier) string, t_shift(isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading time shift in source ',isource
-      stop 'Error reading time shift in station in CMTSOLUTION file'
+      stop 'Error reading time shift in CMTSOLUTION file'
     endif
     !read(string(12:len_trim(string)),*) tshift_src(isource)
     !read(string(12:len_trim(string)),*) t_shift(isource)
@@ -235,7 +235,7 @@
     read(IIN,*,iostat=ier) string, hdur(isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading half duration in source ',isource
-      stop 'Error reading half duration in station in CMTSOLUTION file'
+      stop 'Error reading half duration in CMTSOLUTION file'
     endif
     !read(string(15:len_trim(string)),*) hdur(isource)
 
@@ -244,7 +244,7 @@
     read(IIN,*,iostat=ier) string, lat(isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading latitude in source ',isource
-      stop 'Error reading latitude in station in CMTSOLUTION file'
+      stop 'Error reading latitude in CMTSOLUTION file'
     endif
     !read(string(10:len_trim(string)),*) lat(isource)
 
@@ -253,7 +253,7 @@
     read(IIN,*,iostat=ier) string, long(isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading longitude in source ',isource
-      stop 'Error reading longitude in station in CMTSOLUTION file'
+      stop 'Error reading longitude in CMTSOLUTION file'
     endif
     !read(string(11:len_trim(string)),*) long(isource)
 
@@ -262,7 +262,7 @@
     read(IIN,*,iostat=ier) string, depth(isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading depth in source ',isource
-      stop 'Error reading depth in station in CMTSOLUTION file'
+      stop 'Error reading depth in CMTSOLUTION file'
     endif
     !read(string(7:len_trim(string)),*) depth(isource)
 
@@ -273,7 +273,7 @@
     read(IIN,*,iostat=ier) string, moment_tensor(1,isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading Mrr in source ',isource
-      stop 'Error reading Mrr in station in CMTSOLUTION file'
+      stop 'Error reading Mrr in CMTSOLUTION file'
     endif
     !read(string(5:len_trim(string)),*) moment_tensor(1,isource)
 
@@ -282,7 +282,7 @@
     read(IIN,*,iostat=ier) string, moment_tensor(2,isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading Mtt in source ',isource
-      stop 'Error reading Mtt in station in CMTSOLUTION file'
+      stop 'Error reading Mtt in CMTSOLUTION file'
     endif
     !read(string(5:len_trim(string)),*) moment_tensor(2,isource)
 
@@ -291,7 +291,7 @@
     read(IIN,*,iostat=ier) string, moment_tensor(3,isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading Mpp in source ',isource
-      stop 'Error reading Mpp in station in CMTSOLUTION file'
+      stop 'Error reading Mpp in CMTSOLUTION file'
     endif
     !read(string(5:len_trim(string)),*) moment_tensor(3,isource)
 
@@ -300,7 +300,7 @@
     read(IIN,*,iostat=ier) string, moment_tensor(4,isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading Mrt in source ',isource
-      stop 'Error reading Mrt in station in CMTSOLUTION file'
+      stop 'Error reading Mrt in CMTSOLUTION file'
     endif
     !read(string(5:len_trim(string)),*) moment_tensor(4,isource)
 
@@ -309,7 +309,7 @@
     read(IIN,*,iostat=ier) string, moment_tensor(5,isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading Mrp in source ',isource
-      stop 'Error reading Mrp in station in CMTSOLUTION file'
+      stop 'Error reading Mrp in CMTSOLUTION file'
     endif
     !read(string(5:len_trim(string)),*) moment_tensor(5,isource)
 
@@ -318,7 +318,7 @@
     read(IIN,*,iostat=ier) string, moment_tensor(6,isource)
     if (ier /= 0) then
       write(IMAIN,*) 'Error reading Mtp in source ',isource
-      stop 'Error reading Mtp in station in CMTSOLUTION file'
+      stop 'Error reading Mtp in CMTSOLUTION file'
     endif
     !read(string(5:len_trim(string)),*) moment_tensor(6,isource)
 
@@ -373,6 +373,10 @@
 ! therefore 1 dyne.cm = 1e-7 Newton.m
 !
   scaleM = 1.d7 * RHOAV * (R_EARTH**5) * PI*GRAV*RHOAV
+  ! ktao: in ECEF_CMTSOLUTION the unit of moment tensor is (N.m)
+  if (USE_ECEF_CMTSOLUTION) then
+    scaleM = RHOAV * (R_EARTH**5) * PI*GRAV*RHOAV
+  endif
   moment_tensor(:,:) = moment_tensor(:,:) / scaleM
 
   contains

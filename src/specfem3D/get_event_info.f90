@@ -152,6 +152,7 @@
   character(len=20), intent(out) :: event_name ! event name for SAC header
 
   ! local parameters
+  integer :: ier !ktao: added for reading CMTSOLUTION
   integer :: ios,julian_day
   integer :: isource
   double precision, dimension(NSOURCES) :: t_s,hdur,lat,lon,depth
@@ -181,46 +182,114 @@
   do isource = 1,NSOURCES
 
     ! read header with event information
-    read(IIN,*) datasource,yr,mo,da,ho,mi,sec,elat_pde,elon_pde,depth_pde,mb,ms
+    ! ktao: add checks for reading error
+    !read(IIN,*) datasource,yr,mo,da,ho,mi,sec,elat_pde,elon_pde,depth_pde,mb,ms
+    read(IIN,*,iostat=ier) datasource,yr,mo,da,ho,mi,sec,elat_pde,elon_pde,depth_pde,mb,ms
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading event info in source ',isource
+      stop 'Error reading event info in CMTSOLUTION file'
+    endif
     jda=julian_day(yr,mo,da)
 
+    !-- ktao: change to list-directed I/O for the CMTSOLUTION info
+
     ! read line with event name
-    read(IIN,"(a)") string
-    read(string(12:len_trim(string)),*) e_n(isource)
+    !read(IIN,"(a)") string
+    !read(string(12:len_trim(string)),*) e_n(isource)
+    read(IIN,*,iostat=ier) string, e_n(isource)
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading event name in source ',isource
+      stop 'Error reading event name in CMTSOLUTION file'
+    endif
 
     ! read time shift
-    read(IIN,"(a)") string
-    read(string(12:len_trim(string)),*) t_s(isource)
+    !read(IIN,"(a)") string
+    !read(string(12:len_trim(string)),*) t_s(isource)
+    read(IIN,*,iostat=ier) string, t_s(isource)
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading time shift in source ',isource
+      stop 'Error reading time shift in CMTSOLUTION file'
+    endif
 
     ! read half duration
-    read(IIN,"(a)") string
-    read(string(15:len_trim(string)),*) hdur(isource)
+    !read(IIN,"(a)") string
+    !read(string(15:len_trim(string)),*) hdur(isource)
+    read(IIN,*,iostat=ier) string, hdur(isource)
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading half duration in source ',isource
+      stop 'Error reading half duration in CMTSOLUTION file'
+    endif
 
     ! read latitude
-    read(IIN,"(a)") string
-    read(string(10:len_trim(string)),*) lat(isource)
+    !read(IIN,"(a)") string
+    !read(string(10:len_trim(string)),*) lat(isource)
+    read(IIN,*,iostat=ier) string, lat(isource)
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading latitude in source ',isource
+      stop 'Error reading latitude in CMTSOLUTION file'
+    endif
 
     ! read longitude
-    read(IIN,"(a)") string
-    read(string(11:len_trim(string)),*) lon(isource)
+    !read(IIN,"(a)") string
+    !read(string(11:len_trim(string)),*) lon(isource)
+    read(IIN,*,iostat=ier) string, lon(isource)
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading longitude in source ',isource
+      stop 'Error reading longitude in CMTSOLUTION file'
+    endif
 
     ! read depth
-    read(IIN,"(a)") string
-    read(string(7:len_trim(string)),*) depth(isource)
+    !read(IIN,"(a)") string
+    !read(string(7:len_trim(string)),*) depth(isource)
+    read(IIN,*,iostat=ier) string, depth(isource)
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading depth in source ',isource
+      stop 'Error reading depth in CMTSOLUTION file'
+    endif
 
     ! read the last 6 lines with moment tensor info
-    read(IIN,"(a)") string
-    read(string(5:len_trim(string)),*) Mrr
-    read(IIN,"(a)") string
-    read(string(5:len_trim(string)),*) Mtt
-    read(IIN,"(a)") string
-    read(string(5:len_trim(string)),*) Mpp
-    read(IIN,"(a)") string
-    read(string(5:len_trim(string)),*) Mrt
-    read(IIN,"(a)") string
-    read(string(5:len_trim(string)),*) Mrp
-    read(IIN,"(a)") string
-    read(string(5:len_trim(string)),*) Mtp
+    !read(IIN,"(a)") string
+    !read(string(5:len_trim(string)),*) Mrr
+    !read(IIN,"(a)") string
+    !read(string(5:len_trim(string)),*) Mtt
+    !read(IIN,"(a)") string
+    !read(string(5:len_trim(string)),*) Mpp
+    !read(IIN,"(a)") string
+    !read(string(5:len_trim(string)),*) Mrt
+    !read(IIN,"(a)") string
+    !read(string(5:len_trim(string)),*) Mrp
+    !read(IIN,"(a)") string
+    !read(string(5:len_trim(string)),*) Mtp
+    read(IIN,*,iostat=ier) string, Mrr
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading Mrr in source ',isource
+      stop 'Error reading Mrr in CMTSOLUTION file'
+    endif
+    read(IIN,*,iostat=ier) string, Mtt
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading Mtt in source ',isource
+      stop 'Error reading Mtt in CMTSOLUTION file'
+    endif
+    read(IIN,*,iostat=ier) string, Mpp
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading Mpp in source ',isource
+      stop 'Error reading Mpp in CMTSOLUTION file'
+    endif
+    read(IIN,*,iostat=ier) string, Mrt
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading Mrt in source ',isource
+      stop 'Error reading Mrt in CMTSOLUTION file'
+    endif
+    read(IIN,*,iostat=ier) string, Mrp
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading Mrp in source ',isource
+      stop 'Error reading Mrp in CMTSOLUTION file'
+    endif
+    read(IIN,*,iostat=ier) string, Mtp
+    if (ier /= 0) then
+      write(IMAIN,*) 'Error reading Mtp in source ',isource
+      stop 'Error reading Mtp in CMTSOLUTION file'
+    endif
 
   enddo
 

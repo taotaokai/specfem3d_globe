@@ -199,7 +199,7 @@ NTSTEP_BETWEEN_READ_ADJSRC      = 1000
 # value field must be after 15 spaces
 # unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
 # source time function: stf(t;t0,tau) = erf((t-t0)/tau)
-USE_ECEF_CMTSOLUTION            = .true.
+USE_ECEF_CMTSOLUTION            = .false.
 
 # use a (tilted) FORCESOLUTION force point source (or several) instead of a CMTSOLUTION moment-tensor source.
 # # This can be useful e.g. for asteroid simulations
