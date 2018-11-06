@@ -7,7 +7,7 @@ sem_setup_dir=${2:?[arg] need setup dir(for constants.h.in)}
 sem_data_dir=${3:?[arg] need DATA dir(for DATA/Par_file,STATIONS,CMTSOLUTION)}
 sem_build_dir=${4:?[arg] need build dir(e.g. specfem3d_globe)}
 
-mpif90=${5:?[arg]need mpif90 executable}
+#mpif90=${5:?[arg]need mpif90 executable}
 #mpicc=${6:?[arg]need mpicc executable}
 
 sem_source_dir=$(readlink -f $sem_source_dir)
@@ -85,7 +85,8 @@ cd $sem_build_dir
 
 #./configure FC=gfortran MPIFC=mpif90 FCFLAGS="-O3 -lpthread" CC=mpicc CFLAGS="-O3"
 #./configure FC=gfortran MPIFC=mpif90 FCFLAGS="-march=core-avx2 -O3 -lpthread" CC=mpicc CFLAGS="-O3 -march=core-avx2"
-./configure FC=gfortran CC=gcc MPIFC=${mpif90} FCFLAGS="-O3 -lpthread" CFLAGS="-O3"
+#./configure FC=gfortran CC=gcc MPIFC=${mpif90} FCFLAGS="-O3 -lpthread" CFLAGS="-O3"
+./configure FC=gfortran CC=gcc MPIFC=mpif90 FCFLAGS="-O3 -lpthread" CFLAGS="-O3"
 
 make clean
 #make xdecompose_mesh xmeshfem3D xgenerate_databases xspecfem3D xcombine_vol_data_vtk \
