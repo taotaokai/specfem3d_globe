@@ -33,7 +33,15 @@ replace src/meshfem3D/model_1dref.f90 with src/meshfem3D/customized_1d_model/FWE
 - src/meshfem3D/model_s362ani.f90: add new type topo_map and 
   subroutines read_model_file() and interp_bilinear() to read in
   external 410/660-km topo map
- 
+
+#-----------------------------------------------
+# src/shared/model_topo_bathy.f90
+#-----------------------------------------------
+[2018-11-06]
+  - changed the way how to interpolate the topo file since the original code really does not make sense to me. 
+  - now use gridline registration, such as etopo1_ice_g_gmt4.grd 
+    topo(lon,lat) lon:[-180,180], lat:[-90,90]
+
 #-----------------------------------------------
 # src/specfem3D/write_output_SAC.f90:
 #-----------------------------------------------
