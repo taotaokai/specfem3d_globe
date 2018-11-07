@@ -43,6 +43,26 @@ replace src/meshfem3D/model_1dref.f90 with src/meshfem3D/customized_1d_model/FWE
     topo(lon,lat) lon:[-180,180], lat:[-90,90]
 
 #-----------------------------------------------
+# src/shared/auto_ner.f90
+#-----------------------------------------------
+[2018-11-07]
+  - line318-320: use R80_FICTITIOUS_IN_MESHER instead of R80, which is desgined.
+
+#-----------------------------------------------
+# allow user defined time step: USER_DT
+#-----------------------------------------------
+[2018-11-07]
+
+DATA/Par_file:
+  # allow user defined time step: USER_DT (ignore if <= 0)
+  USER_DT                   = 0.05d0 # second 
+
+src/shared/: shared_par.f90, read_parameter_file.f90, broadcast_computed_parameters.f90
+
+src/shared/get_timestep_and_layers.f90:
+  - lines 528-532 
+
+#-----------------------------------------------
 # src/specfem3D/write_output_SAC.f90:
 #-----------------------------------------------
 - correct the sub milli-second error

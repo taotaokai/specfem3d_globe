@@ -498,7 +498,6 @@
 
       ! enforce 3 element layers
       NER_CRUST = 3
-      !NER_CRUST = 4 !ktao: modified for SETibet
 
       ! increased stability, empirical
       DT = DT*(1.d0 + 0.5d0)
@@ -525,6 +524,12 @@
   ! example: 0.0734815 -> 0.0730
   !          0.07371   -> 0.0735
   !call get_timestep_limit_significant_digit(DT)
+
+  ! ktao: allow user defined time step
+  if (USER_DT > 0.d0) then
+    write(IMAIN, *) "use user defined DT: ", USER_DT
+    DT = USER_DT
+  endif
 
   end subroutine get_timestep_and_layers
 

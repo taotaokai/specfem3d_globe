@@ -28,6 +28,9 @@ NEX_ETA                         = 224
 NPROC_XI                        = 14
 NPROC_ETA                       = 14
 
+# KTAO: user defined time step (ignore if <=0)
+USER_DT                         = 0.05d0
+
 #-----------------------------------------------------------
 #
 # Model

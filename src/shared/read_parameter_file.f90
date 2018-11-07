@@ -89,6 +89,10 @@
   call read_value_integer(NPROC_ETA_read, 'NPROC_ETA', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: NPROC_ETA'
 
+  ! ktao: user defined time step
+  call read_value_double_precision(USER_DT, 'USER_DT', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: USER_DT'
+
   ! physical parameters
   call read_value_logical(OCEANS, 'OCEANS', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: OCEANS'

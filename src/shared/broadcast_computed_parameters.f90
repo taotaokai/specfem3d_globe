@@ -43,7 +43,10 @@
   integer, parameter :: nparam_l = 67
   logical, dimension(nparam_l) :: bcast_logical
 
-  integer, parameter :: nparam_dp = 34
+  ! ktao: change nparm_dp from 34 to 35 to add in 
+  ! ktao: USER_DT
+  !integer, parameter :: nparam_dp = 34
+  integer, parameter :: nparam_dp = 35
   double precision, dimension(nparam_dp) :: bcast_double_precision
 
   ! initializes containers
@@ -113,7 +116,8 @@
             R_CENTRAL_CUBE,RHO_TOP_OC,RHO_BOTTOM_OC,RHO_OCEANS,HDUR_MOVIE, &
             MOVIE_TOP,MOVIE_BOTTOM,MOVIE_WEST,MOVIE_EAST,MOVIE_NORTH,MOVIE_SOUTH, &
             RMOHO_FICTITIOUS_IN_MESHER,RATIO_BY_WHICH_TO_INCREASE_IT, &
-            MEMORY_INSTALLED_PER_CORE_IN_GB,PERCENT_OF_MEM_TO_USE_PER_CORE &
+            MEMORY_INSTALLED_PER_CORE_IN_GB,PERCENT_OF_MEM_TO_USE_PER_CORE, &
+            USER_DT & ! ktao: add
             /)
   endif
 
@@ -313,6 +317,7 @@
     RATIO_BY_WHICH_TO_INCREASE_IT = bcast_double_precision(32)
     MEMORY_INSTALLED_PER_CORE_IN_GB = bcast_double_precision(33)
     PERCENT_OF_MEM_TO_USE_PER_CORE = bcast_double_precision(34)
+    USER_DT = bcast_double_precision(35) ! ktao: add
   endif
 
   end subroutine broadcast_computed_parameters

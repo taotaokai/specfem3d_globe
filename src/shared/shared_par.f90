@@ -89,6 +89,8 @@
                       CENTER_LONGITUDE_IN_DEGREES,CENTER_LATITUDE_IN_DEGREES,GAMMA_ROTATION_AZIMUTH
   logical :: SAVE_MESH_FILES,SAVE_FORWARD
 
+  double precision :: USER_DT ! ktao: add
+
   ! movies
   integer :: MOVIE_VOLUME_TYPE,MOVIE_START,MOVIE_STOP
   double precision :: HDUR_MOVIE,MOVIE_TOP_KM,MOVIE_BOTTOM_KM, &

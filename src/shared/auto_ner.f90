@@ -315,7 +315,9 @@
 
   radius(1)  = R_EARTH ! Surface
   radius(2)  = RMOHO_FICTITIOUS_IN_MESHER !    Moho - 1st Mesh Doubling Interface
-  radius(3)  = R80    !      80
+  ! ktao: change R80 to R80_FICTITIOUS_IN_MESHER as designed
+  !radius(3)  = R80    !      80
+  radius(3)  = R80_FICTITIOUS_IN_MESHER !R80
   radius(4)  = R220   !     220
   radius(5)  = R400   !     400
   radius(6)  = R600   !     600
