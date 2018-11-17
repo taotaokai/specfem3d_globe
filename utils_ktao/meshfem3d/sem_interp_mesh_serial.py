@@ -70,14 +70,10 @@ for iproc_target in [0,]:
   xyz_glob_target = mesh_data_target['xyz_glob']
 
   # merge regions if required
-  idx_merge = np.searchsorted(idoubling_target, idoubling_merge)
-  #idoubling_target[idx_merge] = IFLAG_DUMMY
-  idoubling_target[:] = -1
-
-  #gll_dims = mesh_data_target['gll_dims']
-  #misloc_gll_target = np.zeros(gll_dims)
-  #is_inside_gll_target = np.zeros(gll_dims, dtype='bool')
-  #model_gll_target = np.zeros((nmodel,) + gll_dims)
+  idx_merge = np.zeros(nspec_target, dtype='bool')
+  for ii in idoubling_merge:
+    idx_merge = idx_merge | (idoubling_target == ii)
+  idoubling_target[idx_merge] = IFLAG_DUMMY
 
   xyz_target = xyz_glob_target[:,ibool_target.ravel()-1]
   idoubling_ext = np.zeros(ibool_target.shape,dtype='int') + idoubling_target
@@ -92,8 +88,9 @@ for iproc_target in [0,]:
   model_gll_target = np.zeros((nmodel,npoints))
 
   # loop over each slice of source SEM mesh
-  for iproc_source in range(nproc_source):
+  #for iproc_source in range(nproc_source):
   #for iproc_source in range(63,nproc_source):
+  for iproc_source in [65,]:
 
     tic = time.time()
 
@@ -106,7 +103,9 @@ for iproc_target in [0,]:
 
     # merge regions if required
     idoubling_source = mesh_data_source['idoubling']
-    idx_merge = np.searchsorted(idoubling_source, idoubling_merge)
+    idx_merge = np.zeros(mesh_data_source['nspec'], dtype='bool')
+    for ii in idoubling_merge:
+      idx_merge = idx_merge | (idoubling_source == ii)
     idoubling_source[idx_merge] = IFLAG_DUMMY
 
     # read in source model

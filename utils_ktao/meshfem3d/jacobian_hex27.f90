@@ -218,53 +218,68 @@ subroutine jacobian_hex27(xyz_anchor, uvw, xyz, DuvwDxyz)
  
 end subroutine jacobian_hex27
 
-!///////////////////////////////////////////////////////////////////////////////
 
-subroutine anchor_index_hex27(iax,iay,iaz)
-! index of the anchor nodes as a 27-node element in a SEM element of NGLLX=NGLLY=NGLLZ=5
-! nodes   
+subroutine anchor_index_hex27(NGLLX,NGLLY,NGLLZ,iax,iay,iaz)
+!-return indices of hex27 anchor points in a GLL element used for jacobian_hex27
 !
-!-output
-! iax,iay,iaz(3): index of the anchor nodes on x,y,z axes of the SEM element
+!-input: 
+!   NGLLX,Y,Z: number of GLL points along x,y,z axes
+!
+!-output:
+!   iax,iay,iaz(27): indices on x,y,z axes of the 27 nodes
 
   implicit none
 
   ! input/output
+  integer, intent(in) :: NGLLX, NGLLY, NGLLZ
   integer, intent(out) :: iax(27), iay(27), iaz(27)
 
+  ! local vars
+  integer :: MIDX, MIDY, MIDZ
+  integer :: ENDX, ENDY, ENDZ
+
+  ! mid-point index
+  MIDX = (NGLLX-1)/2
+  MIDY = (NGLLY-1)/2
+  MIDZ = (NGLLZ-1)/2
+  ! end-point index
+  ENDX = NGLLX - 1
+  ENDY = NGLLY - 1
+  ENDZ = NGLLZ - 1
+
   ! corner nodes
-  iax(1) = 0; iay(1) = 0; iaz(1) = 0
-  iax(2) = 2; iay(2) = 0; iaz(2) = 0
-  iax(3) = 2; iay(3) = 2; iaz(3) = 0
-  iax(4) = 0; iay(4) = 2; iaz(4) = 0
-  iax(5) = 0; iay(5) = 0; iaz(5) = 2
-  iax(6) = 2; iay(6) = 0; iaz(6) = 2
-  iax(7) = 2; iay(7) = 2; iaz(7) = 2
-  iax(8) = 0; iay(8) = 2; iaz(8) = 2
+  iax(1) = 0;    iay(1) = 0;    iaz(1) = 0
+  iax(2) = ENDX; iay(2) = 0;    iaz(2) = 0
+  iax(3) = ENDX; iay(3) = ENDY; iaz(3) = 0
+  iax(4) = 0;    iay(4) = ENDY; iaz(4) = 0
+  iax(5) = 0;    iay(5) = 0;    iaz(5) = ENDZ
+  iax(6) = ENDX; iay(6) = 0;    iaz(6) = ENDZ
+  iax(7) = ENDX; iay(7) = ENDY; iaz(7) = ENDZ
+  iax(8) = 0;    iay(8) = ENDY; iaz(8) = ENDZ
 
   ! midside nodes (nodes located in the middle of an edge)
-  iax(9) = 1; iay(9) = 0; iaz(9) = 0
-  iax(10) = 2; iay(10) = 1; iaz(10) = 0
-  iax(11) = 1; iay(11) = 2; iaz(11) = 0
-  iax(12) = 0; iay(12) = 1; iaz(12) = 0
-  iax(13) = 0; iay(13) = 0; iaz(13) = 1
-  iax(14) = 2; iay(14) = 0; iaz(14) = 1
-  iax(15) = 2; iay(15) = 2; iaz(15) = 1
-  iax(16) = 0; iay(16) = 2; iaz(16) = 1
-  iax(17) = 1; iay(17) = 0; iaz(17) = 2
-  iax(18) = 2; iay(18) = 1; iaz(18) = 2
-  iax(19) = 1; iay(19) = 2; iaz(19) = 2
-  iax(20) = 0; iay(20) = 1; iaz(20) = 2
+  iax( 9) = MIDX; iay( 9) = 0;    iaz( 9) = 0
+  iax(10) = ENDX; iay(10) = MIDY; iaz(10) = 0
+  iax(11) = MIDX; iay(11) = ENDY; iaz(11) = 0
+  iax(12) = 0;    iay(12) = MIDY; iaz(12) = 0
+  iax(13) = 0;    iay(13) = 0;    iaz(13) = MIDZ
+  iax(14) = ENDX; iay(14) = 0;    iaz(14) = MIDZ
+  iax(15) = ENDX; iay(15) = ENDY; iaz(15) = MIDZ
+  iax(16) = 0;    iay(16) = ENDY; iaz(16) = MIDZ
+  iax(17) = MIDX; iay(17) = 0;    iaz(17) = ENDZ
+  iax(18) = ENDX; iay(18) = MIDY; iaz(18) = ENDZ
+  iax(19) = MIDX; iay(19) = ENDY; iaz(19) = ENDZ
+  iax(20) = 0;    iay(20) = MIDY; iaz(20) = ENDZ
 
   ! side center nodes (nodes located in the middle of a face)
-  iax(21) = 1; iay(21) = 1; iaz(21) = 0
-  iax(22) = 1; iay(22) = 0; iaz(22) = 1
-  iax(23) = 2; iay(23) = 1; iaz(23) = 1
-  iax(24) = 1; iay(24) = 2; iaz(24) = 1
-  iax(25) = 0; iay(25) = 1; iaz(25) = 1
-  iax(26) = 1; iay(26) = 1; iaz(26) = 2
+  iax(21) = MIDX; iay(21) = MIDY; iaz(21) = 0
+  iax(22) = MIDX; iay(22) = 0;    iaz(22) = MIDZ
+  iax(23) = ENDX; iay(23) = MIDY; iaz(23) = MIDZ
+  iax(24) = MIDX; iay(24) = ENDY; iaz(24) = MIDZ
+  iax(25) = 0;    iay(25) = MIDY; iaz(25) = MIDZ
+  iax(26) = MIDX; iay(26) = MIDY; iaz(26) = ENDZ
 
   ! center node (barycenter of the eight corners)
-  iax(27) = 1; iay(27) = 1; iaz(27) = 1
+  iax(27) = MIDX; iay(27) = MIDY; iaz(27) = MIDZ
 
 end subroutine anchor_index_hex27

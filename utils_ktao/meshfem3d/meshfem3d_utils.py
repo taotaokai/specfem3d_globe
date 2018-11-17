@@ -211,16 +211,16 @@ def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1):
   element_size = np.zeros(nspec)
   for ispec in range(nspec):
     # distance between gll points and the central gll point 
-    iglob1 = ibool[:,:,:,ispec]-1
-    dist = np.sum((xyz_elem[:,ispec].reshape(3,1,1,1) - xyz_glob[:,iglob1])**2
-        , axis=0)**0.5
+    iglob1 = ibool[:,:,:,ispec].ravel() - 1
+    dist = np.sum((xyz_elem[:,ispec:ispec+1] - xyz_glob[:,iglob1])**2, axis=0)**0.5
     element_size[ispec] = np.max(dist)
 
   # get neighbouring elements around each target location xyz
   neighbor_lists = tree_xyz.query_ball_tree(tree_elem, 1.2*max(element_size))
 
   #--- loop over each point, get the location info 
-  iax, iay, iaz = anchor_index_hex27()
+  iax, iay, iaz = anchor_index_hex27(NGLLX,NGLLY,NGLLZ)
+
   #xigll, wx = zwgljd(NGLLX,GAUSSALPHA,GAUSSBETA)
   #yigll, wy = zwgljd(NGLLY,GAUSSALPHA,GAUSSBETA)
   #zigll, wz = zwgljd(NGLLZ,GAUSSALPHA,GAUSSBETA)
@@ -233,25 +233,26 @@ def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1):
   misloc_all[:] = np.inf
   misratio_all = np.zeros(npoints) 
 
-  for ipoint in range(npoints):
-    #loc_data[ipoint] = {}
-    #loc_data[ipoint]['misloc'] = np.inf
-    #loc_data[ipoint]['is_inside'] = False
-    if not neighbor_lists[ipoint]: continue
+  ipoint_select = [ ipoint for ipoint in range(npoints) if neighbor_lists[ipoint] ]
+  #for ipoint in range(npoints):
+  for ipoint in ipoint_select:
+    #if not neighbor_lists[ipoint]: continue
     # get neibouring elements
-    ispec_list = np.array(neighbor_lists[ipoint]) # covnert list to numpy array to have index slicing
+    ispec_list = np.array(neighbor_lists[ipoint]) # convert list to numpy array to have index slicing
     # get ratio between distance to center and element size 
-    dist_ratio = np.sum((xyz_elem[:,ispec_list] - xyz[:,ipoint:ipoint+1])**2, axis=0)**0.5/element_size[ispec_list]
+    dist_ratio = np.sum((xyz_elem[:,ispec_list] - xyz[:,ipoint:ipoint+1])**2, axis=0)**0.5 / element_size[ispec_list]
     # remove elements too far away from target point
     idx = dist_ratio < 1.1
+    # skip elements that does NOT have the same idoubling as xyz
+    if idoubling[ipoint] != -1:
+      idx = idx & (source_idoubling[ispec_list] == idoubling[ipoint])
     ispec_list = ispec_list[idx]
     dist_ratio = dist_ratio[idx]
     # loop each element, start from the closest element
     for ispec in ispec_list[np.argsort(dist_ratio)]:
-      # skip elements that does NOT have the same idoubling as xyz
-      if (idoubling[ipoint] != -1 and
-          idoubling[ipoint] != source_idoubling[ispec]):
-        continue
+      #if (idoubling[ipoint] != -1 and
+      #    idoubling[ipoint] != source_idoubling[ispec]):
+      #  continue
       iglob = ibool[iax,iay,iaz,ispec] - 1
       xyz_anchor = xyz_glob[:,iglob]
       uvw, misloc, is_inside = xyz2cube_bounded_hex27(xyz_anchor, xyz[:,ipoint])
