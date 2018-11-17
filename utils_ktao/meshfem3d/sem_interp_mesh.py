@@ -35,7 +35,8 @@ out_dir = str(sys.argv[7])
 # merge regions
 #idoubling_merge = []
 #In SETibet case, since I use a velocity gradient across Moho and no mesh boundary at Moho, treat IFLAG_CRUST,IFLAG_80_MOHO,IFLAG_220_80 as the same region
-idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80, IFLAG_670_220]
+#idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80, IFLAG_670_220]
+idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80]
 
 # model names
 model_names = model_names.split(',')
@@ -66,7 +67,9 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
   xyz_glob_target = mesh_data_target['xyz_glob']
 
   # merge regions if required
-  idx_merge = np.searchsorted(idoubling_target, idoubling_merge)
+  idx_merge = np.zeros(nspec_target, dtype='bool')
+  for ii in idoubling_merge:
+    idx_merge = idx_merge | (idoubling_target == ii)
   idoubling_target[idx_merge] = IFLAG_DUMMY
 
   # xyz points to locate
@@ -95,7 +98,9 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
 
     # merge regions if required
     idoubling_source = mesh_data_source['idoubling']
-    idx_merge = np.searchsorted(idoubling_source, idoubling_merge)
+    idx_merge = np.zeros(mesh_data_source['nspec'], dtype='bool')
+    for ii in idoubling_merge:
+      idx_merge = idx_merge | (idoubling_source == ii)
     idoubling_source[idx_merge] = IFLAG_DUMMY
 
     # read in source model
@@ -106,7 +111,8 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
       model_file = "%s/proc%06d_reg1_%s.bin"%(model_dir_source, iproc_source, model_tag)
       with FortranFile(model_file, 'r') as f:
         # note: must use fortran convention when reshape to N-D array!!!
-        source_model_gll[imodel,:,:,:,:] = np.reshape(f.read_ints(dtype='f4'), gll_dims, order='F')
+        source_model_gll[imodel,:,:,:,:] = np.reshape(f.read_ints(dtype='f4'), 
+            gll_dims, order='F')
 
     # locate target points
     status_all, ispec_all, uvw_all, misloc_all, misratio_all = sem_locate_points_hex27(mesh_data_source, xyz_target, idoubling_ext)
@@ -117,6 +123,11 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
     #NOTE avoid too many for loops reduces computation time
     #   (not located inside an element before) and (located for the current mesh slice) and ( smaller misloc or located inside an element this mesh slice )
     ii = (status_gll_target != 1) & (status_all != -1) & ( (misloc_all < misloc_gll_target) | (status_all == 1) )
+
+    #FIXME replace with index slicing
+    # status_gll_target[i] = status_all[ii]
+    # ...
+    # modify lagrange_poly(xigll,x) to handle x(n) 
     ipoint_select = np.nonzero(ii)[0]
 
     #for ipoint in range(npoints):
@@ -158,3 +169,16 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
     model_file = "%s/proc%06d_reg1_%s.bin"%(out_dir, iproc_target, model_tag)
     with FortranFile(model_file, 'w') as f:
       f.write_record(np.array(np.ravel(model_gll_target[imodel,:,:,:,:], order='F'), dtype='f4'))
+
+# # save misloc, status
+# model_file = "%s/proc%06d_reg1_status.bin"%(out_dir, iproc_target)
+# with FortranFile(model_file, 'w') as f:
+#   f.write_record(np.array(np.ravel(status_gll_target, order='F'), dtype='f4'))
+
+# model_file = "%s/proc%06d_reg1_misloc.bin"%(out_dir, iproc_target)
+# with FortranFile(model_file, 'w') as f:
+#   f.write_record(np.array(np.ravel(misloc_gll_target, order='F'), dtype='f4'))
+
+# model_file = "%s/proc%06d_reg1_misratio.bin"%(out_dir, iproc_target)
+# with FortranFile(model_file, 'w') as f:
+#   f.write_record(np.array(np.ravel(misratio_gll_target, order='F'), dtype='f4'))

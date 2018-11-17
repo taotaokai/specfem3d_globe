@@ -1,1 +1,0 @@
-/home1/03244/ktao/seiscode/sem_utils/src/module/sem_mesh_mod.f90

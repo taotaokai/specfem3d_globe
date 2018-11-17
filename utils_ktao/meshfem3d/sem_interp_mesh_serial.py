@@ -9,9 +9,7 @@ import time
 import numpy as np
 from scipy.io import FortranFile
 
-#from mpi4py import MPI
 
-#from meshfem3d_constants import NGLLX,NGLLY,NGLLZ
 from meshfem3d_constants import NGLLX,NGLLY,NGLLZ,GAUSSALPHA,GAUSSBETA
 from meshfem3d_constants import IFLAG_CRUST,IFLAG_80_MOHO,IFLAG_220_80,IFLAG_670_220,IFLAG_DUMMY
 from gll_library import zwgljd, lagrange_poly
@@ -44,9 +42,6 @@ model_names = model_names.split(',')
 nmodel = len(model_names)
 
 #====== interpolate
-#comm = MPI.COMM_WORLD
-#mpi_size = comm.Get_size()
-#mpi_rank = comm.Get_rank()
 
 # GLL
 xigll, wx = zwgljd(NGLLX,GAUSSALPHA,GAUSSBETA)
@@ -75,10 +70,12 @@ for iproc_target in [0,]:
     idx_merge = idx_merge | (idoubling_target == ii)
   idoubling_target[idx_merge] = IFLAG_DUMMY
 
+  # xyz points to locate
   xyz_target = xyz_glob_target[:,ibool_target.ravel()-1]
   idoubling_ext = np.zeros(ibool_target.shape,dtype='int') + idoubling_target
   idoubling_ext = idoubling_ext.ravel()
 
+  # array of final results
   npoints = xyz_target.shape[1]
   status_gll_target = np.zeros(npoints,dtype='int')
   status_gll_target[:] = -1
