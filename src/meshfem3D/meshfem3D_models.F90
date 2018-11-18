@@ -1030,7 +1030,7 @@
 
   implicit none
 
-  double precision :: vpv,vph,vsv,vsh,rho,dvp,eta_aniso
+  double precision :: vpv,vph,vsv,vsh,rho,dvp,eta_aniso,qmu
   integer :: iregion_code,ispec,i,j,k
 
   ! local parameters
