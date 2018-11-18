@@ -172,15 +172,16 @@
                               elem_in_crust,moho)
         endif
 
-        ! overwrites with tomographic model values (from iteration step) here, given at all GLL points
-        call meshfem3D_models_impose_val(vpv,vph,vsv,vsh,rho,dvp,eta_aniso,iregion_code,ispec,i,j,k)
+        !> ktao: move after attenuation defined
+        !! overwrites with tomographic model values (from iteration step) here, given at all GLL points
+        !call meshfem3D_models_impose_val(vpv,vph,vsv,vsh,rho,dvp,eta_aniso,iregion_code,ispec,i,j,k)
 
-        ! checks vpv: if close to zero then there is probably an error
-        if (vpv < TINYVAL) then
-          print *,'Error vpv: ',vpv,' vph:',vph,' vsv: ',vsv,' vsh: ',vsh,' rho:',rho
-          print *,'radius:',r*R_EARTH_KM
-          call exit_mpi(myrank,'Error get_model values')
-        endif
+        !! checks vpv: if close to zero then there is probably an error
+        !if (vpv < TINYVAL) then
+        !  print *,'Error vpv: ',vpv,' vph:',vph,' vsv: ',vsv,' vsh: ',vsh,' rho:',rho
+        !  print *,'radius:',r*R_EARTH_KM
+        !  call exit_mpi(myrank,'Error get_model values')
+        !endif
 
         !> Hejun, New attenuation assignment
         ! Define 3D and 1D attenuation after Moho stretch
@@ -191,6 +192,17 @@
           call meshfem3D_models_getatten_val(idoubling,xmesh,ymesh,zmesh,r_prem, &
                                              tau_e,tau_s,T_c_source, &
                                              moho,Qmu,Qkappa,elem_in_crust)
+
+        !> ktao: add qmu
+        ! overwrites with tomographic model values (from iteration step) here, given at all GLL points
+        call meshfem3D_models_impose_val(vpv,vph,vsv,vsh,rho,dvp,eta_aniso,qmu,iregion_code,ispec,i,j,k)
+
+        ! checks vpv: if close to zero then there is probably an error
+        if (vpv < TINYVAL) then
+          print *,'Error vpv: ',vpv,' vph:',vph,' vsv: ',vsv,' vsh: ',vsh,' rho:',rho
+          print *,'radius:',r*R_EARTH_KM
+          call exit_mpi(myrank,'Error get_model values')
+        endif
 
 ! define elastic parameters in the model
 

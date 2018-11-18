@@ -117,6 +117,8 @@
       vsh_new,vph_new,eta_new
     logical :: MODEL_GLL
     logical,dimension(3) :: dummy_pad ! padding 3 bytes to align the structure
+    !> ktao: add qmu_new
+    real(kind=CUSTOM_REAL),dimension(:,:,:,:),allocatable :: qmu_new
   end type model_gll_variables
   type (model_gll_variables) MGLL_V
 

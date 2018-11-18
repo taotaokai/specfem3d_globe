@@ -58,7 +58,8 @@
   if (.not. TRANSVERSE_ISOTROPY) then
     ! isotropic model
     allocate( MGLL_V%vp_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), &
-              MGLL_V%vs_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), stat=ier)
+              MGLL_V%vs_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), &
+              MGLL_V%qmu_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), stat=ier) !> ktao: add qmu
     if (ier /= 0 ) call exit_MPI(myrank,'Error allocating vp_new,.. arrays')
   else
     ! transverse isotropic model
@@ -66,7 +67,8 @@
               MGLL_V%vph_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), &
               MGLL_V%vsv_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), &
               MGLL_V%vsh_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), &
-              MGLL_V%eta_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), stat=ier)
+              MGLL_V%eta_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), &
+              MGLL_V%qmu_new(NGLLX,NGLLY,NGLLZ,NSPEC(IREGION_CRUST_MANTLE)), stat=ier) !> ktao: add qmu
     if (ier /= 0 ) call exit_MPI(myrank,'Error allocating vpv_new,.. arrays')
 
   endif
@@ -170,6 +172,17 @@
     call min_all_cr(minvalue, min_all)
     if (myrank == 0) then
       write(IMAIN,*) '  eta new min/max: ',min_all,max_all
+      write(IMAIN,*)
+      call flush_IMAIN()
+    endif
+
+    !> ktao: add qmu
+    maxvalue = maxval( MGLL_V%qmu_new )
+    minvalue = minval( MGLL_V%qmu_new )
+    call max_all_cr(maxvalue, max_all)
+    call min_all_cr(minvalue, min_all)
+    if (myrank == 0) then
+      write(IMAIN,*) '  qmu new min/max: ',min_all,max_all
       write(IMAIN,*)
       call flush_IMAIN()
     endif
@@ -315,6 +328,16 @@
     call exit_MPI(myrank,'Error model GLL')
   endif
   read(IIN) MGLL_V%rho_new(:,:,:,1:nspec(IREGION_CRUST_MANTLE))
+  close(IIN)
+
+  !> ktao: add qmu mesh
+  open(unit=IIN,file=prname(1:len_trim(prname))//'qmu.bin', &
+       status='old',action='read',form='unformatted',iostat=ier)
+  if (ier /= 0) then
+    print *,'Error opening: ',prname(1:len_trim(prname))//'qmu.bin'
+    call exit_MPI(myrank,'Error model GLL')
+  endif
+  read(IIN) MGLL_V%qmu_new(:,:,:,1:nspec(IREGION_CRUST_MANTLE))
   close(IIN)
 
   end subroutine read_gll_model

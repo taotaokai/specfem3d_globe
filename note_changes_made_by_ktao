@@ -43,6 +43,15 @@ replace src/meshfem3D/model_1dref.f90 with src/meshfem3D/customized_1d_model/FWE
     topo(lon,lat) lon:[-180,180], lat:[-90,90]
 
 #-----------------------------------------------
+# modle=GLL also reads in qmu
+#-----------------------------------------------
+[2018-11-18]
+  - src/meshfem3D/meshfem3D_par.f90: line 121
+  - src/meshfem3D/get_model.F90: line 175-205
+  - src/meshfem3D/meshfem3D_models.F90: line 1023
+  - src/meshfem3D/model_gll.f90
+
+#-----------------------------------------------
 # src/shared/auto_ner.f90
 #-----------------------------------------------
 [2018-11-07]

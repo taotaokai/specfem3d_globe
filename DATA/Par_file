@@ -25,7 +25,7 @@ NEX_XI                          = 224
 NEX_ETA                         = 224
 
 # number of MPI processors along the two sides of the first chunk
-NPROC_XI                        = 14
+NPROC_XI                        = 28
 NPROC_ETA                       = 14
 
 # KTAO: user defined time step (ignore if <=0)
@@ -72,7 +72,7 @@ RECORD_LENGTH_IN_MINUTES        = 10.d0
 # use one (and only one) of the two flags below. UNDO_ATTENUATION is much better (it is exact)
 # but requires a significant amount of disk space for temporary storage.
 PARTIAL_PHYS_DISPERSION_ONLY    = .false.
-UNDO_ATTENUATION                = .false.
+UNDO_ATTENUATION                = .true.
 # How much memory (in GB) is installed on your machine per CPU core (only used for UNDO_ATTENUATION, can be ignored otherwise)
 #         (or per GPU card or per INTEL MIC Phi board)
 #   Beware, this value MUST be given per core, i.e. per MPI thread, i.e. per MPI rank, NOT per node.
@@ -98,7 +98,7 @@ MEMORY_INSTALLED_PER_CORE_IN_GB = 1.4d0
 #    values above, say 90% or 92%, can be OK on some systems but can make the adjoint code run out of memory
 #    on other systems, depending on how much memory per node the GNU/Linux system needs for itself; thus you can try
 #    a higher value and if the adjoint crashes then try again with a lower value)
-PERCENT_OF_MEM_TO_USE_PER_CORE  = 85.d0
+PERCENT_OF_MEM_TO_USE_PER_CORE  = 92.d0
 
 # three mass matrices instead of one are needed to handle rotation very accurately;
 # otherwise rotation is handled slightly less accurately (but still reasonably well);
@@ -202,7 +202,7 @@ NTSTEP_BETWEEN_READ_ADJSRC      = 1000
 # value field must be after 15 spaces
 # unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
 # source time function: stf(t;t0,tau) = erf((t-t0)/tau)
-USE_ECEF_CMTSOLUTION            = .false.
+USE_ECEF_CMTSOLUTION            = .true.
 
 # use a (tilted) FORCESOLUTION force point source (or several) instead of a CMTSOLUTION moment-tensor source.
 # # This can be useful e.g. for asteroid simulations

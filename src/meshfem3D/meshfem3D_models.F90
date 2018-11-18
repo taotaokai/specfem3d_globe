@@ -1020,7 +1020,9 @@
 !
 
 
-  subroutine meshfem3D_models_impose_val(vpv,vph,vsv,vsh,rho,dvp,eta_aniso,iregion_code,ispec,i,j,k)
+  !> ktao: add qmu
+  !subroutine meshfem3D_models_impose_val(vpv,vph,vsv,vsh,rho,dvp,eta_aniso,iregion_code,ispec,i,j,k)
+  subroutine meshfem3D_models_impose_val(vpv,vph,vsv,vsh,rho,dvp,eta_aniso,qmu,iregion_code,ispec,i,j,k)
 
 ! overwrites values with updated model values (from iteration step) here, given at all GLL points
 
@@ -1076,6 +1078,9 @@
     endif
     ! no mantle vp perturbation
     dvp = 0.0d0
+
+    !> ktao: 
+    qmu = dble( MGLL_V%qmu_new(i,j,k,ispec) )
 
   endif ! MODEL_GLL
 
