@@ -668,36 +668,41 @@
 !------------------------------------------------------------------------
 !
 
-subroutine lagrange_poly(ngll, xgll, x, lagrange)
+subroutine lagrange_poly(ngll, xgll, nx, x, lagrange)
 
 !-get lagrange interpolation coefficients: L_i(x)
 !
 !-input
 ! ngll: number of colocation points
 ! xgll(ngll): coordinates of colocation points
-! x: coordinate of interpolating point
+! nx: number of interpolating points
+! x(nx): coordinates of interpolating points
 !
 !-output
-! lagrange(ngll): interpolation coeff.
+! lagrange(ngll,nx): interpolation coeff.
 
   integer, intent(in) :: ngll
 ! integer intent(hide),depend(xgll) :: ngll = shape(xgll)
   real(kind=8), intent(in) :: xgll(ngll)
-  real(kind=8), intent(in) :: x
-  real(kind=8), intent(out) :: lagrange(ngll)
+  integer, intent(in) :: nx
+! integer intent(hide),depend(x) :: nx = shape(x)
+  real(kind=8), intent(in) :: x(nx)
+  real(kind=8), intent(out) :: lagrange(ngll,nx)
 
   ! local variables
-  integer :: i
+  integer :: igll, ix
   integer, dimension(ngll) :: ind
   real(kind=8), dimension(ngll) :: xx, yy
 
-  ! lagrange(ngll) 
-  ind = (/(i, i=1,ngll)/)
-  xx = x - xgll
+  ind = (/(igll, igll=1,ngll)/)
 
-  do i = 1, ngll
-    yy = xgll(i) - xgll
-    lagrange(i) = product(xx/yy, mask=(ind/=i))
+  do ix = 1, nx
+    ! lagrange(ngll,ix) 
+    xx = x(ix) - xgll
+    do igll = 1, ngll
+      yy = xgll(igll) - xgll
+      lagrange(igll,ix) = product(xx/yy, mask=(ind/=igll))
+    end do
   end do
 
 end subroutine lagrange_poly
