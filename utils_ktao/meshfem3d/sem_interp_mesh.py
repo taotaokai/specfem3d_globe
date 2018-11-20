@@ -89,8 +89,8 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
   # loop over each slice of source SEM mesh
   for iproc_source in range(nproc_source):
 
-    #print("iproc_target / iproc_source ", iproc_target, iproc_source)
-    #sys.stdout.flush()
+    print("iproc_target / iproc_source ", iproc_target, iproc_source)
+    sys.stdout.flush()
 
     # read in source SEM mesh
     mesh_file = "%s/proc%06d_reg1_solver_data.bin"%(mesh_dir_source, iproc_source)
