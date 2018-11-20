@@ -124,7 +124,7 @@ for iproc_target in [0,]:
     # merge interpolation results of mesh slice (iproc_souce) into 
     # the final results based on misloc and status  
 
-    # index selection for merge: (not located inside an element before) and (located for the current mesh slice) and ( smaller misloc or located inside an element this mesh slice )
+    # index selection for merge: (not located inside an element yet) and (located for the current mesh slice) and ( smaller misloc or located inside an element in this mesh slice )
     ii = (status_gll_target != 1) & (status_all != -1) & ( (misloc_all < misloc_gll_target) | (status_all == 1) )
 
     status_gll_target[ii] = status_all[ii]

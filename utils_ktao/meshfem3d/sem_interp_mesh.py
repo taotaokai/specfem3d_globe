@@ -127,39 +127,42 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
     misloc_gll_target[ii] = misloc_all[ii]
     misratio_gll_target[ii] = misratio_all[ii]
 
-    hlagx = lagrange_poly(xigll, uvw_all[0,ii]).reshape((NGLLX,1,1,-1))
-    hlagy = lagrange_poly(yigll, uvw_all[1,ii]).reshape((1,NGLLY,1,-1))
-    hlagz = lagrange_poly(zigll, uvw_all[2,ii]).reshape((1,1,NGLLZ,-1))
-    model_gll_target[:,ii] = np.sum(source_model_gll[:,:,:,:,ispec_all[ii]]*hlagx*hlagy*hlagz, axis=(1,2,3))
+    #hlagx = lagrange_poly(xigll, uvw_all[0,ii]).reshape((NGLLX,1,1,-1))
+    #hlagy = lagrange_poly(yigll, uvw_all[1,ii]).reshape((1,NGLLY,1,-1))
+    #hlagz = lagrange_poly(zigll, uvw_all[2,ii]).reshape((1,1,NGLLZ,-1))
+    #model_gll_target[:,ii] = np.sum(source_model_gll[:,:,:,:,ispec_all[ii]]*hlagx*hlagy*hlagz, axis=(1,2,3))
 
     #FIXME replace with index slicing
     # status_gll_target[i] = status_all[ii]
     # ...
     # modify lagrange_poly(xigll,x) to handle x(n) 
     # ipoint_select = np.nonzero(ii)[0]
+    #DONE
 
     #NOTE avoid too many for loops reduces computation time
     ##for ipoint in range(npoints):
-    #for ipoint in ipoint_select:
-    #  #if (status_all[ipoint]==1 and status_gll_target[ipoint]==1):
-    #  #  warnings.warn("point is located inside more than one element", 
-    #  #      xyz_target[:,ipoint])
-    #  # nothing to do if the point is already located inside an element
-    #  # this means if multiple elements overlap (should not occur) we only take the first found element where the point locates inside
-    #  #if status_gll_target[ipoint] == 1:
-    #  #  continue
-    #  #if (misloc_all[ipoint] > misloc_gll_target[ipoint]
-    #  #    and status_all[ipoint]==1):
-    #  #  warnings.warn("point located inside an element but with a larger misloc(loc/previous)", misloc_all['ipoint'], misloc_gll_target[ipoint])
-    #  #if (misloc_all[ipoint] < misloc_gll_target[ipoint] 
-    #  #    or status_all[ipoint]==1):
-    #  status_gll_target[ipoint] = status_all[ipoint]
-    #  misloc_gll_target[ipoint] = misloc_all[ipoint]
-    #  misratio_gll_target[ipoint] = misratio_all[ipoint]
-    #  hlagx = lagrange_poly(xigll, uvw_all[0,ipoint])
-    #  hlagy = lagrange_poly(yigll, uvw_all[1,ipoint])
-    #  hlagz = lagrange_poly(zigll, uvw_all[2,ipoint])
-    #  model_gll_target[:,ipoint] = np.sum(source_model_gll[:,:,:,:,ispec_all[ipoint]]*hlagx[:,None,None]*hlagy[None,:,None]*hlagz[None,None,:], axis=(1,2,3))
+    # slower than index slicing but use less memory 
+    ipoint_select = np.nonzero(ii)[0]
+    for ipoint in ipoint_select:
+      #if (status_all[ipoint]==1 and status_gll_target[ipoint]==1):
+      #  warnings.warn("point is located inside more than one element", 
+      #      xyz_target[:,ipoint])
+      # nothing to do if the point is already located inside an element
+      # this means if multiple elements overlap (should not occur) we only take the first found element where the point locates inside
+      #if status_gll_target[ipoint] == 1:
+      #  continue
+      #if (misloc_all[ipoint] > misloc_gll_target[ipoint]
+      #    and status_all[ipoint]==1):
+      #  warnings.warn("point located inside an element but with a larger misloc(loc/previous)", misloc_all['ipoint'], misloc_gll_target[ipoint])
+      #if (misloc_all[ipoint] < misloc_gll_target[ipoint] 
+      #    or status_all[ipoint]==1):
+      #status_gll_target[ipoint] = status_all[ipoint]
+      #misloc_gll_target[ipoint] = misloc_all[ipoint]
+      #misratio_gll_target[ipoint] = misratio_all[ipoint]
+      hlagx = lagrange_poly(xigll, uvw_all[0,ipoint])[:,0]
+      hlagy = lagrange_poly(yigll, uvw_all[1,ipoint])[:,0]
+      hlagz = lagrange_poly(zigll, uvw_all[2,ipoint])[:,0]
+      model_gll_target[:,ipoint] = np.sum(source_model_gll[:,:,:,:,ispec_all[ipoint]]*hlagx[:,None,None]*hlagy[None,:,None]*hlagz[None,None,:], axis=(1,2,3))
         
   #end for loop over each slice of source SEM mesh
 
@@ -178,14 +181,14 @@ for iproc_target in range(mpi_rank,nproc_target,mpi_size):
     with FortranFile(model_file, 'w') as f:
       f.write_record(np.array(np.ravel(model_gll_target[imodel,:,:,:,:], order='F'), dtype='f4'))
 
-# # save misloc, status
-# model_file = "%s/proc%06d_reg1_status.bin"%(out_dir, iproc_target)
-# with FortranFile(model_file, 'w') as f:
-#   f.write_record(np.array(np.ravel(status_gll_target, order='F'), dtype='f4'))
+  # save misloc, status
+  model_file = "%s/proc%06d_reg1_status.bin"%(out_dir, iproc_target)
+  with FortranFile(model_file, 'w') as f:
+    f.write_record(np.array(np.ravel(status_gll_target, order='F'), dtype='f4'))
 
-# model_file = "%s/proc%06d_reg1_misloc.bin"%(out_dir, iproc_target)
-# with FortranFile(model_file, 'w') as f:
-#   f.write_record(np.array(np.ravel(misloc_gll_target, order='F'), dtype='f4'))
+  model_file = "%s/proc%06d_reg1_misloc.bin"%(out_dir, iproc_target)
+  with FortranFile(model_file, 'w') as f:
+    f.write_record(np.array(np.ravel(misloc_gll_target, order='F'), dtype='f4'))
 
 # model_file = "%s/proc%06d_reg1_misratio.bin"%(out_dir, iproc_target)
 # with FortranFile(model_file, 'w') as f:
