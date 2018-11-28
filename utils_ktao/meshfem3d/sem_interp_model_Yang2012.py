@@ -35,7 +35,7 @@ GPS_ELLPS = 'WGS84'
 ecef = pyproj.Proj(proj='geocent', ellps=GPS_ELLPS)
 lla = pyproj.Proj(proj='latlong', ellps=GPS_ELLPS)
 
-# 3-D grid
+# 3-D grid of input 1-D profiles
 lon_grid = np.arange(90,112)
 lat_grid = np.arange(22,37)
 depth_grid = np.hstack((np.arange(-1,15,0.1), np.arange(15,149.8,0.2)))
@@ -84,7 +84,7 @@ for ilon in range(nlon):
       model_grid3[ilon,ilat,:,:] = np.nan
 
 #====== interpolate
-for iproc_target in [196,]:
+for iproc_target in range(nproc_target):
 
   print("====== iproc_target ", iproc_target)
   sys.stdout.flush()

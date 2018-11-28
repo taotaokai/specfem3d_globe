@@ -87,11 +87,13 @@ def sem_mesh_read(mesh_file):
 
   # reshape
   for field_name in ['ibool', 'DxiDx','DxiDy','DxiDz','DetaDx','DetaDy','DetaDz','DgammaDx','DgammaDy','DgammaDz',]:
-    mesh_data[field_name] = np.reshape(mesh_data[field_name], gll_dims, order='F')
     #NB: binary files are written in Fortran column-major convention !!!
+    #NB: reshape 1-D array to matrix by Fortran convention, and 
+    #NB: also convert to a contiguous array in memory, in case of direct memory copy or MPI transfer
+    mesh_data[field_name] = np.ascontiguousarray(np.reshape(mesh_data[field_name], gll_dims, order='F'))
 
   # jacobian: det( d(x,y,z)/d(xi,eta,gamma))
-  jacobian = 1.0 / ( 
+  mesh_data['jacobian'] = 1.0 / ( 
       mesh_data['DxiDx']*(mesh_data['DetaDy']*mesh_data['DgammaDz']-mesh_data['DetaDz']*mesh_data['DgammaDy'])
       -mesh_data['DxiDy']*(mesh_data['DetaDx']*mesh_data['DgammaDz']-mesh_data['DetaDz']*mesh_data['DgammaDx'])
       +mesh_data['DxiDz']*(mesh_data['DetaDx']*mesh_data['DgammaDy']-mesh_data['DetaDy']*mesh_data['DgammaDx'])
@@ -114,13 +116,15 @@ def sem_mesh_read(mesh_file):
   z = mesh_data['z'].reshape((1,nglob))
   mesh_data['xyz_glob'] = np.r_[x,y,z]
 
+  mesh_data['xyz_glob'] = np.ascontiguousarray(mesh_data['xyz_glob'])
+
   del mesh_data['x']
   del mesh_data['y']
   del mesh_data['z']
 
   # add xyz_elem
   iglob_elem = mesh_data['ibool'][MIDX,MIDY,MIDZ,:] - 1
-  mesh_data['xyz_elem'] = mesh_data['xyz_glob'][:,iglob_elem]
+  mesh_data['xyz_elem'] = np.ascontiguousarray(mesh_data['xyz_glob'][:,iglob_elem])
 
   #FIXME bad idea due to 410 undulation. Need to modify the specfem code
   ## separate mesh layers across 410-km
@@ -165,7 +169,8 @@ def sem_mesh_get_vol_gll(mesh_data):
 
   #--- jacobian * gll_quad_weights
   #vol_gll = mesh_data['jacobian']*wgll_cube.reshape((NGLLX,NGLLY,NGLLZ,1))
-  vol_gll = mesh_data['jacobian'] * wx[NGLLX,None,None,None] * wy[None,NGLLY,None,None] * wz[None,None,NGLLZ,None]
+  #vol_gll = np.array(mesh_data['jacobian']*wx[:,None,None,None]*wy[None,:,None,None]*wz[None,None,:,None], dtype='float32')
+  vol_gll = mesh_data['jacobian'] * wx[:,None,None,None] * wy[None,:,None,None] * wz[None,None,:,None]
 
   return vol_gll
 

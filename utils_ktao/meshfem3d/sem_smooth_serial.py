@@ -10,16 +10,13 @@ import time
 
 import numpy as np
 from scipy.io import FortranFile
-from scipy import spatial
+from scipy.spatial import cKDTree
 
-from mpi4py import MPI
-
-import pyproj
+#from mpi4py import MPI
 
 from meshfem3d_utils import sem_mesh_read, sem_mesh_get_vol_gll
-from meshfem3d_constants import NGLLX,NGLLY,NGLLZ,MIDX,MIDY,MIDZ
+from meshfem3d_constants import *
 
-from gll_library import zwgljd
 from smooth_gauss_cap import smooth_gauss_cap 
 
 #====== parameters
@@ -30,42 +27,27 @@ model_dir = str(sys.argv[3]) # <model_dir>/proc******_<model_name>.bin
 model_names = str(sys.argv[4]) # comma delimited e.g. vp,vs,rho,qmu,qkappa
 
 sigma_dir = str(sys.argv[5]) # <sigma_dir>/proc******_<sigmaH/R_tag>.bin
-sigmaH_tag = str(sys.argv[6]) # tag for GLL files of sigmaH value (horizontal smoothing length)
-sigmaV_tag = str(sys.argv[7]) # tag for GLL files of sigmaV value (vertical/radial smoothing length) 
+sigmaH_tag = str(sys.argv[6]) # tag for GLL files of sigmaH value (horizontal smoothing length in KM)
+sigmaV_tag = str(sys.argv[7]) # tag for GLL files of sigmaV value (vertical/radial smoothing length in KM) 
 
 out_dir = str(sys.argv[8])
 
-#--- Gaussian smoothing kernel 
-#sigma_h = np.array([ float(x) for x in sigma_h.split(',') ])
-#sigma_r = np.array([ float(x) for x in sigma_r.split(',') ])
-#sigma2_h = sigma_h**2
-#sigma2_r = sigma_r**2
-#search_radius = 3.0*np.max(np.stack((sigma_h,sigma_r))) # search neighboring points
+#--- merge regions
+#idoubling_merge = []
+#In SETibet case, since I use a velocity gradient across Moho and no mesh boundary at Moho, treat IFLAG_CRUST,IFLAG_80_MOHO,IFLAG_220_80 as the same region
+#idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80, IFLAG_670_220]
+idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80]
 
 #--- model names
 model_names = model_names.split(',')
 nmodel = len(model_names)
 
 #====== smooth each target mesh slice
-comm = MPI.COMM_WORLD
-mpi_size = comm.Get_size()
-mpi_rank = comm.Get_rank()
-
-for iproc_target in range(mpi_rank,nproc,mpi_size):
+#for iproc_target in range(nproc):
+for iproc_target in [0,]:
 
   print("====== target proc# ", iproc_target)
   sys.stdout.flush()
-
-  #-- read in smoothing length
-  sigmaH_file = "%s/proc%06d_reg1_%s.bin"%(sigma_dir, iproc_target, sigmaH_tag)
-  with FortranFile(sigmaH_file, 'r') as f:
-    # note: must use fortran convention when reshape to N-D array!!!
-    sigmaH_gll_target = np.reshape(f.read_ints(dtype='f4'), gll_dims, order='F')
-
-  sigmaV_file = "%s/proc%06d_reg1_%s.bin"%(sigma_dir, iproc_target, sigmaV_tag)
-  with FortranFile(sigmaV_file, 'r') as f:
-    # note: must use fortran convention when reshape to N-D array!!!
-    sigmaV_gll_target = np.reshape(f.read_ints(dtype='f4'), gll_dims, order='F')
 
   #--- read in target SEM mesh
   mesh_file = "%s/proc%06d_reg1_solver_data.bin"%(mesh_dir, iproc_target)
@@ -73,17 +55,58 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
 
   nspec_target = mesh_target['nspec']
   gll_dims_target = mesh_target['gll_dims']
+  idoubling_target = mesh_target['idoubling']
+
+  # merge regions if required
+  idx_merge = np.zeros(nspec_target, dtype='bool')
+  for ii in idoubling_merge:
+    idx_merge = idx_merge | (idoubling_target == ii)
+  idoubling_target[idx_merge] = IFLAG_DUMMY
 
   xyz_elem_target = mesh_target['xyz_elem']
   xyz_glob_target = mesh_target['xyz_glob']
+  
+  #--- read in smoothing length
+  sigmaH_file = "%s/proc%06d_reg1_%s.bin"%(sigma_dir, iproc_target, sigmaH_tag)
+  with FortranFile(sigmaH_file, 'r') as f:
+    # note: must use fortran convention when reshape to N-D array!!!
+    sigmaH_gll_target = np.reshape(f.read_ints(dtype='f4'), gll_dims_target, order='F')
 
-  weight_model_gll_target = np.zeros((nmodel,)+gll_dims_target)
-  weight_gll_target = np.zeros((nmodel,)+gll_dims_target)
+  sigmaV_file = "%s/proc%06d_reg1_%s.bin"%(sigma_dir, iproc_target, sigmaV_tag)
+  with FortranFile(sigmaV_file, 'r') as f:
+    # note: must use fortran convention when reshape to N-D array!!!
+    sigmaV_gll_target = np.reshape(f.read_ints(dtype='f4'), gll_dims_target, order='F')
+
+  # non-dimensionalize as SEM
+  sigmaH_gll_target /= R_EARTH_KM
+  sigmaV_gll_target /= R_EARTH_KM
+
+  #--- determine element size (approximately)
+  max_gll_dist_target = np.zeros(nspec_target)
+  min_gll_dist_target = np.zeros(nspec_target)
+  for ispec in range(nspec_target):
+    # distance between gll points and the central gll point 
+    iglob1 = mesh_target['ibool'][:,:,:,ispec].ravel() - 1
+    xyz_gll = xyz_glob_target[:,iglob1]
+    dist2 = np.sum((xyz_gll[:,:,None] - xyz_gll[:,None,:])**2, axis=0)**0.5
+    np.fill_diagonal(dist2, np.nan)
+    #dist = np.sum((xyz_elem_target[:,ispec:ispec+1] - xyz_glob_target[:,iglob1])**2, axis=0)**0.5
+    max_gll_dist_target[ispec] = np.nanmax(dist2)
+    min_gll_dist_target[ispec] = np.nanmin(dist2)
+    # replace small sigma values with a fraction of minimum distance between gll points
+    # to eliminate the issue from diving zero in smooth_gauss_cap.f90
+    idx = sigmaH_gll_target[:,:,:,ispec] < 1.0e-4*min_gll_dist_target[ispec]
+    sigmaH_gll_target[idx,ispec] = 1.0e-4*min_gll_dist_target[ispec]
+    idx = sigmaV_gll_target[:,:,:,ispec] < 1.0e-4*min_gll_dist_target[ispec]
+    sigmaV_gll_target[idx,ispec] = 1.0e-4*min_gll_dist_target[ispec]
 
   #====== loop over each contribution mesh slice
+  weight_model_gll_target = np.zeros((nmodel,)+gll_dims_target)
+  weight_gll_target = np.zeros(gll_dims_target)
+
   for iproc_contrib in range(nproc):
 
-    print("target %d contrib %d"%(iproc_contrib, iproc_target))
+    print("target %d contrib %d"%(iproc_target, iproc_contrib))
     sys.stdout.flush()
     #start = time.clock()
 
@@ -93,6 +116,13 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
 
     nspec_contrib = mesh_contrib['nspec']
     gll_dims_contrib = mesh_contrib['gll_dims']
+    idoubling_contrib = mesh_target['idoubling']
+
+    # merge regions if required
+    idx_merge = np.zeros(nspec_contrib, dtype='bool')
+    for ii in idoubling_merge:
+      idx_merge = idx_merge | (idoubling_contrib == ii)
+    idoubling_contrib[idx_merge] = IFLAG_DUMMY
 
     xyz_elem_contrib = mesh_contrib['xyz_elem']
     xyz_glob_contrib = mesh_contrib['xyz_glob']
@@ -100,7 +130,6 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
     vol_gll_contrib = sem_mesh_get_vol_gll(mesh_contrib)
 
     #--- read model values of the contributing mesh slice
-    #print("... read model")
     model_gll_contrib = np.zeros((nmodel,)+gll_dims_contrib)
     for imodel in range(nmodel):
       model_tag = model_names[imodel]
@@ -109,27 +138,27 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
         # note: must use fortran convention when reshape to N-D array!!! 
         model_gll_contrib[imodel,:,:,:,:] = np.reshape(f.read_ints(dtype='f4'), gll_dims_contrib, order='F')
 
-    #--- prepare KDTree of contrib mesh
-    points_contrib = np.c_[xyz_elem_contrib[0,:].ravel(), xyz_elem_contrib[1,:].ravel(), xyz_elem_contrib[2,:].ravel()]
-    tree_contrib = spatial.cKDTree(points_contrib)
+    #--- select contrib elements based on distance and idoubling to narrow down the elements that need explicit calculation
+    dist_elem_target_contrib = np.sum((xyz_elem_target[:,:,None] - xyz_elem_contrib[:,None,:])**2, axis=0)**0.5
+
+    search_radius_target = 5*np.maximum(np.amax(sigmaH_gll_target, axis=(0,1,2)), np.amax(sigmaV_gll_target, axis=(0,1,2))) \
+                          + max_gll_dist_target
+
+    idx_dist = dist_elem_target_contrib < search_radius_target[:,None]
+
+    # only smooth over elements of the same idoubling
+    idx_idoubling = (idoubling_target[:,None] - idoubling_contrib[None,:]) == 0
+
+    idx_select = idx_dist & idx_idoubling
 
     #--- gather contributions for each target gll point
-    #ispec_target_list = [ ispec for ispec in range(nspec_target) if neighbor_lists[ispec] ]
-    for ispec_target in range(npsec_target):
+    ispec_target_list = [ ispec for ispec in range(nspec_target) if any(idx_select[ispec,:]) ]
+    print(len(ispec_target_list))
 
-      #--- get neighboring contrib elements
-      KDTree_search_radius = 5 * max(np.max(sigmaH_gll[:,:,:,ispec_target]), np.max(sigmaV_gll[:,:,:,ispec_target]))
-      ispec_contrib = tree_contrib.query_ball_point(xyz_elem_target[:,ispec_target], search_radius)
+    for ispec_target in ispec_target_list:
 
-      #skip mesh slice that is too faraway from the target mesh slice
-      if not ispec_contrib:
-        #print("... too faraway, skip this mesh slice")
-        continue
-
-      #print("\b\b\b\b\b\b\b\b\b%09d"%(ispec_target), end="")
-      #sys.stdout.write("\b\b\b\b\b\b\b\b\b%09d"%(ispec_target))
-      #print("... ispec_target: ", ispec_target)
-      #sys.stdout.flush()
+      print("... ispec_target / spec_contrib# ", ispec_target, np.sum(idx_select[ispec_target,:]))
+      sys.stdout.flush()
 
       iglob_target = mesh_target['ibool'][:,:,:,ispec_target].ravel() - 1
       ngll_target = len(iglob_target)
@@ -137,7 +166,8 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
       sigmaH = sigmaH_gll_target[:,:,:,ispec_target].ravel()
       sigmaV = sigmaV_gll_target[:,:,:,ispec_target].ravel()
 
-      iglob_contrib = mesh_contrib['ibool'][:,:,:,ispec_contrib].ravel() - 1
+      idx_contrib = idx_select[ispec_target,:]
+      iglob_contrib = mesh_contrib['ibool'][:,:,:,idx_contrib].ravel() - 1
       ngll_contrib = len(iglob_contrib)
       xyz_gll_contrib = xyz_glob_contrib[:,iglob_contrib]
 
@@ -147,8 +177,8 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
       #max_dist = np.max(np.sum((xyz_elem_contrib[:,ielem_contrib] - xyz_elem_target[:,ispec_target].reshape((3,1)))**2,axis=0)**0.5)
       #print('max_dist, search_radius: ', max_dist, search_radius)
 
-      model_gll = model_gll_contrib[:,:,:,:,ispec_contrib].reshape((nmodel,-1))
-      vol_gll = vol_gll_contrib[:,:,:,ispec_contrib].ravel()
+      model_gll = model_gll_contrib[:,:,:,:,idx_contrib].reshape((nmodel,-1))
+      vol_gll = vol_gll_contrib[:,:,:,idx_contrib].ravel()
 
       #print(ngll_target, ngll_contrib)
       #weight_model_val = np.empty((nmodel,NGLLX,NGLLY,NGLLZ))
@@ -156,6 +186,7 @@ for iproc_target in range(mpi_rank,nproc,mpi_size):
       weight_model_val, weight_val = smooth_gauss_cap(xyz_gll_target, xyz_gll_contrib, vol_gll, model_gll, sigmaH, sigmaV)
 
       weight_model_gll_target[:,:,:,:,ispec_target] += weight_model_val.reshape((nmodel,NGLLX,NGLLY,NGLLZ))
+
       weight_gll_target[:,:,:,ispec_target] += weight_val.reshape((NGLLX,NGLLY,NGLLZ))
 
       #r_gll_target = np.sum(xyz_gll_target**2, axis=0)**0.5
