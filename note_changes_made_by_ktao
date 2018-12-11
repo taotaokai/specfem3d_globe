@@ -89,6 +89,15 @@ src/shared/get_timestep_and_layers.f90:
 - src/specfem3D/get_event_info.f90:
 
 #-----------------------------------------------
+# change how to read FORCESOLUTION
+#-----------------------------------------------
+- src/specfem3D/get_cmt.f90: lines 102-163:
+    !-- ktao: get rid of reading lines of FORCESOLUTION at a specified position
+    !-- ktao: the comment string on first column should not have spaces or quoted 
+    !read(string(12:len_trim(string)),*) t_shift(isource)
+    read(string,*) dummy_string, t_shift(isource)
+
+#-----------------------------------------------
 # src/specfem3D/locate_receivers.f90: 
 #-----------------------------------------------
 - switch the network/station order in the STATION files to be "net sta lat lon alt depth"

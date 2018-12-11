@@ -52,7 +52,8 @@
   double precision :: scaleF
   double precision :: t_shift(NSOURCES)
   double precision :: length
-  character(len=7) :: dummy
+  !character(len=7) :: dummy
+  character(len=MAX_STRING_LEN) :: dummy_string !-- ktao: added
   character(len=MAX_STRING_LEN) :: string
   character(len=MAX_STRING_LEN) :: FORCESOLUTION,path_to_add
   integer :: ier
@@ -98,12 +99,18 @@
       read(IIN,"(a)") string
     enddo
 
+    !-- ktao: get rid of reading lines of FORCESOLUTION at a specified position
+    !-- ktao: the comment string on first column should not have spaces or quoted 
+    !-- ktao: FIXME it's better to put value field at the first column in CMT or FORCESOLUTION 
+
     ! read header with event information
-    read(string,"(a6,i4)") dummy,dummyval
+    !read(string,"(a6,i4)") dummy,dummyval
+    read(string,*) dummy_string !--ktao: FIXME this could be used to set the origin time in SAC output
 
     ! read time shift
     read(IIN,"(a)") string
-    read(string(12:len_trim(string)),*) t_shift(isource)
+    !read(string(12:len_trim(string)),*) t_shift(isource)
+    read(string,*) dummy_string, t_shift(isource)
 
     ! read f0 (stored in hdur() array for convenience, to use the same array as for CMTSOLUTION)
     ! Please be careful, if you meet an error in reading the file FORCESOLUTION,
@@ -113,39 +120,48 @@
     ! to
     ! read(string(6:len_trim(string)),*) hdur(isource)
     read(IIN,"(a)") string
-    read(string(15:len_trim(string)),*) hdur(isource)
+    !read(string(15:len_trim(string)),*) hdur(isource)
+    read(string,*) dummy_string, hdur(isource)
 
     ! read latitude
     read(IIN,"(a)") string
-    read(string(10:len_trim(string)),*) lat(isource)
+    !read(string(10:len_trim(string)),*) lat(isource)
+    read(string,*) dummy_string, lat(isource)
 
     ! read longitude
     read(IIN,"(a)") string
-    read(string(11:len_trim(string)),*) long(isource)
+    !read(string(11:len_trim(string)),*) long(isource)
+    read(string,*) dummy_string, long(isource)
 
     ! read depth
     read(IIN,"(a)") string
-    read(string(7:len_trim(string)),*) depth(isource)
+    !read(string(7:len_trim(string)),*) depth(isource)
+    read(string,*) dummy_string, depth(isource)
 
     ! source time function
     read(IIN,"(a)") string
-    read(string(22:len_trim(string)),*) force_stf(isource)
+    !read(string(22:len_trim(string)),*) force_stf(isource)
+    read(string,*) dummy_string, force_stf(isource)
 
     ! read magnitude
     read(IIN,"(a)") string
-    read(string(21:len_trim(string)),*) factor_force_source(isource)
+    !read(string(21:len_trim(string)),*) factor_force_source(isource)
+    read(string,*) dummy_string, factor_force_source(isource)
 
     ! read direction vector's East component
     read(IIN,"(a)") string
-    read(string(29:len_trim(string)),*) comp_dir_vect_source_E(isource)
+    !read(string(29:len_trim(string)),*) comp_dir_vect_source_E(isource)
+    read(string,*) dummy_string, comp_dir_vect_source_E(isource)
 
     ! read direction vector's North component
     read(IIN,"(a)") string
-    read(string(29:len_trim(string)),*) comp_dir_vect_source_N(isource)
+    !read(string(29:len_trim(string)),*) comp_dir_vect_source_N(isource)
+    read(string,*) dummy_string, comp_dir_vect_source_N(isource)
 
     ! read direction vector's vertical component
     read(IIN,"(a)") string
-    read(string(32:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
+    !read(string(32:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
+    read(string,*) dummy_string, comp_dir_vect_source_Z_UP(isource)
 
     ! checks half-duration
     if (force_stf(isource) == 0) then

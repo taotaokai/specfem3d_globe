@@ -268,6 +268,15 @@ for iproc_target in range(nproc):
     comm.Allgatherv([ispec_target_list_local, counts[mpi_rank]], [ispec_target_list, counts, displs, MPI.INT32_T])
     comm.Allgatherv([ispec_contrib_list_local, counts[mpi_rank]], [ispec_contrib_list, counts, displs, MPI.INT32_T])
 
+    #comm.Gatherv([ispec_target_list_local, counts[mpi_rank]], [ispec_target_list, counts, displs, MPI.INT32_T])
+    #comm.Gatherv([ispec_contrib_list_local, counts[mpi_rank]], [ispec_contrib_list, counts, displs, MPI.INT32_T])
+    #if mpi_rank == iproc_target:
+    #  ind = np.random.permutation(count_all)
+    #  ispec_target_list = ispec_target_list[ind]
+    #  ispec_contrib_list = ispec_contrib_list[ind]
+    #comm.Bcast(ispec_target_list, root=iproc_target)
+    #comm.Bcast(ispec_contrib_list, root=iproc_target)
+
     #--- bcast model
     ibool_contrib = np.empty(gll_dims_contrib, dtype=np.int32)
     xyz_glob_contrib = np.empty((3,nglob_contrib), dtype=np.float32)
@@ -293,11 +302,30 @@ for iproc_target in range(nproc):
     weight_model_gll_local = np.zeros((nmodel,)+gll_dims_target)
     weight_gll_local = np.zeros(gll_dims_target)
 
-    #for ilocal_target in ilocal_target_list:
+    ##NOTE if throw large amount of data to smooth_gauss_cap, it will be extremely slow. Contrary to what I expect.
+    #ispec_target_local = ispec_target_list[mpi_rank::mpi_size]
+    #ispec_contrib_local = ispec_contrib_list[mpi_rank::mpi_size]
+    #nlocal = len(ispec_target_local)
+    #iglob_target = ibool_target[:,:,:,ispec_target_local].ravel() - 1
+    #xyz_gll_target = xyz_glob_target[:,iglob_target]
+    #sigmaH = sigmaH_gll_target[:,:,:,ispec_target_local].ravel()
+    #sigmaV = sigmaV_gll_target[:,:,:,ispec_target_local].ravel()
+    #iglob_contrib = ibool_contrib[:,:,:,ispec_contrib_local].ravel() - 1
+    #xyz_gll_contrib = xyz_glob_contrib[:,iglob_contrib]
+    #model_gll = model_gll_contrib[:,:,:,:,ispec_contrib_local].reshape((nmodel,-1))
+    #vol_gll = vol_gll_contrib[:,:,:,ispec_contrib_local].ravel()
+    #weight_model_val, weight_val = smooth_gauss_cap(xyz_gll_target, xyz_gll_contrib, vol_gll, model_gll, sigmaH, sigmaV) 
+    #weight_model_gll_local[:,:,:,:,ispec_target_local] += weight_model_val.reshape((nmodel,NGLLX,NGLLY,NGLLZ,nlocal))
+    #weight_gll_local[:,:,:,ispec_target_local] += weight_val.reshape((NGLLX,NGLLY,NGLLZ,nlocal))
+
+    ##NOTE I do this try to throw more data into smooth_gauss_cap, but really does not help with the speed.
+    #ispec_target_unique, ind = np.unique(ispec_target_local, return_inverse=True)
+    #for icount in range(len(ispec_target_unique)):
+      #ispec_target = ispec_target_unique[icount]
+      #ispec_contrib = ispec_contrib_local[ind==icount]
+
     for icount in range(mpi_rank,count_all,mpi_size):
 
-      #print("...mpi_rank: ispec_target / spec_contrib# ", mpi_rank, ispec_target, np.sum(idx_select[ispec_target,:]))
-      #sys.stdout.flush()
       ispec_target = ispec_target_list[icount]
       ispec_contrib = ispec_contrib_list[icount]
 
@@ -306,13 +334,8 @@ for iproc_target in range(nproc):
       sigmaH = sigmaH_gll_target[:,:,:,ispec_target].ravel()
       sigmaV = sigmaV_gll_target[:,:,:,ispec_target].ravel()
 
-      #idx_contrib = idx_select_local[ilocal_target,:]
-      #iglob_contrib = ibool_contrib[:,:,:,idx_contrib].ravel() - 1
       iglob_contrib = ibool_contrib[:,:,:,ispec_contrib].ravel() - 1
       xyz_gll_contrib = xyz_glob_contrib[:,iglob_contrib]
-
-      #model_gll = model_gll_contrib[:,:,:,:,idx_contrib].reshape((nmodel,-1))
-      #vol_gll = vol_gll_contrib[:,:,:,idx_contrib].ravel()
 
       model_gll = model_gll_contrib[:,:,:,:,ispec_contrib].reshape((nmodel,-1))
       vol_gll = vol_gll_contrib[:,:,:,ispec_contrib].ravel()
