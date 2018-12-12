@@ -29,6 +29,7 @@ NPROC_XI                        = 28
 NPROC_ETA                       = 14
 
 # KTAO: user defined time step (ignore if <=0)
+# KTAO: instability also occurs when unphysically small Vp/Vs ratio is set (the physical system itself is unstalbe instead of numerical issue) 
 USER_DT                         = 0.05d0
 
 #-----------------------------------------------------------

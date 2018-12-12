@@ -141,26 +141,26 @@ cd $event_dir
 
 rm -rf $misfit_dir
 mkdir -p $misfit_dir
-$sem_utils_dir/misfit/read_data.py \
+$python_exec $sem_utils_dir/misfit/read_data.py \
   $misfit_par \
   $db_file \
-  $event_dir/DATA/FORCESOLUTION \
+  $event_dir/DATA/CMTSOLUTION \
   $data_dir/$event_id/data/channel.txt \
   $event_dir/output_syn/sac \
   $data_dir/$event_id/dis
 
-$sem_utils_dir/misfit/measure_misfit.py $misfit_par $db_file
+$python_exec $sem_utils_dir/misfit/measure_misfit.py $misfit_par $db_file
 
-$sem_utils_dir/misfit/output_misfit.py $db_file $misfit_dir/misfit.txt
+$python_exec $sem_utils_dir/misfit/output_misfit.py $db_file $misfit_dir/misfit.txt
 
 rm -rf $figure_dir
 mkdir -p $figure_dir
-$sem_utils_dir/misfit/plot_misfit.py $misfit_par $db_file $figure_dir
+$python_exec $sem_utils_dir/misfit/plot_misfit.py $misfit_par $db_file $figure_dir
 
 ##------ adjoint source for kernel simulation
 #rm -rf $event_dir/adj_kernel
 #mkdir -p $event_dir/adj_kernel
-#$sem_utils_dir/misfit/output_adj.py $misfit_par $db_file $event_dir/adj_kernel
+#$python_exec $sem_utils_dir/misfit/output_adj.py $misfit_par $db_file $event_dir/adj_kernel
 #
 ## make STATIONS_ADJOINT
 #cd $event_dir/adj_kernel

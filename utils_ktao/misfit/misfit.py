@@ -1163,12 +1163,9 @@ class Misfit(object):
         #plt.plot(obs_times, tr.data, 'k')
 
         # lowpass below the nyquist frequency of synthetics
-        # repeat twice to avoid numerical inaccuries
         tr.detrend(type='linear')
-        tr.detrend(type='linear')
-        # repeat lowpass filter twice to make sharper edge
-        tr.filter('lowpass', freq=0.8*syn_nyq, corners=10, zerophase=True)
-        tr.filter('lowpass', freq=0.8*syn_nyq, corners=10, zerophase=True)
+        if obs_delta < syn_delta:
+          tr.filter('lowpass', freq=0.8*syn_nyq, corners=10, zerophase=True)
         # interpolation: windowed sinc reconstruction
         obs_ENZ[i,:] = lanczos_interp1(tr.data, obs_delta,
             syn_times+(syn_starttime-obs_starttime), na=40)
@@ -4333,7 +4330,7 @@ class Misfit(object):
     Mrt = M[0][1]
     Mrp = M[0][2]
     Mtp = M[1][2]
-    focmec = [ Mrr, Mtt, Mpp, Mrt, Mrp, Mtp ]
+    focmec = np.array([Mrr, Mtt, Mpp, Mrt, Mrp, Mtp])
 
     # map range
     min_lat = min(min(stla_list), evla)
@@ -4556,7 +4553,7 @@ class Misfit(object):
     Mrt = mt[0][1]
     Mrp = mt[0][2]
     Mtp = mt[1][2]
-    focmec = [Mrr, Mtt, Mpp, Mrt, Mrp, Mtp]
+    focmec = np.array([Mrr, Mtt, Mpp, Mrt, Mrp, Mtp])
 
     #------ station info
     station_dict = self.data['station']
@@ -4948,7 +4945,7 @@ class Misfit(object):
     Mrt = mt[0][1]
     Mrp = mt[0][2]
     Mtp = mt[1][2]
-    focmec = [Mrr, Mtt, Mpp, Mrt, Mrp, Mtp]
+    focmec = np.array([Mrr, Mtt, Mpp, Mrt, Mrp, Mtp])
 
     #------ get station info
     station_dict = self.data['station']
@@ -5179,6 +5176,9 @@ class Misfit(object):
       # plot focal mechanism
       sx, sy = ax_bm(evlo, evla)
       bb_width = 110000.0 * np.abs(max(stlo_all)-min(stlo_all)) * 0.1
+      # in case all focmec are zero (when use forcesolution, I use a cmtsolution with all Mij=0)
+      if np.max(np.abs(focmec)) < 1.e-5:
+        focmec[0:3] = 1
       b = beach(focmec, xy=(sx, sy), width=bb_width, linewidth=0.2, facecolor='r')
       ax_map.add_collection(b)
       #-- plot the station location

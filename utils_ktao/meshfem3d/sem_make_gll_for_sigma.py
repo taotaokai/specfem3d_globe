@@ -27,7 +27,8 @@ lla = pyproj.Proj(proj='latlong', ellps=GPS_ELLPS)
 
 lat_min = 22
 lat_max = 23
-sigmaH_lat_min = 30 # km
+#sigmaH_lat_min = 30 # km
+sigmaH_lat_min = 5 # km
 sigmaH_lat_max = 5 # km
 
 depth_min = 80
