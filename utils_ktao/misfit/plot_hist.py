@@ -71,9 +71,9 @@ ax_size = ax_size_subplot*subplot_size
 ax = fig.add_axes(np.concatenate((ax_origin, ax_size)))
 ax.hist(dt_cc, nbins, histtype='step')
 ax.set_xlabel('Tobs-Tsyn (s)')
-ax.set_ylabel('No. of windows')
+ax.set_ylabel('Window number')
 #ax.set_xlim([-max_dt, max_dt])
-title_str = "%s %.3f$\pm$%.3f" % (window_id, np.mean(dt_cc), np.std(dt_cc))
+title_str = "%s (%.3f$\pm$%.3f s)" % (window_id, np.mean(dt_cc), np.std(dt_cc))
 ax.set_title(title_str)
 
 # plot histogram of dt_cc
@@ -86,9 +86,15 @@ ax = fig.add_axes(np.concatenate((ax_origin, ax_size)))
 ax.plot(gcarc, dt_cc, 'o')
 ax.set_xlabel('Epidistance (degree)')
 ax.set_ylabel('Tobs-Tsyn (s)')
+polycoef = np.polyfit(gcarc, dt_cc, 1)
+p = np.poly1d(polycoef)
+xlim = [np.min(gcarc), np.max(gcarc)]
+line = ax.plot(xlim, p(xlim), 'r-')
+#ax.legend(line, "%5.2f s/deg"%(polycoef[0]))
+#print(polycoef)
 #ax.set_xlim([-max_dt, max_dt])
-#title_str = "%s %.3f$\pm$%.3f" % (window_id, np.mean(dt_cc), np.std(dt_cc))
-#ax.set_title(title_str)
+title_str = "%s (%5.2f s/deg)" % (window_id, polycoef[0])
+ax.set_title(title_str)
 
 #------ save figure
 plt.savefig(out_file, format='pdf')
