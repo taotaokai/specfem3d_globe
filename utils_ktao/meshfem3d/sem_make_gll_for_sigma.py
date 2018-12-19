@@ -31,8 +31,8 @@ lat_max = 23
 sigmaH_lat_min = 5 # km
 sigmaH_lat_max = 5 # km
 
-depth_min = 80
-depth_max = 120
+depth_min = 150
+depth_max = 190
 sigmaV_depth_min = 1 #km
 sigmaV_depth_max = 0 #km
 

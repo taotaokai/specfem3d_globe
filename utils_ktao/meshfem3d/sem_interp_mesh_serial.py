@@ -32,10 +32,10 @@ model_names = str(sys.argv[6]) # comma delimited e.g. vp,vs,rho,qmu,qkappa
 out_dir = str(sys.argv[7])
 
 # merge regions
-#idoubling_merge = []
+idoubling_merge = []
 #In SETibet case, since I use a velocity gradient across Moho and no mesh boundary at Moho, treat IFLAG_CRUST,IFLAG_80_MOHO,IFLAG_220_80 as the same region
 #idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80, IFLAG_670_220]
-idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80]
+#idoubling_merge = [IFLAG_CRUST, IFLAG_80_MOHO, IFLAG_220_80]
 
 # model names
 model_names = model_names.split(',')
@@ -51,7 +51,7 @@ zigll, wz = zwgljd(NGLLZ,GAUSSALPHA,GAUSSBETA)
 #--- loop over each slice of target SEM mesh
 #for iproc_target in range(mpi_rank,nproc_target,mpi_size):
 #for iproc_target in range(nproc_target):
-for iproc_target in [0,]:
+for iproc_target in [4, ]:
 
   print("====== iproc_target ", iproc_target)
   sys.stdout.flush()
@@ -84,10 +84,10 @@ for iproc_target in [0,]:
   misratio_gll_target = np.zeros(npoints)
   model_gll_target = np.zeros((nmodel,npoints))
 
-  # loop over each slice of source SEM mesh
+  #-- loop over each slice of source SEM mesh
   #for iproc_source in range(nproc_source):
   #for iproc_source in range(63,nproc_source):
-  for iproc_source in [65,]:
+  for iproc_source in [4, ]:
 
     tic = time.time()
 
@@ -118,7 +118,8 @@ for iproc_target in [0,]:
 
     # locate target points
     tic1 = time.time()
-    status_all, ispec_all, uvw_all, misloc_all, misratio_all = sem_locate_points_hex27(mesh_data_source, xyz_target, idoubling_ext)
+    status_all, ispec_all, uvw_all, misloc_all, misratio_all = \
+        sem_locate_points_hex27(mesh_data_source, xyz_target, idoubling_ext, kdtree_num_element=2.0, max_dist_ratio=2.0)
     print("sem_locate_points_hex27 elapse", time.time() - tic1)
 
     # merge interpolation results of mesh slice (iproc_souce) into 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import sys
+import warnings
+
 import numpy as np
 
 from meshfem3d_constants import *
@@ -175,23 +177,29 @@ def sem_mesh_get_vol_gll(mesh_data):
   return vol_gll
 
 #///////////////////////////////////////////////////
-def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1):
+def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1, kdtree_num_element=2.0, max_dist_ratio=2.0):
   """ locate points in the SEM mesh. 
   mesh_data: return value from sem_mesh_read()
   xyz(3,n): locations of n points
   idoubling: integer or integer array of size n. idoubling for the n points which denotes mesh regions (surface-Moho,Moho-410,410-660,etc)
     -1 means no specific region and interpolation will be done to all the elements in the mesh, otherwise interpolation is only done for those elements with the same idoubling value. 
+  kdtree_num_element: radius factor as number of multiples of the maximum element half size used in kdtree search of neighboring elements to target point. 
+  max_dist_ratio: maximum ratio between the distance from target point to the element center and the element half size. Used to ignore element which is too far away from the target point. Sometimes if this value is too close to one, the target point slightly outside the mesh will be marked as NOT located, even if the SEM could allow a point outside the element be located.
 
   output:
     status(n): -1=not located,0=close to but outside the element,1=inside element
     ispec(n): element num that located
     uvw(3,n): local coordinate located
     misloc(n): location residual
-    misratio(n): misloc/element_size
+    misratio(n): misloc/element_half_size
   """
   from scipy import spatial
   #from gll_library import zwgljd, lagrange_poly
   from jacobian_hex27 import xyz2cube_bounded_hex27, anchor_index_hex27
+
+  if max_dist_ratio < 1:
+    warnings.warn("max_dist_ratio should be larger than one! Default value 2.0 will be used.")
+    max_dist_ratio = 2.0
 
   npoints = xyz.shape[1]
   idoubling = np.array(idoubling, dtype='int')
@@ -214,15 +222,15 @@ def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1):
     (xyz[0,:],xyz[1,:],xyz[2,:])))
   
   # determine element size (approximately)
-  element_size = np.zeros(nspec)
+  element_half_size = np.zeros(nspec)
   for ispec in range(nspec):
     # distance between gll points and the central gll point 
     iglob1 = ibool[:,:,:,ispec].ravel() - 1
     dist = np.sum((xyz_elem[:,ispec:ispec+1] - xyz_glob[:,iglob1])**2, axis=0)**0.5
-    element_size[ispec] = np.max(dist)
+    element_half_size[ispec] = np.max(dist)
 
   # get neighbouring elements around each target location xyz
-  neighbor_lists = tree_xyz.query_ball_tree(tree_elem, 1.2*max(element_size))
+  neighbor_lists = tree_xyz.query_ball_tree(tree_elem, kdtree_num_element*np.max(element_half_size))
 
   #--- loop over each point, get the location info 
   iax, iay, iaz = anchor_index_hex27(NGLLX,NGLLY,NGLLZ)
@@ -245,10 +253,10 @@ def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1):
     #if not neighbor_lists[ipoint]: continue
     # get neibouring elements
     ispec_list = np.array(neighbor_lists[ipoint]) # convert list to numpy array to have index slicing
-    # get ratio between distance to center and element size 
-    dist_ratio = np.sum((xyz_elem[:,ispec_list] - xyz[:,ipoint:ipoint+1])**2, axis=0)**0.5 / element_size[ispec_list]
+    # ratio between the distance from target point to the element center and the element size 
+    dist_ratio = np.sum((xyz_elem[:,ispec_list] - xyz[:,ipoint:ipoint+1])**2, axis=0)**0.5 / element_half_size[ispec_list]
     # remove elements too far away from target point
-    idx = dist_ratio < 1.1
+    idx = dist_ratio < max_dist_ratio
     # skip elements that does NOT have the same idoubling as xyz
     if idoubling[ipoint] != -1:
       idx = idx & (source_idoubling[ispec_list] == idoubling[ipoint])
@@ -267,13 +275,13 @@ def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1):
       #  warnings.warn("point is located inside more than one element", 
       #      xyz[:,ipoint], xyz_anchor)
       if misloc > misloc_all[ipoint] and is_inside:
-        warnings.warn("point located inside an element but with a larger misloc(loc/previous)", misloc, misloc_all[ipoint])
+        warnings.warn("point located inside an element but with a larger misloc: current/previous = %f/%f"%(misloc, misloc_all[ipoint]))
       if misloc < misloc_all[ipoint] or is_inside:
         status_all[ipoint] = 0
         ispec_all[ipoint] = ispec
         uvw_all[:,ipoint] = uvw
         misloc_all[ipoint] = misloc
-        misratio_all[ipoint] = misloc/element_size[ispec]
+        misratio_all[ipoint] = misloc/element_half_size[ispec]
       # skip the rest elements since points already located inside an element
       # this means if multiple elements overlap (should not occur) we only take the first found element where the point locates inside
       if is_inside: 

@@ -40,6 +40,11 @@ then
   echo "[ERROR] sem_data_dir/DATA/CMTSOLUTION does not exits!"
   exit 1
 fi
+if [ ! -f "$sem_data_dir/STATIONS" ]
+then
+  echo "[ERROR] sem_data_dir/DATA/STATIONS does not exits!"
+  exit 1
+fi
 
 #====== prepare sem_build_dir
 if [ -d "$sem_build_dir" ]

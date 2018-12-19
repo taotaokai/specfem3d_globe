@@ -66,6 +66,7 @@ cd \$mesh_dir
 mkdir DATA DATABASES_MPI OUTPUT_FILES
 
 cd \$mesh_dir/DATA
+chmod u+w * 
 ln -sf $sem_build_dir/DATA/* \$mesh_dir/DATA/
 rm Par_file GLL CMTSOLUTION
 ln -sf \$model_dir GLL
