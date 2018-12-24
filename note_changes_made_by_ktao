@@ -103,6 +103,11 @@ src/shared/get_timestep_and_layers.f90:
 - switch the network/station order in the STATION files to be "net sta lat lon alt depth"
 
 #-----------------------------------------------
+# src/specfem3D/locate_sources.f90: 
+#-----------------------------------------------
+- lines 781-787: lines 793-798 are moved into if-else condition for CMTSOLUTION, since Mxx,Myy... are only used for CMTSOLUTION. Otherwise error might occur for un-initialized variables.
+
+#-----------------------------------------------
 # allow transverse isotropy in different regions: 
 #-----------------------------------------------
 DATA/Par_file:

@@ -1,0 +1,4 @@
+1. smooth_resample_etopo1.sh: smooth and resample etopo1 GRD file 
+
+
+2. convert_grd_to_specfem_binary.py: convert GRD to Binary file reading by SEM

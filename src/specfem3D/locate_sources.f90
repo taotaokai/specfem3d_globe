@@ -777,14 +777,25 @@
           endif
           write(IMAIN,*)
           write(IMAIN,*) ' half duration: ',hdur(isource),' seconds'
+
+          ! KT KT: moved here since Mxx's are only used for CMTSOLUTION
+          write(IMAIN,*)
+          write(IMAIN,*) 'magnitude of the source:'
+          M0 = get_cmt_scalar_moment(Mxx(isource),Myy(isource),Mzz(isource),Mxy(isource),Mxz(isource),Myz(isource))
+          write(IMAIN,*) '     scalar moment M0 = ', M0,' dyne-cm'
+          Mw =  get_cmt_moment_magnitude(Mxx(isource),Myy(isource),Mzz(isource),Mxy(isource),Mxz(isource),Myz(isource))
+          write(IMAIN,*) '  moment magnitude Mw = ', Mw
+
         endif
-        write(IMAIN,*) '    time shift: ',tshift_src(isource),' seconds'
+
         write(IMAIN,*)
-        write(IMAIN,*) 'magnitude of the source:'
-        M0 = get_cmt_scalar_moment(Mxx(isource),Myy(isource),Mzz(isource),Mxy(isource),Mxz(isource),Myz(isource))
-        write(IMAIN,*) '     scalar moment M0 = ', M0,' dyne-cm'
-        Mw =  get_cmt_moment_magnitude(Mxx(isource),Myy(isource),Mzz(isource),Mxy(isource),Mxz(isource),Myz(isource))
-        write(IMAIN,*) '  moment magnitude Mw = ', Mw
+        write(IMAIN,*) '    time shift: ',tshift_src(isource),' seconds'
+        !write(IMAIN,*)
+        !write(IMAIN,*) 'magnitude of the source:'
+        !M0 = get_cmt_scalar_moment(Mxx(isource),Myy(isource),Mzz(isource),Mxy(isource),Mxz(isource),Myz(isource))
+        !write(IMAIN,*) '     scalar moment M0 = ', M0,' dyne-cm'
+        !Mw =  get_cmt_moment_magnitude(Mxx(isource),Myy(isource),Mzz(isource),Mxy(isource),Mxz(isource),Myz(isource))
+        !write(IMAIN,*) '  moment magnitude Mw = ', Mw
         write(IMAIN,*)
 
 
