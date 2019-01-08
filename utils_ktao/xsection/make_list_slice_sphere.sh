@@ -21,7 +21,7 @@ echo "# spherical slices:" > $out_file
 
 #cat depth.list |\
 #while read depth
-for depth in 3 5 15 20 40 60 80 100 120
+for depth in 3 5 15 20 40 50 60 80 100 120
 do
   printf "%6.2f %6.2f %4d %7.2f %7.2f %4d %6.1f depth_%03d\n" \
     $lat0 $lat1 $nlat $lon0 $lon1 $nlon $depth $depth

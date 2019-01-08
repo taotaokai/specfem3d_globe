@@ -74,7 +74,8 @@ fig = plt.figure(figsize=(8.27, 11.7)) # A4
 # a matrix of sub plot 
 nrow = len(model_tags)
 ncol = 1
-subplot_size = np.array([1.0/ncol, 1.0/nrow])
+#subplot_size = np.array([1.0/ncol, 1.0/nrow])
+subplot_size = np.array([1.0/ncol, 1.0/3])
 # axis position relative to the subplot region
 ax_origin_subplot = np.array([0.2, 0.2])
 # size: [width, height]
@@ -101,15 +102,19 @@ for irow in range(nrow):
   
   cmap = plt.get_cmap('jet_r')
   x, y = np.meshgrid(lons,lats)
-  #levels = np.linspace(3.2,0.02,101)
-  cs = m.contourf(x, y, data[model_tags[irow]].values, latlon=True, cmap=cmap, extend='both')
+  #levels = np.arange(3.2,3.901,0.1)
+  #levels = np.arange(3.4,4.601,0.1)
+  levels = np.arange(3.5,4.601,0.1)
+  #levels = np.arange(3.7,4.601,0.1)
+  model = data[model_tags[irow]]
+  cs = m.contourf(x, y, model.values, latlon=True, cmap=cmap, extend='both', levels=levels)
   cs.cmap.set_over('purple')
   cs.cmap.set_under('black')
  
   # colorbar for contourfill
   #ticks = np.arange(-0.02,0.02001, 0.005)
-  cb = m.colorbar(cs, location='right', pad="5%")
-  cb.ax.set_title('(km-1)', fontsize=10)
+  cb = m.colorbar(cs, location='bottom', pad="5%", ticks=levels)
+  cb.ax.set_title('(%s)'%(model.attrs['unit']), fontsize=10)
   #cb.set_label('path density')
   
   for l in block_lines:

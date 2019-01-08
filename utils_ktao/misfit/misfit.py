@@ -588,7 +588,7 @@ class Misfit(object):
         if len(Z_comp) != 1 or abs(Z_comp[0][2]) != 90.0: 
           print('[WARNING] %s: problematic Z channel, SKIP' \
               % (station_id))
-          print('      channel: ', H_comp)
+          print('      channel: ', Z_comp)
           continue
         H_comp = [ (x['code'], x['azimuth'], x['dip']) \
             for x in channel if x['code'][2] != 'Z']

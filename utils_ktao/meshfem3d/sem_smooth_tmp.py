@@ -143,7 +143,7 @@ if mpi_rank == 0:
 
 #====== loop over each target mesh slice
 #for iproc_target in range(nproc):
-for iproc_target in range(275,nproc):
+for iproc_target in range(266,nproc):
 #for iproc_target in range(240,nproc):
 #for iproc_target in range(346,nproc):
 #for iproc_target in range(246):
