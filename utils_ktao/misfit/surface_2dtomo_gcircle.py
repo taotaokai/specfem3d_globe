@@ -65,11 +65,11 @@ for ipath in range(npath):
   az, baz, dist = g.inv(evlo[ipath], evla[ipath], stlo[ipath], stla[ipath])
   dist = dist/1000.0 # km
   npts = int(dist/R_EARTH/np.deg2rad(path_integration_interval)) - 1
-  path_length = dist/npts
   lonlats = g.npts(evlo[ipath], evla[ipath], stlo[ipath], stla[ipath], npts)
   lonlats.insert(0, (evlo[ipath], evla[ipath]))
   lonlats.append((stlo[ipath], stla[ipath]))
   npts = len(lonlats)
+  path_length = dist/(npts-1)
 
   # path weight
   #weight_path = ccmax[ipath]
