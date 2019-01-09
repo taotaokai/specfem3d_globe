@@ -21,7 +21,7 @@
 control_file=${1:?[arg] need control_file}
 event_list=${2:?[arg]need event_list}
 
-#------ source control_file
+# load parameters in control_file
 source $control_file
 
 #------ process each event

@@ -60,6 +60,6 @@ do
   cp $misfit_par_dir/${event_id}_misfit_par.py $event_dir/DATA/misfit_par.py
 
   # create batch scripts
-  $sem_utils_dir/structure_inversion/make_slurm_jobs_for_event_noisecc.sh $control_file $event_id
+  $sem_utils_dir/structure_inversion/make_slurm_jobs_for_event_noiseCC.sh $control_file $event_id
 
 done

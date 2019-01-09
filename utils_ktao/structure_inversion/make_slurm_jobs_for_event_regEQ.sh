@@ -86,8 +86,10 @@ cp $mesh_dir/DATA/Par_file .
 sed -i "/^SIMULATION_TYPE/s/=.*/= 1/" Par_file
 sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
 
+#
+sed -i "/^USE_ECEF_CMTSOLUTION/s/=.*/= .true./" Par_file
+
 # for regional earthquake data
-sed -i "/^USE_ECEF_CMTSOLUTION/s/=.*/= .false./" Par_file
 sed -i "/^USE_FORCE_POINT_SOURCE/s/=.*/= .false./" Par_file
 
 rm -rf $event_dir/DATABASES_MPI
