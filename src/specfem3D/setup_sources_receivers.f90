@@ -576,7 +576,7 @@
       write(IMAIN,*) '  seismograms written by all processes'
     endif
     write(IMAIN,*) '  writing out seismograms at every NTSTEP_BETWEEN_OUTPUT_SEISMOS = ',NTSTEP_BETWEEN_OUTPUT_SEISMOS
-    write(IMAIN,*) '  maximum number of local receivers is ',maxrec,' in slice ',maxproc(1)
+    write(IMAIN,*) '  maximum number of local receivers is ',maxrec,' in slice ',maxproc(1)-1
     write(IMAIN,*) '  size of maximum seismogram array       = ', sngl(sizeval),'MB'
     write(IMAIN,*) '                                         = ', sngl(sizeval/1024.d0),'GB'
     write(IMAIN,*)
@@ -614,7 +614,7 @@
       if (IO_ASYNC_COPY) then
         write(IMAIN,*) '  using asynchronous buffer for file I/O of adjoint sources'
       endif
-      write(IMAIN,*) '  maximum number of local adjoint sources is ',maxrec,' in slice ',maxproc(1)
+      write(IMAIN,*) '  maximum number of local adjoint sources is ',maxrec,' in slice ',maxproc(1)-1
       write(IMAIN,*) '  size of maximum adjoint source array = ', sngl(sizeval),'MB'
       write(IMAIN,*) '                                       = ', sngl(sizeval/1024.d0),'GB'
       write(IMAIN,*)
@@ -1053,6 +1053,12 @@
   integer :: ier
   integer :: nadj_hprec_local
 
+  ! KT KT: local parameters used for the case of SIMULATION_TYPE == 2
+  integer :: irec,irec_local
+  double precision, dimension(NGLLX) :: hxir,hpxir
+  double precision, dimension(NGLLY) :: hpetar,hetar
+  double precision, dimension(NGLLZ) :: hgammar,hpgammar
+
   ! define local to global receiver numbering mapping
   ! needs to be allocated for subroutine calls (even if nrec_local == 0)
   allocate(number_receiver_global(nrec_local),stat=ier)
@@ -1121,6 +1127,43 @@
     ! note: nrec_local is zero, Fortran 90/95 should allow zero-sized array allocation...
     allocate(seismograms(NDIM,0,NTSTEP_BETWEEN_OUTPUT_SEISMOS),stat=ier)
     if (ier /= 0) stop 'Error while allocating zero seismograms'
+  endif
+
+  ! KT KT: need to define hxi at receivers in the case of SIMULATION_TYPE == 2
+  if (SIMULATION_TYPE == 2 .and. nadj_rec_local > 0) then
+    ! allocates Lagrange interpolators for receivers
+    allocate(hxir_adj_store(nadj_rec_local,NGLLX), &
+             hetar_adj_store(nadj_rec_local,NGLLY), &
+             hgammar_adj_store(nadj_rec_local,NGLLZ),stat=ier)
+    if (ier /= 0 ) call exit_MPI(myrank,'Error allocating adj receiver interpolators')
+    ! define local to global receiver numbering mapping
+    allocate(number_adj_receiver_global(nadj_rec_local),stat=ier)
+    if (ier /= 0 ) call exit_MPI(myrank,'Error allocating global adj receiver numbering')
+    irec_local = 0
+    do irec = 1,nrec
+      if (myrank == islice_selected_rec(irec)) then
+        irec_local = irec_local + 1
+        ! checks counter
+        if (irec_local > nadj_rec_local) call exit_MPI(myrank,'Error receiver interpolators: irec_local exceeds bounds')
+        ! stores local to global receiver ids
+        number_adj_receiver_global(irec_local) = irec
+      endif
+    enddo
+    ! checks if all local receivers have been found
+    if (irec_local /= nadj_rec_local) call exit_MPI(myrank,'Error Error number of local adj receivers do not match')
+    ! define and store Lagrange interpolators at all the receivers
+    do irec_local = 1,nadj_rec_local
+      irec = number_adj_receiver_global(irec_local)
+      ! receiver positions
+      call lagrange_any(xi_receiver(irec),NGLLX,xigll,hxir,hpxir)
+      call lagrange_any(eta_receiver(irec),NGLLY,yigll,hetar,hpetar)
+      call lagrange_any(gamma_receiver(irec),NGLLZ,zigll,hgammar,hpgammar)
+      ! stores interpolators
+      hxir_adj_store(irec_local,:) = hxir(:)
+      hetar_adj_store(irec_local,:) = hetar(:)
+      hgammar_adj_store(irec_local,:) = hgammar(:)
+    enddo
+
   endif
 
   end subroutine setup_receivers_precompute_intp

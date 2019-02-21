@@ -283,12 +283,34 @@
               !           wavefield at the end of the first time loop, such that b_displ(it=1) corresponds to -t0 + (NSTEP-1)*DT.
               !           assuming that until that end the backward/reconstructed wavefield and adjoint fields
               !           have a zero contribution to adjoint kernels.
-              accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+              !accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+              !              + source_adjoint(:,irec_local,ivec_index)*(hxir_store(irec_local,i)*&
+              !                               hetar_store(irec_local,j)*hgammar_store(irec_local,k))
+              if (SIMULATION_TYPE == 3) then
+                accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
                             + source_adjoint(:,irec_local,ivec_index)*(hxir_store(irec_local,i)*&
                                              hetar_store(irec_local,j)*hgammar_store(irec_local,k))
+              else if (SIMULATION_TYPE == 2) then
+                accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+                            + source_adjoint(:,irec_local,ivec_index)*(hxir_adj_store(irec_local,i)*&
+                                             hetar_adj_store(irec_local,j)*hgammar_adj_store(irec_local,k))
+              else
+                call exit_MPI(myrank,'Error SIMULATION_TYPE')
+              endif
+
             enddo
           enddo
         enddo
+
+        !if (SIMULATION_TYPE == 2) then
+        !  print *, "myrank, max(abs) source_adjoint, hxir_adj_store, ", & 
+        !    myrank, &
+        !    maxval(abs(source_adjoint(:,irec_local,ivec_index))), &
+        !    maxval(abs(hxir_adj_store(irec_local,:))), &
+        !    maxval(abs(hetar_adj_store(irec_local,:))), &
+        !    maxval(abs(hgammar_adj_store(irec_local,:)))
+        !endif
+
       endif
 
     enddo

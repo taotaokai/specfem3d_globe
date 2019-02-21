@@ -310,8 +310,22 @@
                        + nu(3,:) * adj_src(3,itime)
   enddo
 
+  !print *, "myrank, it, it_sub_adj, NSTEP_BLOCK, max_abs adj_src,nu,adj_src_u = ", &
+  !  myrank, it, it_sub_adj, NSTEP_BLOCK, maxval(abs(adj_src)), maxval(abs(nu)), maxval(abs(adj_src_u))
+  !print *, "myrank, shape(source_adjoint), shape(adj_src_u) = ", myrank, shape(source_adjoint), shape(adj_src_u)
+  !print *, "myrank, index_start/end = ", myrank, index_start, index_end
+  !print *, "myrank, adj_src_u = ", myrank
+  !print *, adj_src_u
+
+  source_adjoint = 0._CUSTOM_REAL ! KTAO: add initialization
   do icomp = 1, NDIM
-    source_adjoint(icomp,:) = adj_src_u(icomp,:)
+    !source_adjoint(icomp,:) = adj_src_u(icomp,:)
+    ! KTAO: since NSTEP_BLOCK could be less than NTSTEP_BETWEEN_READ_ADJSRC,
+    ! the orignal code has the risk to assign un-allocated memory content to 
+    ! source_adjoint, which may cause floating number exceptions, e.g. overflow, 
+    ! and stop the program when compiled with -fpe0 
+    ! ref: http://www.ladon.iqfr.csic.es/intel/doc/main_for/mergedProjects/bldaps_for/using_the_floating_point_exception_handling_(-fpe)_option.htm   
+    source_adjoint(icomp,1:NSTEP_BLOCK) = adj_src_u(icomp,:)
   enddo
 
 

@@ -11,3 +11,9 @@ git push
 
 # use SSH to enable password-less push 
 git remote set-url origin git@github.com:taotaokai/specfem3d_globe.git
+
+# use vimdiff for git diff and merge (https://medium.com/usevim/git-and-vimdiff-a762d72ced86)
+$ git config --global diff.tool vimdiff
+$ git config --global merge.tool vimdiff
+$ git config --global difftool.prompt false
+$ git difftool <file name>

@@ -5192,8 +5192,8 @@ class Misfit(object):
       ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='red', edgecolor='')
 
       #-- create axis for seismograms
-      ax_origin = [0.45, 0.05]
-      ax_size = [0.43, 0.90]
+      ax_origin = [0.42, 0.05]
+      ax_size = [0.42, 0.90]
       #ax_size = [0.3, 0.90]
       ax_1comp = fig.add_axes(ax_origin + ax_size)
 

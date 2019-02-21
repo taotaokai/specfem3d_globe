@@ -112,6 +112,7 @@
     NSPEC_CRUST_MANTLE_STRAIN_ONLY,NSPEC_CRUST_MANTLE_STR_OR_ATT
 
   use specfem_par, only: &
+    myrank, &
     NSTEP,NTSTEP_BETWEEN_OUTPUT_SEISMOS,UNDO_ATTENUATION, &
     nrec_local, &
     nu_source,Mxx,Myy,Mzz,Mxy,Mxz,Myz, &
@@ -294,6 +295,9 @@
     stshift_der(irec_local) = stshift_der(irec_local) + eps_m_s * Kp_deltat
 
     shdur_der(irec_local) = shdur_der(irec_local) + eps_m_s * Hp_deltat
+
+    !print *, "myrank, max(abs)(moment_der, sloc_der, stshift_der, shdur_der))= ", &
+    !  myrank, maxval(abs(moment_der)), maxval(abs(sloc_der)), maxval(abs(stshift_der)), maxval(abs(shdur_der))
 
   enddo
 

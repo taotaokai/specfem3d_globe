@@ -484,6 +484,8 @@
     call iterate_time()
   endif
 
+  if (myrank == 0) print *, "after iterate_time"
+
   ! saves last time frame and finishes kernel calculations
   call finalize_simulation()
 

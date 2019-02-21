@@ -299,6 +299,7 @@ module specfem_par
   integer :: nrec,nrec_local
   integer, dimension(:), allocatable :: islice_selected_rec,ispec_selected_rec
   integer, dimension(:), allocatable :: number_receiver_global
+  integer, dimension(:), allocatable :: number_adj_receiver_global ! KT KT setup_sources_receivers.f90:setup_receivers_precompute_intp()
   double precision, dimension(:), allocatable :: xi_receiver,eta_receiver,gamma_receiver
   double precision, dimension(:,:,:), allocatable :: nu
   double precision, allocatable, dimension(:) :: stlat,stlon,stele,stbur
@@ -309,6 +310,7 @@ module specfem_par
   ! Lagrange interpolators at receivers
   double precision, dimension(:,:), allocatable :: hxir_store,hetar_store,hgammar_store
   double precision, dimension(:,:,:,:), allocatable :: hlagrange_store
+  double precision, dimension(:,:), allocatable :: hxir_adj_store,hetar_adj_store,hgammar_adj_store ! KT KT setup_sources_receivers.f90:setup_receivers_precompute_intp()
 
   ! ADJOINT sources
   real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: source_adjoint

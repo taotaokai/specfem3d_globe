@@ -2,7 +2,12 @@
 This file keep some notes about the code or the records of modifications I make to this fork version from CIG git repo. 
 You need to sync this fork occasionally to merge the new updates in the CIG git repo.
 
-NOTE: use " find src -type f | xargs grep tao " to find all changes made in the code
+Useful tips:
+
+1) use " find src -type f | xargs grep tao " to find all changes made in the code
+
+2) compile with -traceback to find which line in which source code run-time failure occurs, e.g. floating overflow.
+   ref:"https://software.intel.com/en-us/articles/tips-for-debugging-run-time-failures-in-intel-fortran-applications"
 
 #-----------------------------------------------
 # about the compiler flags
@@ -72,6 +77,42 @@ src/shared/get_timestep_and_layers.f90:
   - lines 528-532 
 
 #-----------------------------------------------
+# Fix the problem for SIMULATION_TYPE == 2  
+#-----------------------------------------------
+[2019-02-18] 
+
+When SIMULATION_TYPE == 2 bug occurs when src/specfem3d/compute_add_sources.f90 trying to read in hxir_store
+which should be defined at receiver points but actually defined at source point. I define additional
+hxir_adj_store to solve this problem. hxir_store is still needed in src/specfem3d/compute_seismograms.f90:compute_seismograms_adjoint()
+
+src/specfem3d/:
+ 
+  - compute_add_sources.f90: 
+    * lines 286-299: use hxir_adj_store for adjoint source when SIMULATION_TYPE == 2
+ 
+  - setup_sources_receivers.f90
+    * lines 1056-1063,1135-1168: compute hxir_adj_store
+
+  - specfem3D_par.F90:
+    * lines 302,313: define variables number_adj_receiver_global, hxir_adj_store
+
+  - finalize_simulation.F90:
+    * lines 299-303: deallocate number_adj_receiver_global, hxir_adj_store
+
+#-----------------------------------------------
+# Fix floating overflow problem in src/specfem3D/compute_arrays_source.f90
+#-----------------------------------------------
+[2019-02-21]
+
+src/specfem3D/compute_arrays_source.f90:
+  - lines 320-329: source_adjoint(icomp,"1:NSTEP_BLOCK") = adj_src_u(icomp,:) 
+    323     ! KTAO: since NSTEP_BLOCK could be less than NTSTEP_BETWEEN_READ_ADJSRC,
+    324     ! the orignal code has the risk to assign un-allocated memory content to 
+    325     ! source_adjoint, which may cause floating number exceptions, e.g. overflow, 
+    326     ! and stop the program when compiled with -fpe0 
+    327     ! ref: http://www.ladon.iqfr.csic.es/intel/doc/main_for/mergedProjects/bldaps_for/using_the_floating_point_exception_handling_(-fpe)_option.htm  
+
+#-----------------------------------------------
 # src/specfem3D/write_output_SAC.f90:
 #-----------------------------------------------
 - correct the sub milli-second error
@@ -101,6 +142,8 @@ src/shared/get_timestep_and_layers.f90:
 # src/specfem3D/locate_receivers.f90: 
 #-----------------------------------------------
 - switch the network/station order in the STATION files to be "net sta lat lon alt depth"
+
+- lines352-362: avoid error in acos() due to values larger than one from rounding off error  
 
 #-----------------------------------------------
 # src/specfem3D/locate_sources.f90: 
@@ -157,7 +200,6 @@ src/specfem3D/
   save_kernels.f90: save_kernels_source_derivative()
   specfem3D_par.F90: add x,y,z_source
   finalize_simulation.F90: add deallocate x,y,z_source
-
 
 ##-----------------------------------------------
 ## src/specfem3D/compute_seismograms.F90 and save_kernels.f90

@@ -77,9 +77,9 @@
                                                ibool_crust_mantle)
         endif
       ! for forward and kernel simulations, seismograms are computed by the GPU, thus no need to transfer the wavefield
-    else
-      if (.not. ( SIMULATION_TYPE == 3 .and. (.not. SAVE_SEISMOGRAMS_IN_ADJOINT_RUN) ) ) &
-        call compute_seismograms_gpu(Mesh_pointer,seismograms,seismo_current,it,scale_displ,NTSTEP_BETWEEN_OUTPUT_SEISMOS,NSTEP)
+      else
+        if (.not. ( SIMULATION_TYPE == 3 .and. (.not. SAVE_SEISMOGRAMS_IN_ADJOINT_RUN) ) ) &
+          call compute_seismograms_gpu(Mesh_pointer,seismograms,seismo_current,it,scale_displ,NTSTEP_BETWEEN_OUTPUT_SEISMOS,NSTEP)
       endif
 
     endif

@@ -285,6 +285,7 @@
   deallocate(station_name,network_name, &
              stlat,stlon,stele,stbur)
   deallocate(nu,number_receiver_global)
+
   if (nrec_local > 0) then
     deallocate(hxir_store, &
                hetar_store, &
@@ -294,6 +295,13 @@
       deallocate(moment_der,stshift_der)
     endif
   endif
+    
+  ! KT KT setup_sources_receivers.f90:setup_receivers_precompute_intp()
+  if (SIMULATION_TYPE == 2 .and. nadj_rec_local > 0) then
+    deallocate(hxir_adj_store, hetar_adj_store, hgammar_adj_store)
+    deallocate(number_adj_receiver_global) ! KT KT setup_sources_receivers.f90:setup_receivers_precompute_intp()
+  endif
+
   deallocate(seismograms)
 
   ! kernels

@@ -354,11 +354,11 @@
     !>> than 1 due to floating rounding error. Modification is done.
     ! epidist(irec) = acos(cos(theta)*cos(theta_source) + &
     !                      sin(theta)*sin(theta_source)*cos(phi-phi_source))*RADIANS_TO_DEGREES
-    epidist(irec) = cos(theta)*cos(theta_source) + sin(theta)*sin(theta_source)*cos(phi-phi_source)
+    epidist(irec) = cos(theta)*cos(theta_source) + sin(theta)*sin(theta_source)*cos(phi-phi_source) ! cosine of angular dist
     if (abs(epidist(irec)) >= 1.0) then
       epidist(irec) = 0.0
     else
-      epidist(irec) = acos(epidist(irec))
+      epidist(irec) = acos(epidist(irec))*RADIANS_TO_DEGREES
     endif
 
     ! record three components for each station
