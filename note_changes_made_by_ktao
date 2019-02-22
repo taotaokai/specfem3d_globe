@@ -151,6 +151,35 @@ src/specfem3D/compute_arrays_source.f90:
 - lines 781-787: lines 793-798 are moved into if-else condition for CMTSOLUTION, since Mxx,Myy... are only used for CMTSOLUTION. Otherwise error might occur for un-initialized variables.
 
 #-----------------------------------------------
+# add flag in Par_file to allow the use of ECEF coordinate
+#-----------------------------------------------
+DATA/Par_file:
+  logical, parameter :: USE_ECEF_COORDINATE = .true.
+
+src/shared/
+  shared_par.f90: shared_input_parameters: logical :: USE_ECEF_COORDINATE
+  read_parameter_file.f90: read_value_logical(USE_ECEF_COORDINATE, 'USE_ECEF_COORDINATE', ier)
+  broadcast_computed_parameters.f90: USE_ECEF_COORDINATE = bcast_logical(67)
+
+src/specfem3D/
+  get_cmt.f90:
+  locate_sources.f90: use ECEF x,y,z when locating points
+  save_kernels.f90: save_kernels_source_derivative()
+  specfem3D_par.F90: add x,y,z_source
+  finalize_simulation.F90: add deallocate x,y,z_source
+
+#-----------------------------------------------
+# Allow USE_ECEF_COORDINATE with USE_FORCE_POINT_SOURCE
+#-----------------------------------------------
+[2019-02-22]
+
+- src/specfem3D/get_force.f90: comp_dir_vect_source_E/N/Z_up(1:NSOURCES) --> comp_dir_vect_source(3,1:NSOURCES)
+- src/specfem3D/locate_sources.f90: comp_dir_vect_source_E/N/Z_up(1:NSOURCES) --> comp_dir_vect_source(3,1:NSOURCES)
+- src/specfem3D/setup_sources_receivers.f90: comp_dir_vect_source_E/N/Z_up(1:NSOURCES) --> comp_dir_vect_source(3,1:NSOURCES)
+- src/specfem3D/finalize_simulation.F90: comp_dir_vect_source_E/N/Z_up(1:NSOURCES) --> comp_dir_vect_source(3,1:NSOURCES)
+- src/specfem3D/specfem3D_par.F90: comp_dir_vect_source_E/N/Z_up(1:NSOURCES) --> comp_dir_vect_source(3,1:NSOURCES)
+
+#-----------------------------------------------
 # allow transverse isotropy in different regions: 
 #-----------------------------------------------
 DATA/Par_file:
@@ -163,43 +192,6 @@ DATA/Par_file:
 src/shared/: shared_par.f90, read_parameter_file.f90, broadcast_computed_parameters.f90
 
 src/meshfem3D/: compute_element_properties.f90, meshfem3D_par.f90
-
-#-----------------------------------------------
-# add flag in Par_file to allow the use of CMTSOLUTION in ECEF coordinate
-#-----------------------------------------------
- 
----CMTSOLUTION_ECEF--- example
-PDE 1994  6  9  0 33 16.40 -13.8300  -67.5600 637.0 6.9 6.8 NORTHERN BOLIVIA
-event_name:        060994A
-time_shift:         1.0000
-tau:                2.0000
-x:                -13.8200
-y:                -67.2500
-z:                647.1000
-Mxx:               -7.590000e+27
-Myy:                7.750000e+27
-Mzz:               -1.600000e+26
-Mxy:               -2.503000e+28
-Mxz:                4.200000e+26
-Myz:               -2.480000e+27
-----------------------
-unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
-source time function: stf(t;t0,tau) = erf((t-t0)/tau)
-
-DATA/Par_file:
-  logical, parameter :: USE_ECEF_CMTSOLUTION = .true.
-
-src/shared/
-  shared_par.f90: shared_input_parameters: logical :: USE_ECEF_CMTSOLUTION
-  read_parameter_file.f90: read_value_logical(USE_ECEF_CMTSOLUTION, 'USE_ECEF_CMTSOLUTION', ier)
-  broadcast_computed_parameters.f90: USE_ECEF_CMTSOLUTION = bcast_logical(67)
-
-src/specfem3D/
-  get_cmt.f90:
-  locate_sources.f90: use ECEF x,y,z when locating points
-  save_kernels.f90: save_kernels_source_derivative()
-  specfem3D_par.F90: add x,y,z_source
-  finalize_simulation.F90: add deallocate x,y,z_source
 
 ##-----------------------------------------------
 ## src/specfem3D/compute_seismograms.F90 and save_kernels.f90
