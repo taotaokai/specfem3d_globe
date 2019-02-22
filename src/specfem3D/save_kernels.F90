@@ -955,7 +955,7 @@
   ! local parameters
   real(kind=CUSTOM_REAL),parameter :: scale_mass = RHOAV * (R_EARTH**3)
   integer :: irec_local
-  integer :: irec_glob !ktao: for USE_ECEF_CMTSOLUTION 
+  integer :: irec_glob !ktao: for USE_ECEF_COORDINATE 
   character(len=MAX_STRING_LEN) :: outputname
   real(kind=CUSTOM_REAL) :: scale_moment !ktao: moment tensor non-dim scale 
 
@@ -965,9 +965,9 @@
   ! computes derivatives
   do irec_local = 1, nrec_local
 
-    !ktao: add case for USE_ECEF_CMTSOLUTION
+    !ktao: add case for USE_ECEF_COORDINATE
     !only rotate to ENZ when using geodetic coordinate for the source
-    if (.not.(USE_ECEF_CMTSOLUTION)) then
+    if (.not.(USE_ECEF_COORDINATE)) then
 
       ! rotate and scale the location derivatives to correspond to dn,de,dz
       sloc_der(:,irec_local) = matmul(transpose(nu_source(:,:,irec_local)),sloc_der(:,irec_local)) &
@@ -997,7 +997,7 @@
       stshift_der(irec_local) = stshift_der(irec_local) * scale_displ**2
       shdur_der(irec_local) = shdur_der(irec_local) * scale_displ**2
 
-    endif ! USE_ECEF_CMTSOLUTION
+    endif ! USE_ECEF_COORDINATE
 
   enddo
 
@@ -1013,8 +1013,8 @@
       write(outputname,'(a,i6.6)') trim(OUTPUT_FILES)//'/src_frechet.', irec_glob
       open(unit=IOUT,file=trim(outputname),status='unknown',action='write')
 
-      if (USE_ECEF_CMTSOLUTION) then
-        !ktao: add case for USE_ECEF_CMTSOLUTION
+      if (USE_ECEF_COORDINATE) then
+        !ktao: add case for USE_ECEF_COORDINATE
         ! tshift_cmt, hdur_gaussian are not non-dimensionalized
         write(IOUT,'(E16.7,2X,E16.7,2X,"# t0(s)    D_t0 ")') tshift_src(irec_glob), stshift_der(irec_local)/scale_t
         write(IOUT,'(E16.7,2X,E16.7,2X,"# tau(s)   D_tau")') hdur_gaussian(irec_glob), shdur_der(irec_local)/scale_t
@@ -1049,7 +1049,7 @@
         write(IOUT,'(g16.5)') -sloc_der(3,irec_local)
         write(IOUT,'(g16.5)') stshift_der(irec_local)
         write(IOUT,'(g16.5)') shdur_der(irec_local)
-      endif !USE_ECEF_CMTSOLUTION
+      endif !USE_ECEF_COORDINATE
 
       close(IOUT)
     enddo

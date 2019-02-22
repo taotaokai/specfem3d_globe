@@ -1,0 +1,13 @@
+PDEW 2014 05 30 01 20 15.2  25.00   97.85  10.0 0.0 5.9 MYANMAR-CHINA BORDER REG
+event_name:     C201405300120A
+time_shift(s):       2.3000
+half_duration(s):    2.2000
+latitude(deg):        24.9300
+longitude(deg):       97.9000
+depth(km):           14.7000
+Mrr(dyn*cm):             -0.7270e+24
+Mtt(dyn*cm):             -2.1300e+24
+Mpp(dyn*cm):              2.8600e+24
+Mrt(dyn*cm):              0.7820e+24
+Mrp(dyn*cm):              1.9700e+24
+Mtp(dyn*cm):              8.4000e+24

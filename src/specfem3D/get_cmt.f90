@@ -33,7 +33,7 @@
     SOURCE_DECAY_MIMIC_TRIANGLE ! ktao: add SOURCE_DECAY_MIMIC_TRIANGLE
 
   use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS,NOISE_TOMOGRAPHY, &
-    USE_ECEF_CMTSOLUTION ! ktao: add USE_ECEF_CMTSOLUTION
+    USE_ECEF_COORDINATE ! ktao: add USE_ECEF_COORDINATE
 
   implicit none
 
@@ -350,7 +350,7 @@
   close(IIN)
 
   ! ktao: change tau back to hdur
-  if (USE_ECEF_CMTSOLUTION) then
+  if (USE_ECEF_COORDINATE) then
     ! tau instead of hdur is read from CMTSOLUTON_ECEF file
     hdur = hdur * SOURCE_DECAY_MIMIC_TRIANGLE
   endif
@@ -374,7 +374,7 @@
 !
   scaleM = 1.d7 * RHOAV * (R_EARTH**5) * PI*GRAV*RHOAV
   ! ktao: in ECEF_CMTSOLUTION the unit of moment tensor is (N.m)
-  if (USE_ECEF_CMTSOLUTION) then
+  if (USE_ECEF_COORDINATE) then
     scaleM = RHOAV * (R_EARTH**5) * PI*GRAV*RHOAV
   endif
   moment_tensor(:,:) = moment_tensor(:,:) / scaleM

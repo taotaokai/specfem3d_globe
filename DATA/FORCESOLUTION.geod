@@ -1,0 +1,11 @@
+CQ.WAS..LHZ  2000 1 1 0 0 0.0
+time_shift(s):                        0.0
+hdur_or_f0:                           0.5       ! half duration(s) for STEP or dominant frequency (Hz) for Ricker
+latitude(deg):                        28.8750
+longitude(deg):                       106.9170
+depth(km):                            0.0
+source_time_function:                 0         ! 0=STEP,1=Ricker
+force_magnitude(Newton):              1.d15
+force_vector_E:                       0.0
+force_vector_N:                       0.0
+force_vector_Z_UP:                    1.0

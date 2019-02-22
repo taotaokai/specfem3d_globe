@@ -281,7 +281,7 @@ module specfem_par
   double precision, dimension(:,:,:) ,allocatable:: nu_source
 
   double precision, dimension(:), allocatable :: Mxx,Myy,Mzz,Mxy,Mxz,Myz
-  double precision, dimension(:), allocatable :: x_source, y_source, z_source !ktao added for USE_ECEF_CMTSOLUTION
+  double precision, dimension(:), allocatable :: x_source, y_source, z_source !ktao added for USE_ECEF_COORDINATE
   double precision, dimension(:), allocatable :: xi_source,eta_source,gamma_source
   double precision, dimension(:), allocatable :: tshift_src,hdur,hdur_Gaussian
   double precision, dimension(:), allocatable :: theta_source,phi_source
@@ -377,9 +377,10 @@ module specfem_par
   ! parameters for a force source located exactly at a grid point
   integer, dimension(:), allocatable :: force_stf
   double precision, dimension(:), allocatable :: factor_force_source
-  double precision, dimension(:), allocatable :: comp_dir_vect_source_E
-  double precision, dimension(:), allocatable :: comp_dir_vect_source_N
-  double precision, dimension(:), allocatable :: comp_dir_vect_source_Z_UP
+  !double precision, dimension(:), allocatable :: comp_dir_vect_source_E
+  !double precision, dimension(:), allocatable :: comp_dir_vect_source_N
+  !double precision, dimension(:), allocatable :: comp_dir_vect_source_Z_UP
+  double precision, dimension(:,:), allocatable :: comp_dir_vect_source
 
   !-----------------------------------------------------------------
   ! assembly

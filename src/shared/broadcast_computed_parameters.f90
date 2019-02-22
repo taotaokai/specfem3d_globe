@@ -38,7 +38,7 @@
   integer, dimension(nparam_i) :: bcast_integer
   ! ktao: change nparam_l from 64 to 67 to add in following parameters: 
   ! USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220
-  ! USE_ECEF_CMTSOLUTION
+  ! USE_ECEF_COORDINATE
   !integer, parameter :: nparam_l = 64
   integer, parameter :: nparam_l = 67
   logical, dimension(nparam_l) :: bcast_logical
@@ -107,7 +107,7 @@
             ADIOS_FOR_KERNELS,ADIOS_FOR_MODELS,ADIOS_FOR_UNDO_ATTENUATION, &
             CEM_REQUEST,CEM_ACCEPT,BROADCAST_SAME_MESH_AND_MODEL, &
             USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220, & ! ktao: add
-            USE_ECEF_CMTSOLUTION /) ! ktao: add
+            USE_ECEF_COORDINATE /) ! ktao: add
 
     bcast_double_precision = (/ &
             DT,ANGULAR_WIDTH_XI_IN_DEGREES,ANGULAR_WIDTH_ETA_IN_DEGREES,CENTER_LONGITUDE_IN_DEGREES, &
@@ -280,7 +280,7 @@
     ! ktao: add 
     USE_FULL_TISO_CRUST_UPPER_MANTLE = bcast_logical(65)
     USE_FULL_TISO_CRUST_220 = bcast_logical(66)
-    USE_ECEF_CMTSOLUTION = bcast_logical(67)
+    USE_ECEF_COORDINATE = bcast_logical(67)
 
     ! double precisions
     DT = bcast_double_precision(1)

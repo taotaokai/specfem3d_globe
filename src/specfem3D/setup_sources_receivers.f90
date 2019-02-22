@@ -126,9 +126,10 @@
 
   if (USE_FORCE_POINT_SOURCE) then
     allocate(force_stf(NSOURCES),factor_force_source(NSOURCES), &
-             comp_dir_vect_source_E(NSOURCES), &
-             comp_dir_vect_source_N(NSOURCES), &
-             comp_dir_vect_source_Z_UP(NSOURCES),stat=ier)
+             comp_dir_vect_source(3,NSOURCES),stat=ier) ! KTAO
+             !comp_dir_vect_source_E(NSOURCES), &
+             !comp_dir_vect_source_N(NSOURCES), &
+             !comp_dir_vect_source_Z_UP(NSOURCES),stat=ier)
     if (ier /= 0) stop 'error allocating arrays for force point sources'
   endif
 
@@ -906,9 +907,10 @@
               hlagrange = hxis(i) * hetas(j) * hgammas(k)
 
               ! elastic source
-              norm = sqrt( comp_dir_vect_source_E(isource)**2 &
-                         + comp_dir_vect_source_N(isource)**2 &
-                         + comp_dir_vect_source_Z_UP(isource)**2 )
+              !norm = sqrt( comp_dir_vect_source_E(isource)**2 &
+              !           + comp_dir_vect_source_N(isource)**2 &
+              !           + comp_dir_vect_source_Z_UP(isource)**2 )
+              norm = sqrt(sum(comp_dir_vect_source(:,isource)**2))
 
               ! checks norm of component vector
               if (norm < TINYVAL) then
@@ -919,10 +921,12 @@
               ! of an arbitrary (non-unitary) direction vector on the E/N/Z_UP basis
               ! WARNING: first index of nu_source is the orientation which has the
               ! order N-E-Z NOT E-N-Z, i.e, 1=North, 2=East, 3=Z
-              sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * &
-                                      ( nu_source(1,:,isource) * comp_dir_vect_source_N(isource) + &
-                                        nu_source(2,:,isource) * comp_dir_vect_source_E(isource) + &
-                                        nu_source(3,:,isource) * comp_dir_vect_source_Z_UP(isource) ) / norm
+              !sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * &
+              !                        ( nu_source(1,:,isource) * comp_dir_vect_source_N(isource) + &
+              !                          nu_source(2,:,isource) * comp_dir_vect_source_E(isource) + &
+              !                          nu_source(3,:,isource) * comp_dir_vect_source_Z_UP(isource) ) / norm
+              ! KTAO: the rotation from E/N/Up to ECEF X/Y/Z is done in locate_sources.f90
+              sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * comp_dir_vect_source(:,isource) / norm
 
             enddo
           enddo

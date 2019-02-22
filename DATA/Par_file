@@ -184,26 +184,45 @@ NTSTEP_BETWEEN_OUTPUT_INFO      = 500
 NTSTEP_BETWEEN_OUTPUT_SEISMOS   = 5000000
 NTSTEP_BETWEEN_READ_ADJSRC      = 1000
 
-# use CMTSOLUTION in ECEF coordinate
-#|---example-CMTSOLUTION_ECEF---
-#|PDE 1994  6  9  0 33 16.40 -13.8300  -67.5600 637.0 6.9 6.8 NORTHERN BOLIVIA
-#|event name:        060994A 
-#|time shift:         1.0000 
-#|tau:                2.0000
-#|x:                -13.8200
-#|y:                -67.2500
-#|z:                647.1000
-#|Mxx:               -7.590000e+27
-#|Myy:                7.750000e+27
-#|Mzz:               -1.600000e+26
-#|Mxy:               -2.503000e+28
-#|Mxz:                4.200000e+26
-#|Myz:               -2.480000e+27
+# CMTSOLUTION or FORCESOLUTION uses ECEF coordinate instead of geodetic coordinate
+#
+# example of CMTSOLUTION in ECEF       |   Geodetic coord.
 #|------------------------------
-# value field must be after 15 spaces
-# unit: time shift and tau in second; x,y,z in meter; Mij in dyn*cm
-# source time function: stf(t;t0,tau) = erf((t-t0)/tau)
-USE_ECEF_CMTSOLUTION            = .true.
+#|PDEW 2014 5 30 1 20 17.5 25.00 97.85 10.0 0.0 5.9 MYANMAR-CHINA BORDER REG
+#|event_name:        C201405300120A    
+#|time_shift(s):     0.0
+#|hdur_Gaussian(s):  +1.35135135E+00   |   hdur_triangle(s):    2.2000
+#|x(m):              -7.93833843E+05   |   latitude(deg):       24.9300
+#|y(m):              +5.72085220E+06   |   longitude(deg):      97.9000
+#|z(m):              +2.66664346E+06   |   depth(km):           14.7000
+#|Mxx(N*m):          +4.24454944E+17   |   Mrr(dyn*cm):         -0.7270e+24
+#|Myy(N*m):          -1.76285423E+17   |   Mtt(dyn*cm):         -2.1300e+24
+#|Mzz(N*m):          -2.47869521E+17   |   Mpp(dyn*cm):         +2.8600e+24
+#|Mxy(N*m):          -4.66821803E+17   |   Mrt(dyn*cm):         +0.7820e+24
+#|Mxz(N*m):          +6.73237363E+17   |   Mrp(dyn*cm):         +1.9700e+24
+#|Myz(N*m):          +9.61213698E+16   |   Mtp(dyn*cm):         +8.4000e+24
+#|------------------------------
+# source time function(time integral of moment rate function): stf(t;t0,tau) = erf((t-t0)/tau), 
+# tau (i.e. hdur_Gaussian) = hdur_triangle/SOURCE_DECAY_MIMIC_TRIANGLE
+# SOURCE_DECAY_MIMIC_TRIANGLE = 1.628d0 as defined in setup/constants.h.in
+#
+# example of FORCESOLUTION in ECEF     | Geodetic coord.
+#|--------------------------------     |
+#|CQ.WAS..LHZ  2000 1 1 0 0 0.0                                        ! ignored by the code but should be useful to set origin time
+#|time_shift(s):               0.0     
+#|hdur_or_f0:                  0.5                                     ! half duration(s) for STEP or dominant frequency (Hz) for Ricker
+#|x(m):                        xxx     | latitude(deg):           28.8
+#|y(m):                        xxx     | longitude(deg):          106.
+#|z(m):                        xxx     | depth(km):               0.0
+#|source_time_function:        0                                       ! 0=STEP,1=Ricker
+#|force_magnitude(Newton):     1.d15                                  
+#|fx:                          xxx     | force_vector_E:          0.0  ! x/y/z or e/n/z_up component (magnitude is normalized automatically in code)
+#|fy:                          xxx     | force_vector_N:          0.0
+#|fz:                          xxx     | force_vector_Z_UP:       1.0
+#|--------------------------------
+# NOTE: the first column (comment field) should be a string without spaces or quoted, e.g. time_shift(s): or "time shift (sec):", but not < time shift(s) >
+#   since I use list directiond I/O (read(IIN, *) junk, value), things after ! would be treated as comments and ignored by read.
+USE_ECEF_COORDINATE             = .false.
 
 # use a (tilted) FORCESOLUTION force point source (or several) instead of a CMTSOLUTION moment-tensor source.
 # # This can be useful e.g. for asteroid simulations

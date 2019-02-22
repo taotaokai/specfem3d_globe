@@ -27,8 +27,9 @@
 
   subroutine get_force(tshift_force,hdur,lat,long,depth,DT,NSOURCES, &
                       min_tshift_force_original,force_stf,factor_force_source, &
-                      comp_dir_vect_source_E,comp_dir_vect_source_N, &
-                      comp_dir_vect_source_Z_UP)
+                      comp_dir_vect_source)
+                      !comp_dir_vect_source_E,comp_dir_vect_source_N, &
+                      !comp_dir_vect_source_Z_UP)
 
   use constants, only: IIN,MAX_STRING_LEN,TINYVAL,mygroup,RHOAV,R_EARTH,PI,GRAV
   use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS
@@ -43,9 +44,11 @@
   integer, dimension(NSOURCES), intent(out) :: force_stf
   double precision, intent(out) :: min_tshift_force_original
   double precision, dimension(NSOURCES), intent(out) :: tshift_force,hdur,lat,long,depth,factor_force_source
-  double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_E
-  double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_N
-  double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_Z_UP
+  ! KTAO: use one comp_dir_vect_source to take all the 3 components
+  !double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_E
+  !double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_N
+  !double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_Z_UP
+  double precision, dimension(3,NSOURCES), intent(out) :: comp_dir_vect_source
 
   ! local variables below
   integer :: isource,dummyval
@@ -67,9 +70,11 @@
   hdur(:) = 0.d0
   force_stf(:) = 0
   factor_force_source(:) = 0.d0
-  comp_dir_vect_source_E(:) = 0.d0
-  comp_dir_vect_source_N(:) = 0.d0
-  comp_dir_vect_source_Z_UP(:) = 0.d0
+  ! KTAO 
+  !comp_dir_vect_source_E(:) = 0.d0
+  !comp_dir_vect_source_N(:) = 0.d0
+  !comp_dir_vect_source_Z_UP(:) = 0.d0
+  comp_dir_vect_source(:,:) = 0.d0
 
 !
 !---- read info
@@ -151,17 +156,20 @@
     ! read direction vector's East component
     read(IIN,"(a)") string
     !read(string(29:len_trim(string)),*) comp_dir_vect_source_E(isource)
-    read(string,*) dummy_string, comp_dir_vect_source_E(isource)
+    !read(string,*) dummy_string, comp_dir_vect_source_E(isource)
+    read(string,*) dummy_string, comp_dir_vect_source(1,isource)
 
     ! read direction vector's North component
     read(IIN,"(a)") string
     !read(string(29:len_trim(string)),*) comp_dir_vect_source_N(isource)
-    read(string,*) dummy_string, comp_dir_vect_source_N(isource)
+    !read(string,*) dummy_string, comp_dir_vect_source_N(isource)
+    read(string,*) dummy_string, comp_dir_vect_source(2,isource)
 
     ! read direction vector's vertical component
     read(IIN,"(a)") string
     !read(string(32:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
-    read(string,*) dummy_string, comp_dir_vect_source_Z_UP(isource)
+    !read(string,*) dummy_string, comp_dir_vect_source_Z_UP(isource)
+    read(string,*) dummy_string, comp_dir_vect_source(3,isource)
 
     ! checks half-duration
     if (force_stf(isource) == 0) then
@@ -201,8 +209,10 @@
     if (hdur(isource) < TINYVAL) hdur(isource) = TINYVAL
 
     ! check (tilted) force source direction vector
-    length = sqrt( comp_dir_vect_source_E(isource)**2 + comp_dir_vect_source_N(isource)**2 + &
-         comp_dir_vect_source_Z_UP(isource)**2)
+    ! KTAO
+    !length = sqrt( comp_dir_vect_source_E(isource)**2 + comp_dir_vect_source_N(isource)**2 + &
+    !     comp_dir_vect_source_Z_UP(isource)**2)
+    length = sqrt(sum(comp_dir_vect_source(:,isource)**2))
     if (length < TINYVAL) then
       print *, 'normal length: ', length
       print *, 'isource: ',isource

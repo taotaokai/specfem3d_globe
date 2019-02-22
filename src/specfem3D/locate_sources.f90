@@ -36,13 +36,13 @@
   use constants_solver
 
   use shared_input_parameters, only: OUTPUT_FILES, &
-    USE_ECEF_CMTSOLUTION ! ktao: add USE_ECEF_CMTSOLUTION
+    USE_ECEF_COORDINATE ! ktao: add USE_ECEF_COORDINATE
 
   use specfem_par, only: &
     NSOURCES, &
     tshift_src,theta_source,phi_source, &
     DT,hdur,Mxx,Myy,Mzz,Mxy,Mxz,Myz,Mw,M0, &
-    x_source, y_source, z_source, & !ktao added for USE_ECEF_CMTSOLUTION
+    x_source, y_source, z_source, & !ktao added for USE_ECEF_COORDINATE
     rspl,espl,espl2,nspl,ibathy_topo, &
     LOCAL_TMP_PATH,SIMULATION_TYPE,TOPOGRAPHY, &
     xigll,yigll,zigll, &
@@ -50,7 +50,8 @@
     islice_selected_source,ispec_selected_source, &
     SAVE_SOURCE_MASK, &
     USE_FORCE_POINT_SOURCE,force_stf,factor_force_source, &
-    comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
+    comp_dir_vect_source
+    !comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
 
   use specfem_par_movie, only: vtkdata_source_x,vtkdata_source_y,vtkdata_source_z
 
@@ -158,15 +159,17 @@
       ! only master process reads in FORCESOLUTION file
       call get_force(tshift_src,hdur,lat,long,depth,DT,NSOURCES, &
                      min_tshift_src_original,force_stf,factor_force_source, &
-                     comp_dir_vect_source_E,comp_dir_vect_source_N, &
-                     comp_dir_vect_source_Z_UP)
+                     comp_dir_vect_source)
+                     !comp_dir_vect_source_E,comp_dir_vect_source_N, &
+                     !comp_dir_vect_source_Z_UP)
     endif
     ! broadcasts specific point force infos
     call bcast_all_i(force_stf,NSOURCES)
     call bcast_all_dp(factor_force_source,NSOURCES)
-    call bcast_all_dp(comp_dir_vect_source_E,NSOURCES)
-    call bcast_all_dp(comp_dir_vect_source_N,NSOURCES)
-    call bcast_all_dp(comp_dir_vect_source_Z_UP,NSOURCES)
+    !call bcast_all_dp(comp_dir_vect_source_E,NSOURCES)
+    !call bcast_all_dp(comp_dir_vect_source_N,NSOURCES)
+    !call bcast_all_dp(comp_dir_vect_source_Z_UP,NSOURCES)
+    call bcast_all_dp(comp_dir_vect_source,3*NSOURCES)
   else
     ! CMT moment tensors
     if (myrank == 0) then
@@ -268,8 +271,8 @@
       isource = isource_in_this_subset + isources_already_done
 
       ! convert geographic latitude lat (degrees) to geocentric colatitude theta (radians)
-      ! ktao: handle USE_ECEF_CMTSOLUTION 
-      if (USE_ECEF_CMTSOLUTION) then
+      ! ktao: handle USE_ECEF_COORDINATE 
+      if (USE_ECEF_COORDINATE) then
 
         ! non-dimensionalization
         x_target_source = lat(isource)/R_EARTH
@@ -315,55 +318,17 @@
         y_target_source = r_target_source*dsin(theta)*dsin(phi)
         z_target_source = r_target_source*dcos(theta)
 
-      endif !if (USE_ECEF_CMTSOLUTION) then
-
-      ! convert from a spherical to a Cartesian representation of the moment tensor
-      st=dsin(theta)
-      ct=dcos(theta)
-      sp=dsin(phi)
-      cp=dcos(phi)
-
-      ! get the moment tensor
-      ! ktao: handle USE_ECEF_CMTSOLUTION
-      if (USE_ECEF_CMTSOLUTION) then
-
-        Mxx(isource) = moment_tensor(1,isource)
-        Myy(isource) = moment_tensor(2,isource)
-        Mzz(isource) = moment_tensor(3,isource)
-        Mxy(isource) = moment_tensor(4,isource)
-        Mxz(isource) = moment_tensor(5,isource)
-        Myz(isource) = moment_tensor(6,isource)
-
-      else
-
-        Mrr = moment_tensor(1,isource)
-        Mtt = moment_tensor(2,isource)
-        Mpp = moment_tensor(3,isource)
-        Mrt = moment_tensor(4,isource)
-        Mrp = moment_tensor(5,isource)
-        Mtp = moment_tensor(6,isource)
-
-        ! rx(r.dot.x) = st*cp, tx = ct*cp, px = -sp
-        Mxx(isource)=st*st*cp*cp*Mrr+ct*ct*cp*cp*Mtt+sp*sp*Mpp &
-            +2.0d0*st*ct*cp*cp*Mrt-2.0d0*st*sp*cp*Mrp-2.0d0*ct*sp*cp*Mtp
-        ! ry = st*sp, ty = ct*sp, py = cp
-        Myy(isource)=st*st*sp*sp*Mrr+ct*ct*sp*sp*Mtt+cp*cp*Mpp &
-            +2.0d0*st*ct*sp*sp*Mrt+2.0d0*st*sp*cp*Mrp+2.0d0*ct*sp*cp*Mtp
-        ! rz = ct, tz = -st, pz = 0
-        Mzz(isource)=ct*ct*Mrr+st*st*Mtt-2.0d0*st*ct*Mrt
-        Mxy(isource)=st*st*sp*cp*Mrr+ct*ct*sp*cp*Mtt-sp*cp*Mpp &
-            +2.0d0*st*ct*sp*cp*Mrt+st*(cp*cp-sp*sp)*Mrp+ct*(cp*cp-sp*sp)*Mtp
-        Mxz(isource)=st*ct*cp*Mrr-st*ct*cp*Mtt &
-            +(ct*ct-st*st)*cp*Mrt-ct*sp*Mrp+st*sp*Mtp
-        Myz(isource)=st*ct*sp*Mrr-st*ct*sp*Mtt &
-            +(ct*ct-st*st)*sp*Mrt+ct*cp*Mrp-st*cp*Mtp
-
-      endif !if (USE_ECEF_CMTSOLUTION) then
+      endif !if (USE_ECEF_COORDINATE) then
 
       ! record three components for each station
       ! ktao: coordinate transformation at this source location
       ! from local basis (n,e,u=up) to ECEF(x,y,z)
       ! the code does this in two steps: (n,e,u) -> (r,t,p) -> (x,y,z)
+      st=dsin(theta)
+      ct=dcos(theta)
+      sp=dsin(phi)
+      cp=dcos(phi)
+
       do iorientation = 1,3 ! ktao: corresponds to n,e,u 
 
         ! (n,e,u) -> (r,t,p)
@@ -403,6 +368,63 @@
         nu_source(iorientation,3,isource) = n(1)*ct-n(2)*st ! iorientation .dot. z^
 
       enddo
+
+      ! rotate comp_dir_vect_source or moment_tensor when necessary
+      ! ktao: handle USE_ECEF_COORDINATE
+      if (USE_ECEF_COORDINATE) then
+
+        if (USE_FORCE_POINT_SOURCE) then
+          ! comp_dir_vect_source is already in ECEF X/Y/Z
+          ! do nothing
+          comp_dir_vect_source(:,isource) = comp_dir_vect_source(:,isource) ! just for clarification 
+        else
+          ! get the moment tensor
+          Mxx(isource) = moment_tensor(1,isource)
+          Myy(isource) = moment_tensor(2,isource)
+          Mzz(isource) = moment_tensor(3,isource)
+          Mxy(isource) = moment_tensor(4,isource)
+          Mxz(isource) = moment_tensor(5,isource)
+          Myz(isource) = moment_tensor(6,isource)
+        endif
+
+      else
+
+        if (USE_FORCE_POINT_SOURCE) then
+
+          ! WARNING: first index of nu_source is the orientation which has the
+          ! order N-E-Z, while first index of comp_dir_vect_source has the
+          ! order E-N-Z (see get_force.f90) !!
+          comp_dir_vect_source(:,isource) = &
+            nu_source(1,:,isource) * comp_dir_vect_source(2,isource) + &
+            nu_source(2,:,isource) * comp_dir_vect_source(1,isource) + &
+            nu_source(3,:,isource) * comp_dir_vect_source(3,isource)
+
+        else
+          ! convert from a spherical to a Cartesian representation of the moment tensor
+          Mrr = moment_tensor(1,isource)
+          Mtt = moment_tensor(2,isource)
+          Mpp = moment_tensor(3,isource)
+          Mrt = moment_tensor(4,isource)
+          Mrp = moment_tensor(5,isource)
+          Mtp = moment_tensor(6,isource)
+
+          ! rx(r.dot.x) = st*cp, tx = ct*cp, px = -sp
+          Mxx(isource)=st*st*cp*cp*Mrr+ct*ct*cp*cp*Mtt+sp*sp*Mpp &
+              +2.0d0*st*ct*cp*cp*Mrt-2.0d0*st*sp*cp*Mrp-2.0d0*ct*sp*cp*Mtp
+          ! ry = st*sp, ty = ct*sp, py = cp
+          Myy(isource)=st*st*sp*sp*Mrr+ct*ct*sp*sp*Mtt+cp*cp*Mpp &
+              +2.0d0*st*ct*sp*sp*Mrt+2.0d0*st*sp*cp*Mrp+2.0d0*ct*sp*cp*Mtp
+          ! rz = ct, tz = -st, pz = 0
+          Mzz(isource)=ct*ct*Mrr+st*st*Mtt-2.0d0*st*ct*Mrt
+          Mxy(isource)=st*st*sp*cp*Mrr+ct*ct*sp*cp*Mtt-sp*cp*Mpp &
+              +2.0d0*st*ct*sp*cp*Mrt+st*(cp*cp-sp*sp)*Mrp+ct*(cp*cp-sp*sp)*Mtp
+          Mxz(isource)=st*ct*cp*Mrr-st*ct*cp*Mtt &
+              +(ct*ct-st*st)*cp*Mrt-ct*sp*Mrp+st*sp*Mtp
+          Myz(isource)=st*ct*sp*Mrr-st*ct*sp*Mtt &
+              +(ct*ct-st*st)*sp*Mrt+ct*cp*Mrp-st*cp*Mtp
+        endif
+
+      endif !if (USE_ECEF_COORDINATE) then
 
       ! set distance to huge initial value
       distmin_squared = HUGEVAL
@@ -724,11 +746,17 @@
         write(IMAIN,*) ' locating source ',isource
         write(IMAIN,*) '*************************************'
         write(IMAIN,*)
-        write(IMAIN,*) 'USE_ECEF_CMTSOLUTION = ', USE_ECEF_CMTSOLUTION
+        write(IMAIN,*) 'USE_ECEF_COORDINATE = ', USE_ECEF_COORDINATE
         write(IMAIN,*)
         write(IMAIN,*) 'source located in slice ',islice_selected_source(isource_in_this_subset)
         write(IMAIN,*) '               in element ',ispec_selected_source(isource_in_this_subset)
         write(IMAIN,*)
+        write(IMAIN,*) 'NEUp-to-ECEF rotation matrix: N/E/Up .dot. X/Y/Z '
+        write(IMAIN,*) '  nu1 = ',nu_source(1,:,isource)
+        write(IMAIN,*) '  nu2 = ',nu_source(2,:,isource)
+        write(IMAIN,*) '  nu3 = ',nu_source(3,:,isource)
+        write(IMAIN,*)
+
         ! different output for force point sources
         !-------------POINT FORCE-----------------------------------------------
         if (USE_FORCE_POINT_SOURCE) then
@@ -738,22 +766,23 @@
           write(IMAIN,*) '  gamma coordinate of source in that element: ',gamma_source(isource)
 
           write(IMAIN,*)
-          write(IMAIN,*) '  component of direction vector in East direction: ',comp_dir_vect_source_E(isource)
-          write(IMAIN,*) '  component of direction vector in North direction: ',comp_dir_vect_source_N(isource)
-          write(IMAIN,*) '  component of direction vector in Vertical direction: ',comp_dir_vect_source_Z_UP(isource)
+          write(IMAIN,*) '  components of direction vector: ',comp_dir_vect_source(:,isource) ! KTAO
+          !write(IMAIN,*) '  component of direction vector in East direction: ',comp_dir_vect_source_E(isource)
+          !write(IMAIN,*) '  component of direction vector in North direction: ',comp_dir_vect_source_N(isource)
+          !write(IMAIN,*) '  component of direction vector in Vertical direction: ',comp_dir_vect_source_Z_UP(isource)
 
           !write(IMAIN,*) '  i index of source in that element: ',nint(xi_source(isource))
           !write(IMAIN,*) '  j index of source in that element: ',nint(eta_source(isource))
           !write(IMAIN,*) '  k index of source in that element: ',nint(gamma_source(isource))
           !write(IMAIN,*)
           !write(IMAIN,*) '  component direction: ',COMPONENT_FORCE_SOURCE
-          write(IMAIN,*)
-          write(IMAIN,*) '  nu1 = ',nu_source(1,:,isource)
-          write(IMAIN,*) '  nu2 = ',nu_source(2,:,isource)
-          write(IMAIN,*) '  nu3 = ',nu_source(3,:,isource)
-          write(IMAIN,*)
-          write(IMAIN,*) '  at (x,y,z) coordinates = ',x_found_source(isource_in_this_subset), &
-            y_found_source(isource_in_this_subset),z_found_source(isource_in_this_subset)
+          !write(IMAIN,*)
+          !write(IMAIN,*) '  nu1 = ',nu_source(1,:,isource)
+          !write(IMAIN,*) '  nu2 = ',nu_source(2,:,isource)
+          !write(IMAIN,*) '  nu3 = ',nu_source(3,:,isource)
+          !write(IMAIN,*)
+          !write(IMAIN,*) '  at (x,y,z) coordinates = ',x_found_source(isource_in_this_subset), &
+          !  y_found_source(isource_in_this_subset),z_found_source(isource_in_this_subset)
 
           ! prints frequency content for point forces
           f0 = hdur(isource)
@@ -822,7 +851,7 @@
         write(IMAIN,*)
 
         ! ktao: modifies
-        if (USE_ECEF_CMTSOLUTION) then
+        if (USE_ECEF_COORDINATE) then
           write(IMAIN,*) '             x(m): ',lat(isource)
           write(IMAIN,*) '             y(m): ',long(isource)
           write(IMAIN,*) '             z(m): ',depth(isource)
@@ -837,7 +866,7 @@
         write(IMAIN,*) 'position of the source that will be used:'
         write(IMAIN,*)
         ! ktao: modifies
-        if (USE_ECEF_CMTSOLUTION) then
+        if (USE_ECEF_COORDINATE) then
           write(IMAIN,*) '             x(m): ',x_found_source(isource_in_this_subset)*R_EARTH
           write(IMAIN,*) '             y(m): ',y_found_source(isource_in_this_subset)*R_EARTH
           write(IMAIN,*) '             z(m): ',z_found_source(isource_in_this_subset)*R_EARTH
