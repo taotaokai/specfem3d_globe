@@ -2185,7 +2185,7 @@ class Misfit(object):
         cc = window['cc']
         quality = window['quality']
 
-        fp.write("{:15s} {:15s} {:10.3e} {:10.3e} {:7.5f} {:7.5f} {:7.5f} {:+7.3f} {:7.3f} {:12.5e} {:12.5e}\n".format(
+        fp.write("{:15s} {:15s} {:10.3e} {:+11.3e} {:7.5f} {:+8.5f} {:+8.5f} {:+9.3f} {:+10.2e} {:+13.5e} {:+13.5e}\n".format(
           station_id, window_id, meta['dist_degree'], meta['back_azimuth'],
           window['weight'], cc['CC0'], cc['CCmax'], cc['cc_tshift'],
           quality['SNR'], cc['AR0'], cc['ARmax']))

@@ -81,7 +81,7 @@ cp $data_dir/$event_id/data/STATIONS .
 cp $mesh_dir/DATA/Par_file .
 sed -i "/^SIMULATION_TYPE/s/=.*/= 1/" Par_file
 sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
-sed -i "/^USE_ECEF_CMTSOLUTION/s/=.*/= .true./" Par_file
+sed -i "/^USE_ECEF_COORDINATE/s/=.*/= .true./" Par_file
 sed -i "/^USE_FORCE_POINT_SOURCE/s/=.*/= .false./" Par_file
 
 rm -rf $event_dir/DATABASES_MPI
@@ -204,6 +204,8 @@ rm CMTSOLUTION
 cp $cmt_file CMTSOLUTION
 sed -i "/^SIMULATION_TYPE/s/=.*/= 2/" Par_file
 sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
+sed -i "/^USE_ECEF_COORDINATE/s/=.*/= .true./" Par_file
+sed -i "/^USE_FORCE_POINT_SOURCE/s/=.*/= .false./" Par_file
 
 cd $event_dir
 
@@ -268,7 +270,9 @@ do
 
   sed -i "/^SIMULATION_TYPE/s/=.*/= 1/" Par_file
   sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
-  
+  sed -i "/^USE_ECEF_COORDINATE/s/=.*/= .true./" Par_file
+  sed -i "/^USE_FORCE_POINT_SOURCE/s/=.*/= .false./" Par_file
+ 
   cd $event_dir
   rm -rf \$out_dir OUTPUT_FILES
   mkdir \$out_dir

@@ -15,10 +15,11 @@ cp -rL $(readlink -f $source_dir/CMTSOLUTION_updated) CMTSOLUTION_initial
 
 rm mesh; ln -s $(readlink -f $source_dir/mesh) mesh
 #cp -a $source_dir/proc.sh .
-cp -a $source_dir/to_run.txt .
-cp -a $source_dir/event.txt .
+#cp -a $source_dir/to_run.txt .
+#cp -a $source_dir/event.txt .
+cp -a $source_dir/*.txt .
 #cp -a $source_dir/misfit_par.py .
 cp -a $source_dir/misfit_par .
-cp -a $source_dir/control_file .
+cp -a $source_dir/control_file* .
 
 echo !!!! modify control_file

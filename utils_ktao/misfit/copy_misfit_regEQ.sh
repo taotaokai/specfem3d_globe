@@ -20,6 +20,8 @@ do
 
   cp $event_dir/misfit/misfit.txt $out_dir/${event_id}.txt
 
+  #cp $event_dir/misfit/grid_search_source.txt $out_dir/${event_id}_grid_search_source.txt
+
 done
 
 #cp $wkdir/misfit_par.py $out_dir/

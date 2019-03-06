@@ -41,14 +41,14 @@ print("\n====== load data\n")
 misfit.load(misfit_file)
 
 print("\n====== grid_cc \n")
-range_shrink_ratio = 0.618
+range_shrink_ratio = 0.6
 dtau_range = 2
 dt0_range = 5
 xs_mt_step_range = 5
 
 dtau_opt = 0.0
 dt0_opt = 0.0
-xs_mt_step_opt = 0.5
+xs_mt_step_opt = 0.0
 
 niter = 0
 tau0 = misfit.data['event']['tau']
@@ -57,7 +57,7 @@ tau0 = misfit.data['event']['tau']
 #  tau0 = 1.0
 f = open(out_file, 'w')
 with PdfPages(out_figure) as pdf:
-  while niter < 4:
+  while niter < 10:
     f.write("====== iter = {:02d}\n".format(niter))
 
     # define search range
@@ -88,27 +88,35 @@ with PdfPages(out_figure) as pdf:
             dm=dm,
             plot=False)
     wcc = wcc_sum/weight_sum
-    interp = interpolate.RectBivariateSpline(xs_mt_step_1d, dt0_1d, wcc.reshape(dt0_2d.shape))
-    y = np.linspace(np.min(xs_mt_step_1d), np.max(xs_mt_step_1d), 500)
-    x = np.linspace(np.min(dt0_1d), np.max(dt0_1d), 500)
-    zz = interp(y, x)
-    idx_max = np.argmax(zz)
-    iy, ix = np.unravel_index(idx_max, zz.shape)
-    dt0_opt = x[ix]
-    xs_mt_step_opt = y[iy]
-    f.write("dt0_opt = {:f}\n".format(dt0_opt))
-    f.write("xs_mt_step_opt = {:f}\n".format(xs_mt_step_opt))
+    ind = np.argmax(wcc)
+    wcc_max = wcc[ind]
+    #iy, ix = np.unravel_index(ind, dt0_2d.shape)
+    dt0_opt = dm['t0'][ind]
+    xs_mt_step_opt = dm['xs_mt'][ind]
 
-    plt.figure(figsize=(11,8.5)) # US Letter
+    #interp = interpolate.RectBivariateSpline(xs_mt_step_1d, dt0_1d, wcc)
+    #y = np.linspace(np.min(xs_mt_step_1d), np.max(xs_mt_step_1d), 500)
+    #x = np.linspace(np.min(dt0_1d), np.max(dt0_1d), 500)
+    #zz = interp(y, x)
+    #iy, ix = np.unravel_index(np.argmax(zz), zz.shape)
+    #dt0_opt = x[ix]
+    #xs_mt_step_opt = y[iy]
+
+    plt.figure(figsize=(6,12)) # US Letter
     plt.subplot(2,1,1)
-    levels = np.linspace(np.min(zz), np.max(zz), 100)
-    cs = plt.contour(x, y, zz, levels=levels)
+    #levels = np.linspace(np.min(zz), np.max(zz), 100)
+    levels = np.linspace(np.min(wcc), np.max(wcc), 100)
+    #cs = plt.contour(x, y, zz, levels=levels)
+    cs = plt.contour(dt0_1d, xs_mt_step_1d, wcc.reshape(dt0_2d.shape), levels=levels)
     plt.clabel(cs, levels, inline=1, fmt='%.3f', fontsize=10)
-    plt.plot(dt0_opt, xs_mt_step_opt, 'r*', markersize=3, clip_on=False)
-    plt.text(dt0_opt, xs_mt_step_opt, "%f/%f" % (dt0_opt, xs_mt_step_opt))
+    plt.plot(dm['t0'], dm['xs_mt'], 'ko', clip_on=False)
+    for i in range(dt0_2d.size):
+      plt.text(dm['t0'][i], dm['xs_mt'][i], '%.3f'%(wcc[i]))
+    plt.plot(dt0_opt, xs_mt_step_opt, 'r+', markersize=8, clip_on=False)
+    #plt.text(dt0_opt, xs_mt_step_opt, "%.3f/%.3f" % (dt0_opt, xs_mt_step_opt))
     plt.xlabel('dt0 (second)')
     plt.ylabel('xs_mt_step')
-    plt.title("iter%02d" % (niter))
+    plt.title("iter%02d dt0_opt=%f,xs_mt_step_opt=%f\n" % (niter, dt0_opt, xs_mt_step_opt))
   
     # 1D grid search for tau
     dtau_1d = np.linspace(dtau_min, dtau_max, 11)
@@ -122,20 +130,30 @@ with PdfPages(out_figure) as pdf:
             dm=dm,
             plot=False)
     wcc = wcc_sum/weight_sum
-    interp = interpolate.interp1d(dtau_1d, wcc, kind='cubic')
-    x = np.linspace(dtau_min, dtau_max, 500)
-    z = interp(x)
-    idx_max = np.argmax(z)
-    dtau_opt = x[idx_max]
+    #interp = interpolate.interp1d(dtau_1d, wcc, kind='cubic')
+    #x = np.linspace(dtau_min, dtau_max, 500)
+    #z = interp(x)
+    #idx_max = np.argmax(z)
+    #dtau_opt = x[idx_max]
+    ind = np.argmax(wcc)
+    dtau_opt = dm['tau'][ind]
+
+    f.write("wcc_max = {:f}\n".format(wcc[ind]))
+    f.write("dt0_opt = {:f}\n".format(dt0_opt))
+    f.write("xs_mt_step_opt = {:f}\n".format(xs_mt_step_opt))
     f.write("dtau_opt = {:f}\n".format(dtau_opt))
   
     plt.subplot(2,1,2)
     plt.plot(dtau_1d, wcc, 'ko')
-    plt.plot(x, z, 'k')
-    plt.plot(x[idx_max], z[idx_max], 'ro', markersize=5)
+    #plt.plot(x, z, 'k')
+    #plt.plot(x[idx_max], z[idx_max], 'ro', markersize=5)
+    plt.plot(dtau_opt, wcc[ind], 'r+', markersize=8)
+    for i in range(dtau_1d.size):
+      plt.text(dm['tau'][i], wcc[i], '%.3f'%(wcc[i]))
     plt.xlabel('dtau (second)')
-    plt.ylabel('wcc(interp)')
-    
+    plt.ylabel('wcc')
+    plt.title("dau_opt=%f" % (dtau_opt))
+
     pdf.savefig()
     plt.close()
   
