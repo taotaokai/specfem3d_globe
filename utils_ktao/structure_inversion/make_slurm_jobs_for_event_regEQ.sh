@@ -87,7 +87,7 @@ sed -i "/^SIMULATION_TYPE/s/=.*/= 1/" Par_file
 sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
 
 #
-sed -i "/^USE_ECEF_CMTSOLUTION/s/=.*/= .true./" Par_file
+sed -i "/^USE_ECEF_COORDINATE/s/=.*/= .true./" Par_file
 
 # for regional earthquake data
 sed -i "/^USE_FORCE_POINT_SOURCE/s/=.*/= .false./" Par_file

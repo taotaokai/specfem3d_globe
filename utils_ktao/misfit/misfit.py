@@ -2162,7 +2162,7 @@ class Misfit(object):
     station_dict = self.data['station']
 
     fp = open(out_file, 'w')
-    fp.write("#station window gcarc back_azimuth weight CC0 CCmax dt_cc SNR AR0 ARmax\n")
+    fp.write("#station window gcarc azimuth back_azimuth weight CC0 CCmax dt_cc SNR AR0 ARmax\n")
 
     for station_id in station_dict:
       station = station_dict[station_id]
@@ -2185,8 +2185,8 @@ class Misfit(object):
         cc = window['cc']
         quality = window['quality']
 
-        fp.write("{:15s} {:15s} {:10.3e} {:+11.3e} {:7.5f} {:+8.5f} {:+8.5f} {:+9.3f} {:+10.2e} {:+13.5e} {:+13.5e}\n".format(
-          station_id, window_id, meta['dist_degree'], meta['back_azimuth'],
+        fp.write("{:15s} {:15s} {:10.3e} {:+11.3e} {:+11.3e} {:7.5f} {:+8.5f} {:+8.5f} {:+9.3f} {:+10.2e} {:+13.5e} {:+13.5e}\n".format(
+          station_id, window_id, meta['dist_degree'], meta['azimuth'], meta['back_azimuth'],
           window['weight'], cc['CC0'], cc['CCmax'], cc['cc_tshift'],
           quality['SNR'], cc['AR0'], cc['ARmax']))
 
