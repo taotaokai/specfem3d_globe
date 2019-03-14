@@ -87,7 +87,7 @@ sed -i "/^SIMULATION_TYPE/s/=.*/= 1/" Par_file
 sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
 
 # for noisecc data the FORCESOLUTION will always be represented in lat/lon/depth
-sed -i "/^USE_ECEF_CMTSOLUTION/s/=.*/= .false./" Par_file
+sed -i "/^USE_ECEF_COORDINATE/s/=.*/= .false./" Par_file
 sed -i "/^USE_FORCE_POINT_SOURCE/s/=.*/= .true./" Par_file
 
 rm -rf $event_dir/DATABASES_MPI

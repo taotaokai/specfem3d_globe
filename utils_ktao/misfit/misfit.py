@@ -2001,9 +2001,11 @@ class Misfit(object):
         cci = lanczos_interp1(cc, syn_delta, ti, na=40)
         # time shift at the maximum correlation
         # limit xcorr time shift within the minimum filtering period to avoid cycle-skipping
-        min_filter_period = 1.0/np.max(np.array(filter_freqlim))
-        idx_ignore = np.abs(cc_times) > min_filter_period
-        cci[idx_ignore] = -1
+        # 20190313: not relevant since dt_cc misfit is less prone to cycle-skipping, and here
+        # we just want to get the best time shift.
+        #min_filter_period = 1.0/np.max(np.array(filter_freqlim))
+        #idx_ignore = np.abs(cc_times) > min_filter_period
+        #cci[idx_ignore] = -1
         imax = np.argmax(cci)
         CC_time_shift = cc_times[imax]
         CCmax = cci[imax]
