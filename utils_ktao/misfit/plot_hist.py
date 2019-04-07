@@ -60,9 +60,9 @@ ax_size_subplot = np.array([0.7, 0.7])
 # hist parameters
 #nbins = 30
 min_cc_plot=0.5
-max_dt_plot = 20
+max_dt_plot = 10
 min_SNR = 10
-max_dt_cc = 20
+max_dt_cc = 10
 min_cc_max = 0.5
 # cutoff after remove linear trend
 num_sigma_cutoff = 3
@@ -99,7 +99,8 @@ for iter in range(10):
   gcarc = gcarc[idx]
   dt_cc = dt_cc[idx]
   ccmax = ccmax[idx]
-  
+  dt_cc_rtrend = dt_cc_rtrend[idx]
+
   print(len(dt_cc))
   if len(dt_cc) == n: break
 
@@ -134,15 +135,15 @@ ax.plot([0,0],ylim,'k')
 # model 
 hist, bin_edges = np.histogram(dt_cc, bins='auto')
 imax = np.argmax(hist)
-mode = (bin_edges[imax] + bin_edges[imax+1])/2
-print(mode, hist[imax])
-ax.plot([mode, mode],ylim,'b', label="mode=%.3f"%(mode))
-ax.legend()
+#mode = (bin_edges[imax] + bin_edges[imax+1])/2
+#print(mode, hist[imax])
+#ax.plot([mode, mode],ylim,'b', label="mode=%.3f"%(mode))
+#ax.legend()
 ax.set_ylim(ylim)
 ax.set_xlabel('Tobs-Tsyn (s)')
 ax.set_ylabel('Window number')
-#title_str = "%s (%.3f$\pm$%.3f %.3f sec)" % (window_id, np.mean(dt_cc), np.std(dt_cc), np.std(dt_cc_rtrend))
-title_str = "%s (%.3f$\pm$%.3f sec)" % (window_id, np.mean(dt_cc), np.std(dt_cc))
+title_str = "%s (%.3f$\pm$%.3f 0$\pm$%.3f sec)" % (window_id, np.mean(dt_cc), np.std(dt_cc), np.std(dt_cc_rtrend))
+#title_str = "%s ($\pm$%.3f sec)" % (window_id, np.mean(dt_cc_rtrend), np.std(dt_cc))
 ax.set_title(title_str)
 
 # plot dt_cc against gcarc
@@ -161,7 +162,8 @@ xlim = ax.get_xlim()
 ax.plot(xlim,[0,0],'k')
 #ax.legend(line, "%5.2f s/deg"%(polycoef[0]))
 #print(polycoef)
-ax.set_xlim(xlim)
+#ax.set_xlim(xlim)
+ax.set_xlim((xlim[0], 16.5))
 ax.set_ylim([-max_dt_plot, max_dt_plot])
 title_str = "%s: %s (%5.2f s/deg)" % (plot_title, window_id, polycoef[0])
 #title_str = "%s" % (window_id)

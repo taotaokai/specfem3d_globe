@@ -203,7 +203,8 @@ subplot_origin = np.array([ncol-1, nrow-1])*subplot_size
 ax_origin = ax_origin_subplot*subplot_size + subplot_origin
 ax_size = ax_size_subplot*subplot_size
 ax = fig.add_axes(np.concatenate((ax_origin, ax_size)))
-ax.hist(ccmax, 'auto', histtype='step', color='b')
+ax.hist(ccmax, 'auto', histtype='step', color='b',label="%.3f"%(np.mean(ccmax)))
+ax.legend(loc='upper left')
 ax.set_xlim([min_cc_plot, 1])
 ax.set_xlabel('CCmax')
 ax.set_ylabel('Window number')

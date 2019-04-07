@@ -8,22 +8,20 @@ import scipy.sparse.linalg
 from pyproj import Geod
 import xarray
 
-#====== parameters
+R_EARTH = 6371.0
 
+#====== parameters
 misfit_file = str(sys.argv[1])
 window_id = str(sys.argv[2]) #"surface_10-25_Z"
 out_file = str(sys.argv[3])
 
 min_SNR = 5
 max_dt_cc = 10
-
-R_EARTH = 6371.0
-
+num_sigma_cutoff = 3
 # regular 2-D grid
 # should be in strictly ascending order
-lon_grid = np.arange(94,110.1,0.5)
-lat_grid = np.arange(21,35.1,0.5)
-
+lon_grid = np.arange(93,110.6,0.5)
+lat_grid = np.arange(20.5,35.6,0.5)
 #
 path_integration_interval = 0.05 # degree
 damping_ratio = 0.01
@@ -35,20 +33,92 @@ with open(misfit_file, 'r') as f:
 lines = [l for l in lines if l[1] == window_id]
 
 # filter SNR, dt_cc
-dt_cc = np.array([ float(l[7]) for l in lines ])
-SNR = np.array([ float(l[8]) for l in lines ])
-idx = (SNR >= min_SNR) & (np.abs(dt_cc) < max_dt_cc)
+#dt_cc = np.array([ float(l[7]) for l in lines ])
+#SNR = np.array([ float(l[8]) for l in lines ])
+#idx = (SNR >= min_SNR) & (np.abs(dt_cc) < max_dt_cc)
+#
+#nlines = len(lines)
+#lines = [lines[i] for i in range(nlines) if idx[i]]
+#
+#ccmax = np.array([ float(l[6]) for l in lines ])
+#dt_cc = np.array([ float(l[7]) for l in lines ])
+#SNR = np.array([ float(l[8]) for l in lines ])
+#stlo = np.array([ float(l[12]) for l in lines ])
+#stla = np.array([ float(l[13]) for l in lines ])
+#evlo = np.array([ float(l[14]) for l in lines ])
+#evla = np.array([ float(l[15]) for l in lines ])
 
-nlines = len(lines)
-lines = [lines[i] for i in range(nlines) if idx[i]]
+gcarc = np.array([ float(l[2]) for l in lines])
+az = np.array([ float(l[3]) for l in lines])
+baz = np.array([ float(l[4]) for l in lines])
+weight = np.array([ float(l[5]) for l in lines])
+cc0 = np.array([ float(l[6]) for l in lines ])
+ccmax = np.array([ float(l[7]) for l in lines ])
+dt_cc = np.array([ float(l[8]) for l in lines ])
+SNR = np.array([ float(l[9]) for l in lines ])
+stlo = np.array([ float(l[13]) for l in lines ])
+stla = np.array([ float(l[14]) for l in lines ])
+evlo = np.array([ float(l[15]) for l in lines ])
+evla = np.array([ float(l[16]) for l in lines ])
 
-ccmax = np.array([ float(l[6]) for l in lines ])
-dt_cc = np.array([ float(l[7]) for l in lines ])
-SNR = np.array([ float(l[8]) for l in lines ])
-stlo = np.array([ float(l[12]) for l in lines ])
-stla = np.array([ float(l[13]) for l in lines ])
-evlo = np.array([ float(l[14]) for l in lines ])
-evla = np.array([ float(l[15]) for l in lines ])
+# check if lat/lon grid covers all station/event
+if any(stlo<np.min(lon_grid)) or any(stlo > np.max(lon_grid)) or \
+   any(stla<np.min(lat_grid)) or any(stla > np.max(lat_grid)):
+     print(np.min(stlo), np.max(stlo))
+     print(np.min(stla), np.max(stla))
+     raise Exception("Some station/event lies outside lat/lon grid!")
+
+print(len(dt_cc))
+idx = (SNR >= min_SNR) #& (np.abs(dt_cc) < max_dt_cc) #& (ccmax >= min_cc_max)
+gcarc = gcarc[idx]
+az = az[idx]
+baz = baz[idx]
+weight = weight[idx]
+cc0 = cc0[idx]
+ccmax = ccmax[idx]
+dt_cc = dt_cc[idx]
+SNR = SNR[idx]
+stlo = stlo[idx] 
+stla = stla[idx]
+evlo = evlo[idx]
+evla = evla[idx]
+print(len(dt_cc))
+
+# remove linear trend (iterate to remove large outliers)
+for i in range(10):
+  n = len(dt_cc)
+
+  idx = (np.abs(dt_cc) < max_dt_cc) #& (ccmax >= min_cc_max)
+  print(len(dt_cc[idx]))
+  polycoef = np.polyfit(gcarc[idx], dt_cc[idx], 1)
+  #polycoef = np.polyfit(gcarc, dt_cc, 1)
+  p = np.poly1d(polycoef)
+  print(i, p)
+  dt_cc_rtrend = dt_cc - p(gcarc)
+  
+  # filter dt_cc_rtrend within 3-sigma
+  mean_dt_cc = np.mean(dt_cc_rtrend[idx])
+  std_dt_cc = np.std(dt_cc_rtrend[idx])
+  min_dt_cc = mean_dt_cc - num_sigma_cutoff*std_dt_cc
+  max_dt_cc = mean_dt_cc + num_sigma_cutoff*std_dt_cc
+  idx = (dt_cc_rtrend > min_dt_cc) & (dt_cc_rtrend < max_dt_cc)
+
+  gcarc = gcarc[idx]
+  az = az[idx]
+  baz = baz[idx]
+  weight = weight[idx]
+  cc0 = cc0[idx]
+  ccmax = ccmax[idx]
+  dt_cc = dt_cc[idx]
+  SNR = SNR[idx]
+  stlo = stlo[idx] 
+  stla = stla[idx]
+  evlo = evlo[idx]
+  evla = evla[idx]
+  dt_cc_rtrend = dt_cc_rtrend[idx]
+
+  print(len(dt_cc))
+  if len(dt_cc) == n: break
 
 npath = dt_cc.size 
 nlon = lon_grid.size
