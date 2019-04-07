@@ -40,8 +40,9 @@ print(window_list_P_wave)
 
 for win in window_list_P_wave:
   misfit.add_window_body_wave(
-      component=win['component'],
+      window_id=win['id'],
       phase=win['phase'],
+      component=win['component'],
       begin_time=win['time'][0],
       end_time=win['time'][1],
       min_frequency=win['filter'][0],
@@ -58,8 +59,9 @@ print(window_list_S_wave)
 
 for win in window_list_S_wave:
   misfit.add_window_body_wave(
-      component=win['component'],
+      window_id=win['id'],
       phase=win['phase'],
+      component=win['component'],
       begin_time=win['time'][0],
       end_time=win['time'][1],
       min_frequency=win['filter'][0],

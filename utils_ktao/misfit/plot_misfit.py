@@ -39,7 +39,8 @@ window_list_P_wave = par.make_window_list_P_wave(evdp_km)
 print(window_list_P_wave)
 
 for win in window_list_P_wave:
-  window_id = "%s_%s" % (win['phase'], win['component'])
+  #window_id = "%s_%s" % (win['phase'], win['component'])
+  window_id = win['id']
   print("\n------ %s\n" % (window_id))
   misfit.plot_seismogram_1comp(
       savefig=True,
@@ -61,7 +62,8 @@ window_list_S_wave = par.make_window_list_S_wave(evdp_km)
 print(window_list_S_wave)
 
 for win in window_list_S_wave:
-  window_id = "%s_%s" % (win['phase'], win['component'])
+  #window_id = "%s_%s" % (win['phase'], win['component'])
+  window_id = win['id']
   print("\n------ %s\n" % (window_id))
   misfit.plot_seismogram_1comp(
       savefig=True,

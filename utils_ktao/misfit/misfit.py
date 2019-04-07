@@ -1252,8 +1252,9 @@ class Misfit(object):
 #
 
   def add_window_body_wave(self,
-      component='Z',
+      window_id='p,P_Z',
       phase='p,P',
+      component='Z',
       taper_percentage=0.1,
       begin_time=-50,
       end_time=50,
@@ -1343,7 +1344,7 @@ class Misfit(object):
         station['window'] = {}
       window = station['window']
 
-      window_id = "%s_%s" % (phase, component)
+      #window_id = "%s_%s" % (phase, component)
 
       # get time window
       if arrivals:
