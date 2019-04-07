@@ -107,13 +107,18 @@ mv $event_dir/\$out_dir/*.sac $event_dir/\$out_dir/sac
 # modify CMTSOLUTION.init with the source location actually used in the simulation
 tmpfile=\$(mktemp)
 grep -A4 "position of the source that will be used:" $event_dir/\$out_dir/output_solver.txt > \$tmpfile
-x=\$(grep "x(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
-y=\$(grep "y(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
-z=\$(grep "z(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
-
-sed -i "s/x(m).*/x(m):              \$x/"  $cmt_file
-sed -i "s/y(m).*/y(m):              \$y/"  $cmt_file
-sed -i "s/z(m).*/z(m):              \$z/"  $cmt_file
+if [ $? -ne 0 ]
+then
+  echo "[ERROR] check if green.job finished OK!"
+  exit -1
+else
+  x=\$(grep "x(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
+  y=\$(grep "y(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
+  z=\$(grep "z(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
+  sed -i "s/x(m).*/x(m):              \$x/"  $cmt_file
+  sed -i "s/y(m).*/y(m):              \$y/"  $cmt_file
+  sed -i "s/z(m).*/z(m):              \$z/"  $cmt_file
+fi
 
 echo
 echo "Done: JOB_ID=\${SLURM_JOB_ID} [\$(date)]"
