@@ -109,7 +109,7 @@ src/specfem3D/compute_arrays_source.f90:
     323     ! KTAO: since NSTEP_BLOCK could be less than NTSTEP_BETWEEN_READ_ADJSRC,
     324     ! the orignal code has the risk to assign un-allocated memory content to 
     325     ! source_adjoint, which may cause floating number exceptions, e.g. overflow, 
-    326     ! and stop the program when compiled with -fpe0 
+    326     ! and halt the program when compiled with -fpe0 
     327     ! ref: http://www.ladon.iqfr.csic.es/intel/doc/main_for/mergedProjects/bldaps_for/using_the_floating_point_exception_handling_(-fpe)_option.htm  
 
 #-----------------------------------------------
@@ -149,6 +149,7 @@ src/specfem3D/compute_arrays_source.f90:
 # src/specfem3D/locate_sources.f90: 
 #-----------------------------------------------
 - lines 781-787: lines 793-798 are moved into if-else condition for CMTSOLUTION, since Mxx,Myy... are only used for CMTSOLUTION. Otherwise error might occur for un-initialized variables.
+- [2019-07-19] this is further changed due to merging with upstream/master
 
 #-----------------------------------------------
 # add flag in Par_file to allow the use of ECEF coordinate
@@ -184,10 +185,13 @@ src/specfem3D/
 #-----------------------------------------------
 DATA/Par_file:
   # forces transverse isotropy in certain types of elements
-  # when all false use tiso only between MOHO and 220 or 670(if reference model is 1D_REF)
-  USE_FULL_TISO_CRUST_220                = .true.  # tiso between surface and 220
-  USE_FULL_TISO_CRUST_UPPER_MANTLE       = .false. # tiso between surface and 670
-  USE_FULL_TISO_MANTLE                   = .false. # tiso between moho and CMB 
+  # when all false dependeing on reference model:
+  #  REFERENCE_1D_MODEL == REFERENCE_MODEL_1DREF: tiso between surface and 670
+  #  other: tiso between surface and 220
+  # see src/meshfem3D/compute_element_properties.f90: subroutine compute_element_tiso_flag(...)
+  USE_FULL_TISO_CRUST_220                = .true.  # TISO between surface and 220
+  USE_FULL_TISO_CRUST_UPPER_MANTLE       = .false. # TISO between surface and 670
+  USE_FULL_TISO_MANTLE                   = .false. # TISO between moho and CMB 
 
 src/shared/: shared_par.f90, read_parameter_file.f90, broadcast_computed_parameters.f90
 
