@@ -112,6 +112,7 @@ then
   echo "[ERROR] check if green.job finished OK!"
   exit -1
 else
+  cp $cmt_file $event_dir/DATA/CMTSOLUTION.init.orig
   x=\$(grep "x(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
   y=\$(grep "y(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
   z=\$(grep "z(m)" \$tmpfile | awk '{printf "%+15.8E", \$2}')
@@ -119,6 +120,7 @@ else
   sed -i "s/y(m).*/y(m):              \$y/"  $cmt_file
   sed -i "s/z(m).*/z(m):              \$z/"  $cmt_file
 fi
+rm \$tmpfile
 
 echo
 echo "Done: JOB_ID=\${SLURM_JOB_ID} [\$(date)]"

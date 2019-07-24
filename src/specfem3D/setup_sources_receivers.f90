@@ -930,9 +930,10 @@
               endif
 
               ! normalizes vector
-              comp_dir_vect_source_E(isource) = comp_dir_vect_source_E(isource) / norm
-              comp_dir_vect_source_N(isource) = comp_dir_vect_source_N(isource) / norm
-              comp_dir_vect_source_Z_UP(isource) = comp_dir_vect_source_Z_UP(isource) / norm
+              !comp_dir_vect_source_E(isource) = comp_dir_vect_source_E(isource) / norm
+              !comp_dir_vect_source_N(isource) = comp_dir_vect_source_N(isource) / norm
+              !comp_dir_vect_source_Z_UP(isource) = comp_dir_vect_source_Z_UP(isource) / norm
+              comp_dir_vect_source = comp_dir_vect_source / norm ! ktao modified 
 
               ! we use a tilted force defined by its magnitude and the projections
               ! of an arbitrary (non-unitary) direction vector on the E/N/Z_UP basis
@@ -943,8 +944,8 @@
               !                        ( nu_source(1,:,isource) * comp_dir_vect_source_N(isource) + &
               !                          nu_source(2,:,isource) * comp_dir_vect_source_E(isource) + &
               !                          nu_source(3,:,isource) * comp_dir_vect_source_Z_UP(isource) ) / norm
-              ! KTAO: the rotation from E/N/Up to ECEF X/Y/Z is done in locate_sources.f90 to account for USE_ECEF_COORDINATE
-              sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * comp_dir_vect_source(:,isource) / norm
+              ! KTAO: the rotation from E/N/Up to ECEF X/Y/Z of comp_dir_vect_source is done in locate_sources.f90 to account for USE_ECEF_COORDINATE
+              sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * comp_dir_vect_source(:,isource)
 
 !=======
 !              !

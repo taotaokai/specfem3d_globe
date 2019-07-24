@@ -7,7 +7,7 @@ event_list=${1:?[arg]need fdsnws-event list}
 out_dir=${2:?[arg]need out dir}
 
 chmod u+w -R $out_dir
-rm -rf $out_dir
+#rm -rf $out_dir
 mkdir $out_dir
 
 for event_id in $(awk -F"|" 'NF&&$1!~/#/{print $9}' $event_list)

@@ -152,7 +152,7 @@
   character(len=20), intent(out) :: event_name ! event name for SAC header
 
   ! local parameters
-  integer :: ier !ktao: added for reading CMTSOLUTION
+  !integer :: ier !ktao: added for reading CMTSOLUTION
   integer :: ios,julian_day
   integer :: isource,idummy
   integer :: i,istart,iend,ier
@@ -280,7 +280,7 @@
       SOLUTION_FILE = path_to_add(1:len_trim(path_to_add))//SOLUTION_FILE(1:len_trim(SOLUTION_FILE))
     endif
 
-    open(unit=IIN,file=trim(CMTSOLUTION_FILE),status='old',action='read',iostat=ios)
+    open(unit=IIN,file=trim(SOLUTION_FILE),status='old',action='read',iostat=ios)
     if (ios /= 0) stop 'Error opening DATA/CMTSOLUTION file (in get_event_info_serial)'
 
     ! example header line of CMTSOLUTION file

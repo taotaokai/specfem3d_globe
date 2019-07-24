@@ -272,7 +272,8 @@
   use shared_parameters, only: &
     R80,R220,R400,R600,R670,R771, &
     RTOPDDOUBLEPRIME,RCMB, &
-    RMOHO_FICTITIOUS_IN_MESHER
+    RMOHO_FICTITIOUS_IN_MESHER, &
+    R80_FICTITIOUS_IN_MESHER ! ktao: add
 
   implicit none
 
