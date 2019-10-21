@@ -86,7 +86,7 @@ cd $sem_build_dir
 #./configure FC=gfortran MPIFC=mpif90 FCFLAGS="-O3 -lpthread" CC=mpicc CFLAGS="-O3"
 #./configure FC=gfortran MPIFC=mpif90 FCFLAGS="-march=core-avx2 -O3 -lpthread" CC=mpicc CFLAGS="-O3 -march=core-avx2"
 #./configure FC=gfortran CC=gcc MPIFC=${mpif90} FCFLAGS="-O3 -lpthread" CFLAGS="-O3"
-./configure FC=gfortran CC=gcc MPIFC=mpif90 FCFLAGS="-O3 -lpthread" CFLAGS="-O3"
+./configure FC=gfortran CC=gcc MPIFC=mpif90 MPILIBS="-lpthread"
 
 make clean
 #make xdecompose_mesh xmeshfem3D xgenerate_databases xspecfem3D xcombine_vol_data_vtk \
