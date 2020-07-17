@@ -77,6 +77,11 @@
   logical :: USE_FORCE_POINT_SOURCE
   logical :: USE_RICKER_TIME_FUNCTION,PRINT_SOURCE_TIME_FUNCTION
 
+  !>>>KTAO teleseismic incidence
+  logical :: TELESEISMIC_INCIDENCE
+  double precision :: TELESEISMIC_BOTTOM_KM
+  !<<<
+
   ! checkpointing/restart
   integer :: NUMBER_OF_RUNS,NUMBER_OF_THIS_RUN
 

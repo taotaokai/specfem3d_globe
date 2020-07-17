@@ -294,3 +294,49 @@ def sem_locate_points_hex27(mesh_data, xyz, idoubling=-1, kdtree_num_element=2.0
     #  loc_data[ipoint]['lagrange'] = hlagx[:,None,None]*hlagy[None,:,None]*hlagz[None,None,:]
 
   return status_all, ispec_all, uvw_all, misloc_all, misratio_all
+
+
+#///////////////////////////////////////////////////
+def sem_boundary_mesh_read(mesh_file):
+  """ read in SEM mesh slice
+  """
+  from scipy.io import FortranFile
+
+  mesh_data = {}
+
+  with FortranFile(mesh_file, 'r') as f:
+    for field in BOUNDARY_ARRAY_LIST:
+      field_name = field[0]
+      data_type = field[1]
+      mesh_data[field_name] = f.read_ints(dtype=data_type)
+  
+  mesh_data['nspec2D_teleseismic_xmin'] = mesh_data['nspec2D_teleseismic_xmin'][0]
+  mesh_data['nspec2D_teleseismic_xmax'] = mesh_data['nspec2D_teleseismic_xmax'][0]
+  mesh_data['nspec2D_teleseismic_ymin'] = mesh_data['nspec2D_teleseismic_ymin'][0]
+  mesh_data['nspec2D_teleseismic_ymax'] = mesh_data['nspec2D_teleseismic_ymax'][0]
+  mesh_data['nspec2D_teleseismic_bottom'] = mesh_data['nspec2D_teleseismic_bottom'][0]
+
+  # reshape
+  #NB: binary files are written in Fortran column-major convention !!!
+  #NB: reshape 1-D array to matrix by Fortran convention, and 
+  #NB: also convert to a contiguous array in memory, in case of direct memory copy or MPI transfer
+  mesh_data['jacobian2D_teleseismic_xmin'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_xmin'], (NGLLY,NGLLZ,-1), order='F'))
+  mesh_data['jacobian2D_teleseismic_xmax'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_xmax'], (NGLLY,NGLLZ,-1), order='F'))
+  mesh_data['jacobian2D_teleseismic_ymin'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_ymin'], (NGLLX,NGLLZ,-1), order='F'))
+  mesh_data['jacobian2D_teleseismic_ymax'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_ymax'], (NGLLX,NGLLZ,-1), order='F'))
+  mesh_data['jacobian2D_teleseismic_bottom'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_bottom'], (NGLLX,NGLLY,-1), order='F'))
+
+  # cut data arrays to lengths actually used    
+  mesh_data['ibelm_teleseismic_xmin'] = mesh_data['ibelm_teleseismic_xmin'][0:mesh_data['nspec2D_teleseismic_xmin']]
+  mesh_data['ibelm_teleseismic_xmax'] = mesh_data['ibelm_teleseismic_xmax'][0:mesh_data['nspec2D_teleseismic_xmax']]
+  mesh_data['ibelm_teleseismic_ymin'] = mesh_data['ibelm_teleseismic_ymin'][0:mesh_data['nspec2D_teleseismic_ymin']]
+  mesh_data['ibelm_teleseismic_ymax'] = mesh_data['ibelm_teleseismic_ymax'][0:mesh_data['nspec2D_teleseismic_ymax']]
+  mesh_data['ibelm_teleseismic_bottom'] = mesh_data['ibelm_teleseismic_bottom'][0:mesh_data['nspec2D_teleseismic_bottom']]
+
+  mesh_data['jacobian2D_teleseismic_xmin'] = mesh_data['jacobian2D_teleseismic_xmin'][:,:,0:mesh_data['nspec2D_teleseismic_xmin']]
+  mesh_data['jacobian2D_teleseismic_xmax'] = mesh_data['jacobian2D_teleseismic_xmax'][:,:,0:mesh_data['nspec2D_teleseismic_xmax']]
+  mesh_data['jacobian2D_teleseismic_ymin'] = mesh_data['jacobian2D_teleseismic_ymin'][:,:,0:mesh_data['nspec2D_teleseismic_ymin']]
+  mesh_data['jacobian2D_teleseismic_ymax'] = mesh_data['jacobian2D_teleseismic_ymax'][:,:,0:mesh_data['nspec2D_teleseismic_ymax']]
+  mesh_data['jacobian2D_teleseismic_bottom'] = mesh_data['jacobian2D_teleseismic_bottom'][:,:,0:mesh_data['nspec2D_teleseismic_bottom']]
+
+  return mesh_data

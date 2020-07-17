@@ -665,6 +665,19 @@
     ispec2D_670_top,ispec2D_670_bot, &
     prname
 
+  !>>>KTAO
+  use shared_parameters, only: TELESEISMIC_INCIDENCE
+  use regions_mesh_par2, only: &
+    nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+    nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax, &
+    ibelm_teleseismic_xmin,ibelm_teleseismic_xmax, &
+    ibelm_teleseismic_ymin,ibelm_teleseismic_ymax, &
+    jacobian2D_teleseismic_xmin, jacobian2D_teleseismic_xmax, &
+    jacobian2D_teleseismic_ymin, jacobian2D_teleseismic_ymax, &
+    NSPEC2D_teleseismic_bottom,ibelm_teleseismic_bottom, &
+    jacobian2D_teleseismic_bottom
+  !<<<
+
   implicit none
 
   ! local parameters
@@ -701,6 +714,36 @@
   write(IOUT) normal_670
 
   close(IOUT)
+
+  !>>>KTAO: writing boundary for teleseismic incidence
+  if (TELESEISMIC_INCIDENCE) then
+    open(unit=IOUT,file=prname(1:len_trim(prname))//'boundary_teleseismic.bin', &
+         status='unknown',form='unformatted',iostat=ier)
+    if (ier /= 0 ) call exit_mpi(myrank,'Error opening boundary_teleseismic.bin file')
+
+    write(IOUT) nspec2D_teleseismic_xmin
+    write(IOUT) ibelm_teleseismic_xmin
+    write(IOUT) jacobian2D_teleseismic_xmin
+
+    write(IOUT) nspec2D_teleseismic_xmax
+    write(IOUT) ibelm_teleseismic_xmax
+    write(IOUT) jacobian2D_teleseismic_xmax
+
+    write(IOUT) nspec2D_teleseismic_ymin
+    write(IOUT) ibelm_teleseismic_ymin
+    write(IOUT) jacobian2D_teleseismic_ymin
+
+    write(IOUT) nspec2D_teleseismic_ymax
+    write(IOUT) ibelm_teleseismic_ymax
+    write(IOUT) jacobian2D_teleseismic_ymax
+
+    write(IOUT) nspec2D_teleseismic_bottom
+    write(IOUT) ibelm_teleseismic_bottom
+    write(IOUT) jacobian2D_teleseismic_bottom
+
+    close(IOUT)
+  endif
+  !<<<
 
   end subroutine save_arrays_boundary
 

@@ -63,3 +63,26 @@ MESH_ARRAY_LIST = [
   ('DgammaDy','f4')                   ,
   ('DgammaDz','f4')                   ,
   ]
+
+#--- data structure of proc000*_reg1_boundary_teleseismic.bin
+BOUNDARY_ARRAY_LIST = [                       
+  ('nspec2D_teleseismic_xmin','i4')        ,
+  ('ibelm_teleseismic_xmin', 'i4')         ,
+  ('jacobian2D_teleseismic_xmin', 'f4')    ,
+
+  ('nspec2D_teleseismic_xmax','i4')        ,
+  ('ibelm_teleseismic_xmax', 'i4')         ,
+  ('jacobian2D_teleseismic_xmax', 'f4')    ,
+
+  ('nspec2D_teleseismic_ymin','i4')        ,
+  ('ibelm_teleseismic_ymin', 'i4')         ,
+  ('jacobian2D_teleseismic_ymin', 'f4')    ,
+
+  ('nspec2D_teleseismic_ymax','i4')        ,
+  ('ibelm_teleseismic_ymax', 'i4')         ,
+  ('jacobian2D_teleseismic_ymax', 'f4')    ,
+
+  ('nspec2D_teleseismic_bottom','i4')      ,
+  ('ibelm_teleseismic_bottom', 'i4')       ,
+  ('jacobian2D_teleseismic_bottom', 'f4')  ,
+  ]

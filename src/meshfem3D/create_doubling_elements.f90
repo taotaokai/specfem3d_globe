@@ -57,6 +57,11 @@
   use constants
   use meshfem3D_models_par, only: myrank,HONOR_1D_SPHERICAL_MOHO
 
+  !>>>KTAO
+  use shared_parameters, only: TELESEISMIC_INCIDENCE
+  use regions_mesh_par2, only: r_teleseismic_bottom,above_teleseismic_bottom
+  !<<<KTAO
+
   implicit none
 
   integer,intent(in) :: ilayer,ichunk,ipass,ifirst_region,ilast_region
@@ -392,6 +397,16 @@
               ispec2D_400_bot,ispec2D_670_top,ispec2D_670_bot, &
               NSPEC2D_MOHO,NSPEC2D_400,NSPEC2D_670,r_moho,r_400,r_670, &
               is_superbrick,USE_ONE_LAYER_SB,ispec_superbrick,nex_eta_moho,HONOR_1D_SPHERICAL_MOHO)
+
+          !>>>>>>KTAO: above_teleseismic_bottom(ispec)
+          if (TELESEISMIC_INCIDENCE) then
+            above_teleseismic_bottom(ispec_loc) = .false.
+            if ( (r_teleseismic_bottom - max(r1,r2,r3,r4)) < SMALLVAL) then
+              above_teleseismic_bottom(ispec_loc) = .true.
+            endif
+          endif
+          !<<<<<<KTAO
+
         endif
 
       ! end of loops on the mesh doubling elements

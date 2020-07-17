@@ -129,7 +129,9 @@
   call crm_allocate_arrays(ipass, &
                            NSPEC2DMAX_XMIN_XMAX,NSPEC2DMAX_YMIN_YMAX, &
                            NSPEC2D_BOTTOM,NSPEC2D_TOP)
-
+  !KTAO: modify crm_allocate_arrays to:
+  ! -allocate and initialize above_teleseismic_bottom, ibelm_teleseismic_xmin(...)
+  !  jacobian2D_teleseismic_xim,..
 
   ! initialize number of layers
   call synchronize_all()
@@ -138,7 +140,11 @@
     write(IMAIN,*) '  ...setting up layers '
     call flush_IMAIN()
   endif
-  call crm_setup_layers(ipass,NEX_PER_PROC_ETA)
+  !call crm_setup_layers(ipass,NEX_PER_PROC_ETA)
+  call crm_setup_layers(ipass,NEX_PER_PROC_ETA,NSPEC2D_TOP) !KTAO: add NSPEC2D_TOP
+  !KTAO: modify crm_setup_layers to:
+  ! -calculate r_teleseismic_bottom,NSPEC2D_teleseismic_bottom and,
+  ! -allocate and initialize ibelm/jacobian2D/normal_teleseismic_bottom(...).
 
   !  creates mesh elements
   call synchronize_all()
@@ -517,6 +523,17 @@
   deallocate(ibelm_670_top,ibelm_670_bot)
   deallocate(normal_moho,normal_400,normal_670)
 
+  !>>>KTAO
+  deallocate(above_teleseismic_bottom)
+  deallocate(ibelm_teleseismic_xmin,ibelm_teleseismic_xmax, &
+             ibelm_teleseismic_ymin,ibelm_teleseismic_ymax)
+  deallocate(jacobian2D_teleseismic_xmin,jacobian2D_teleseismic_xmax, &
+    jacobian2D_teleseismic_ymin,jacobian2D_teleseismic_ymax)
+  deallocate(ibelm_teleseismic_bottom, &
+             normal_teleseismic_bottom, &
+             jacobian2D_teleseismic_bottom)
+  !<<<
+
   end subroutine create_regions_mesh
 
 !
@@ -543,6 +560,8 @@
   use regions_mesh_par2
 
   use MPI_interfaces_par
+
+  use shared_parameters, only: TELESEISMIC_INCIDENCE
 
   implicit none
 
@@ -659,6 +678,36 @@
   ibelm_xmin(:) = 0; ibelm_xmax(:) = 0
   ibelm_ymin(:) = 0; ibelm_ymax(:) = 0
   ibelm_bottom(:) = 0; ibelm_top(:) = 0
+
+  !>>>>> KTAO flag ibelm for teleseismic incidence 
+  if (TELESEISMIC_INCIDENCE) then
+    allocate(above_teleseismic_bottom(nspec), stat=ier)
+    if (ier /= 0) stop 'Error in allocate above_teleseismic_bottom'
+    above_teleseismic_bottom(:) = .false.
+
+    allocate(ibelm_teleseismic_xmin(NSPEC2DMAX_XMIN_XMAX), &
+             ibelm_teleseismic_xmax(NSPEC2DMAX_XMIN_XMAX), &
+             ibelm_teleseismic_ymin(NSPEC2DMAX_YMIN_YMAX), &
+             ibelm_teleseismic_ymax(NSPEC2DMAX_YMIN_YMAX), &
+             stat=ier)
+    if (ier /= 0) stop 'Error in allocate ibelm_teleseismic_xmin etc.'
+    ibelm_teleseismic_xmin(:) = 0
+    ibelm_teleseismic_xmax(:) = 0
+    ibelm_teleseismic_ymin(:) = 0
+    ibelm_teleseismic_ymax(:) = 0
+
+    allocate(jacobian2D_teleseismic_xmin(NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX), &
+             jacobian2D_teleseismic_xmax(NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX), &
+             jacobian2D_teleseismic_ymin(NGLLX,NGLLZ,NSPEC2DMAX_YMIN_YMAX), &
+             jacobian2D_teleseismic_ymax(NGLLX,NGLLZ,NSPEC2DMAX_YMIN_YMAX), &
+             stat=ier)
+    if (ier /= 0) stop 'Error in allocate jacobian2D_teleseismic_xmin etc.'
+    jacobian2D_teleseismic_xmin(:,:,:) = 0.0
+    jacobian2D_teleseismic_xmax(:,:,:) = 0.0
+    jacobian2D_teleseismic_ymin(:,:,:) = 0.0
+    jacobian2D_teleseismic_ymax(:,:,:) = 0.0
+  endif
+  !<<<<<
 
   ! 2-D Jacobians and normals
   allocate(jacobian2D_xmin(NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX), &
@@ -822,7 +871,7 @@
 !-------------------------------------------------------------------------------------------------
 !
 
-  subroutine crm_setup_layers(ipass,NEX_PER_PROC_ETA)
+  subroutine crm_setup_layers(ipass,NEX_PER_PROC_ETA,NSPEC2D_TOP)
 
   use meshfem3D_par, only: &
     nspec,iregion_code, &
@@ -840,14 +889,28 @@
 
   use regions_mesh_par2
 
+  !>>>KTAO
+  use meshfem3D_par, only: myrank
+  use meshfem3D_models_par, only: SAVE_BOUNDARY_MESH
+  use constants, only: R_EARTH_KM,HUGEVAL
+  use shared_parameters, only: rmins,rmaxs,this_region_has_a_doubling, &
+    TELESEISMIC_INCIDENCE,TELESEISMIC_BOTTOM_KM,r_top,r_bottom
+  !<<<
+
   implicit none
 
   integer,intent(in) :: ipass
   integer :: NEX_PER_PROC_ETA
+  integer :: NSPEC2D_TOP !KTAO to calculate NSPEC2D_teleseismic_bottom
 
   ! local parameters
   integer :: cpt
   integer :: i,ier
+
+  !>>>KTAO for teleseismic
+  double precision :: r,r_target,rmin,rmax 
+  integer :: ilayer,ier0
+  !<<<
 
   ! initializes element layers
   call initialize_layers(ipass,xigll,yigll,zigll,wxgll,wygll,wzgll, &
@@ -861,6 +924,64 @@
                          ONE_CRUST,NUMBER_OF_MESH_LAYERS,layer_shift, &
                          iregion_code,ifirst_region,ilast_region, &
                          first_layer_aniso,last_layer_aniso,is_on_a_slice_edge)
+
+  !>>>KTAO get NSPEC2D_teleseismic_bottom,r_teleseismic_bottom and 
+  !        allocate arrays for teleseismic_bottom boundary
+  if (ipass == 2 .and. SAVE_BOUNDARY_MESH .and. iregion_code == IREGION_CRUST_MANTLE .and. TELESEISMIC_INCIDENCE) then
+    !debug
+    if (myrank == 0) then
+      do ilayer = ifirst_region,ilast_region
+        print *,'ilayer,ner,rmin,rmax,r_bot,r_top,doubling = ',&
+          ilayer,ner(ilayer),rmins(ilayer), rmaxs(ilayer), &
+          r_bottom(ilayer),r_top(ilayer),this_region_has_a_doubling(ilayer)
+      enddo
+    endif
+    !
+    NSPEC2D_teleseismic_bottom = NSPEC2D_TOP
+    r_target = 1.d0 - TELESEISMIC_BOTTOM_KM/R_EARTH_KM
+    if (myrank == 0) print *,'NSPEC2D_TOP,r_target = ',NSPEC2D_TOP,r_target
+    do ilayer = ifirst_region,ilast_region
+      ! determine the radii that define the shell
+      rmin = rmins(ilayer)
+      rmax = rmaxs(ilayer)
+      if (myrank == 0) print *,'ilayer,ner,doubling,rmin,rmax = ',ilayer,ner(ilayer),this_region_has_a_doubling(ilayer),rmin,rmax
+      ier0 = 1
+      if (this_region_has_a_doubling(ilayer)) then
+        ier0 = 3 ! move r_teleseismic_bottom below top two doubling layers to avoid complexities
+        ! determine NSPEC2D_teleseismic_bottom
+        NSPEC2D_teleseismic_bottom = NSPEC2D_teleseismic_bottom/4
+      endif
+      if (rmin < r_target) then
+        do ier = ier0, ner(ilayer)
+          r = rmax - (rmax - rmin)*(ier - 1)/ner(ilayer)
+          if (r < r_target) then
+            r_teleseismic_bottom = r
+            if (myrank == 0) print *,'ier,r_teleseismic_bottom = ',ier,r_teleseismic_bottom
+            exit
+          endif
+        enddo
+        exit
+      endif
+    enddo
+  else
+    NSPEC2D_teleseismic_bottom = 1
+  endif
+
+  if (myrank == 0) then
+    print *,'NSPEC2D_teleseismic_bottom = ',NSPEC2D_teleseismic_bottom
+  endif
+
+  allocate(ibelm_teleseismic_bottom(NSPEC2D_teleseismic_bottom), &
+           normal_teleseismic_bottom(NDIM,NGLLX,NGLLY,NSPEC2D_teleseismic_bottom), &
+           jacobian2D_teleseismic_bottom(NGLLX,NGLLY,NSPEC2D_teleseismic_bottom),stat=ier)
+  if (ier /= 0) stop 'Error in allocate ibelm_teleseismic_bottom,...'
+
+  !initialize arrays
+  ispec2D_teleseismic_bottom = 0
+  ibelm_teleseismic_bottom(:) = 0
+  normal_teleseismic_bottom(:,:,:,:) = 0.0
+  jacobian2D_teleseismic_bottom(:,:,:) = 0.0
+  !<<<
 
   ! to consider anisotropic elements first and to build the mesh from the bottom to the top of the region
   allocate (perm_layer(ifirst_region:ilast_region),stat=ier)

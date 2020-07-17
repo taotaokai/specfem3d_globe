@@ -270,7 +270,8 @@
     R_CENTRAL_CUBE
 
   use shared_parameters, only: &
-    R80,R220,R400,R600,R670,R771, &
+    !R80,R220,R400,R600,R670,R771, & !KTAO: remove R80 to avoid warning of unused variable
+    R220,R400,R600,R670,R771, &
     RTOPDDOUBLEPRIME,RCMB, &
     RMOHO_FICTITIOUS_IN_MESHER, &
     R80_FICTITIOUS_IN_MESHER ! ktao: add
@@ -314,9 +315,10 @@
 
   radius(1)  = R_EARTH ! Surface
   radius(2)  = RMOHO_FICTITIOUS_IN_MESHER !    Moho - 1st Mesh Doubling Interface
-  ! ktao: change R80 to R80_FICTITIOUS_IN_MESHER as designed
+  !>>> KTAO: change R80 to R80_FICTITIOUS_IN_MESHER as designed
   !radius(3)  = R80    !      80
   radius(3)  = R80_FICTITIOUS_IN_MESHER !R80
+  !<<<
   radius(4)  = R220   !     220
   radius(5)  = R400   !     400
   radius(6)  = R600   !     600

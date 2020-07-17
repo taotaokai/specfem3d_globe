@@ -136,6 +136,10 @@
 
   ratio_sampling_array(15) = 0
 
+  !!KTAO debug
+  !print *,ADD_4TH_DOUBLING,SUPPRESS_CRUSTAL_MESH,ONE_CRUST
+  
+
 ! define all the layers of the mesh
   if (.not. ADD_4TH_DOUBLING) then
 
@@ -257,8 +261,15 @@
       rmaxs(8) = R670 / R_EARTH
       rmins(8) = R771 / R_EARTH
 
-      rmaxs(9:10) = R771 / R_EARTH
-      rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      !>>>>> KTAO: modified to be consistent with r_top/bottom
+      !rmaxs(9:10) = R771 / R_EARTH
+      !rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      rmaxs(9) = R771 / R_EARTH
+      rmins(9) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+
+      rmaxs(10) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+      rmins(10) = RTOPDDOUBLEPRIME / R_EARTH
+      !<<<<< KTAO
 
       rmaxs(11) = RTOPDDOUBLEPRIME / R_EARTH
       rmins(11) = RCMB / R_EARTH
@@ -390,8 +401,15 @@
       rmaxs(7) = R670 / R_EARTH
       rmins(7) = R771 / R_EARTH
 
-      rmaxs(8:9) = R771 / R_EARTH
-      rmins(8:9) = RTOPDDOUBLEPRIME / R_EARTH
+      !>>>>> KTAO: modified to be consistent with r_top/bottom
+      !rmaxs(8:9) = R771 / R_EARTH
+      !rmins(8:9) = RTOPDDOUBLEPRIME / R_EARTH
+      rmaxs(8) = R771 / R_EARTH
+      rmins(8) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+
+      rmaxs(9) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+      rmins(9) = RTOPDDOUBLEPRIME / R_EARTH
+      !<<<<< KTAO
 
       rmaxs(10) = RTOPDDOUBLEPRIME / R_EARTH
       rmins(10) = RCMB / R_EARTH
@@ -527,8 +545,16 @@
       rmaxs(8) = R670 / R_EARTH
       rmins(8) = R771 / R_EARTH
 
-      rmaxs(9:10) = R771 / R_EARTH
-      rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      !>>>>> KTAO: modified to be consistent with r_top/bottom
+      !rmaxs(9:10) = R771 / R_EARTH
+      !rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      
+      rmaxs(9) = R771 / R_EARTH
+      rmins(9) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+
+      rmaxs(10) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+      rmins(10) = RTOPDDOUBLEPRIME / R_EARTH
+      !<<<<< KTAO
 
       rmaxs(11) = RTOPDDOUBLEPRIME / R_EARTH
       rmins(11) = RCMB / R_EARTH
@@ -667,8 +693,16 @@
       rmaxs(8) = R670 / R_EARTH
       rmins(8) = R771 / R_EARTH
 
-      rmaxs(9:10) = R771 / R_EARTH
-      rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      !>>>>> KTAO: modified to be consistent with r_top/bottom
+      !rmaxs(9:10) = R771 / R_EARTH
+      !rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      
+      rmaxs(9) = R771 / R_EARTH
+      rmins(9) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+
+      rmaxs(10) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+      rmins(10) = RTOPDDOUBLEPRIME / R_EARTH
+      !<<<<< KTAO
 
       rmaxs(11) = RTOPDDOUBLEPRIME / R_EARTH
       rmins(11) = RCMB / R_EARTH
@@ -803,9 +837,17 @@
       rmaxs(7) = R670 / R_EARTH
       rmins(7) = R771 / R_EARTH
 
-      rmaxs(8:9) = R771 / R_EARTH
-      rmins(8:9) = RTOPDDOUBLEPRIME / R_EARTH
+      !>>>>> KTAO: modified to be consistent with r_top/bottom
+      !rmaxs(8:9) = R771 / R_EARTH
+      !rmins(8:9) = RTOPDDOUBLEPRIME / R_EARTH
+      
+      rmaxs(8) = R771 / R_EARTH
+      rmins(8) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
 
+      rmaxs(9) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+      rmins(9) = RTOPDDOUBLEPRIME / R_EARTH
+      !<<<<< KTAO
+     
       rmaxs(10) = RTOPDDOUBLEPRIME / R_EARTH
       rmins(10) = RCMB / R_EARTH
 
@@ -942,8 +984,16 @@
       rmaxs(8) = R670 / R_EARTH
       rmins(8) = R771 / R_EARTH
 
-      rmaxs(9:10) = R771 / R_EARTH
-      rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      !>>>>> KTAO: modified to be consistent with r_top/bottom
+      !rmaxs(9:10) = R771 / R_EARTH
+      !rmins(9:10) = RTOPDDOUBLEPRIME / R_EARTH
+      
+      rmaxs(9) = R771 / R_EARTH
+      rmins(9) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+
+      rmaxs(10) = (R_EARTH - DEPTH_SECOND_DOUBLING_REAL) / R_EARTH
+      rmins(10) = RTOPDDOUBLEPRIME / R_EARTH
+      !<<<<< KTAO
 
       rmaxs(11) = RTOPDDOUBLEPRIME / R_EARTH
       rmins(11) = RCMB / R_EARTH

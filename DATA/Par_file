@@ -13,20 +13,20 @@ SAVE_FORWARD                    = .false.   # save last frame of forward simulat
 NCHUNKS                         = 1
 
 # angular width of the first chunk (not used if full sphere with six chunks)
-ANGULAR_WIDTH_XI_IN_DEGREES     = 15.d0   # angular size of a chunk
-ANGULAR_WIDTH_ETA_IN_DEGREES    = 15.d0
-CENTER_LATITUDE_IN_DEGREES      = 27.5d0
-CENTER_LONGITUDE_IN_DEGREES     = 101.5d0
+ANGULAR_WIDTH_XI_IN_DEGREES     = 20.d0   # angular size of a chunk
+ANGULAR_WIDTH_ETA_IN_DEGREES    = 20.d0
+CENTER_LATITUDE_IN_DEGREES      = 24.d0
+CENTER_LONGITUDE_IN_DEGREES     = 97.d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
 
 # number of elements at the surface along the two sides of the first chunk
 # (must be multiple of 16 and 8 * multiple of NPROC below)
-NEX_XI                          = 224
-NEX_ETA                         = 224
+NEX_XI                          = 64
+NEX_ETA                         = 64
 
 # number of MPI processors along the two sides of the first chunk
-NPROC_XI                        = 28
-NPROC_ETA                       = 14
+NPROC_XI                        = 2
+NPROC_ETA                       = 2
 
 # KTAO: user defined time step (ignore if <=0)
 # KTAO: instability also occurs when unphysically small Vp/Vs ratio is set (the physical system itself is unstalbe instead of numerical issue) 
@@ -61,7 +61,7 @@ USER_DT                         = 0.05d0
 #                          associated reference model rather than the default 3D crustal model
 #                          e.g. s20rts_1Dcrust, s362ani_1Dcrust, etc.
 #
-MODEL                           = 1D_isotropic_prem
+MODEL                           = s362ani
 
 # parameters describing the Earth model
 OCEANS                          = .true.
@@ -75,13 +75,13 @@ ATTENUATION                     = .true.
 ABSORBING_CONDITIONS            = .true.
 
 # record length in minutes
-RECORD_LENGTH_IN_MINUTES        = 10.d0
+RECORD_LENGTH_IN_MINUTES        = 2.5d0
 
 # to undo attenuation for sensitivity kernel calculations or forward runs with SAVE_FORWARD
 # use one (and only one) of the two flags below. UNDO_ATTENUATION is much better (it is exact)
 # but requires a significant amount of disk space for temporary storage.
-PARTIAL_PHYS_DISPERSION_ONLY    = .false.
-UNDO_ATTENUATION                = .true.
+PARTIAL_PHYS_DISPERSION_ONLY    = .true.
+UNDO_ATTENUATION                = .false.
 # How much memory (in GB) is installed on your machine per CPU core (only used for UNDO_ATTENUATION, can be ignored otherwise)
 #         (or per GPU card or per INTEL MIC Phi board)
 #   Beware, this value MUST be given per core, i.e. per MPI thread, i.e. per MPI rank, NOT per node.
@@ -180,7 +180,7 @@ LOCAL_PATH                      = ./DATABASES_MPI
 LOCAL_TMP_PATH                  = ./DATABASES_MPI
 
 # interval at which we output time step info and max of norm of displacement
-NTSTEP_BETWEEN_OUTPUT_INFO      = 500
+NTSTEP_BETWEEN_OUTPUT_INFO      = 200
 
 #-----------------------------------------------------------
 #
@@ -245,6 +245,12 @@ USE_ECEF_COORDINATE             = .false.
 # The direction vector is made unitary internally in the code and thus only its direction matters here;
 # its norm is ignored and the norm of the force used is the factor force source times the source time function.
 USE_FORCE_POINT_SOURCE          = .false.
+
+#>>>KTAO teleseismic incidence
+TELESEISMIC_INCIDENCE           = .true.
+# depth (in km) of the bottom 'source' boundary for teleseismic incidence
+TELESEISMIC_BOTTOM_KM           = 1000.d0
+#<<<
 
 # option to save strain seismograms
 # this option is useful for strain Green's tensor

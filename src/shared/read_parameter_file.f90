@@ -198,6 +198,13 @@
   call read_value_logical(USE_FORCE_POINT_SOURCE, 'USE_FORCE_POINT_SOURCE', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_FORCE_POINT_SOURCE'
 
+  !>>>KTAO: teleseismic incidence
+  call read_value_logical(TELESEISMIC_INCIDENCE, 'TELESEISMIC_INCIDENCE', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: TELESEISMIC_INCIDENCE'
+  call read_value_double_precision(TELESEISMIC_BOTTOM_KM, 'TELESEISMIC_BOTTOM_KM', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: TELESEISMIC_BOTTOM_KM'
+  !<<<
+
   ! option to save strain seismograms
   call read_value_logical(SAVE_SEISMOGRAMS_STRAIN, 'SAVE_SEISMOGRAMS_STRAIN', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: SAVE_SEISMOGRAMS_STRAIN'

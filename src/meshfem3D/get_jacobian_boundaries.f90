@@ -42,6 +42,17 @@
 
   use meshfem3D_par, only: nspec
 
+  !>>>KTAO
+  use shared_parameters, only: TELESEISMIC_INCIDENCE
+  use regions_mesh_par2, only: above_teleseismic_bottom, &
+    nspec2D_teleseismic_xmin, nspec2D_teleseismic_xmax, &
+    nspec2D_teleseismic_ymin, nspec2D_teleseismic_ymax, &
+    ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
+    ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
+    jacobian2D_teleseismic_xmin, jacobian2D_teleseismic_xmax, &
+    jacobian2D_teleseismic_ymin, jacobian2D_teleseismic_ymax
+  !<<<
+
   implicit none
 
   integer :: NSPEC2D_BOTTOM,NSPEC2D_TOP,NSPEC2DMAX_XMIN_XMAX,NSPEC2DMAX_YMIN_YMAX
@@ -80,6 +91,12 @@
 
 ! counters to keep track of number of elements on each of the boundaries
   integer :: ispecb1,ispecb2,ispecb3,ispecb4,ispecb5,ispecb6
+  !>>>KTAO
+  integer :: ispecb1_teleseismic
+  integer :: ispecb2_teleseismic
+  integer :: ispecb3_teleseismic
+  integer :: ispecb4_teleseismic
+  !<<<
 
   double precision :: xelm(NGNOD2D),yelm(NGNOD2D),zelm(NGNOD2D)
 
@@ -100,6 +117,13 @@
   ispecb4 = 0
   ispecb5 = 0
   ispecb6 = 0
+
+  !>>>KTAO
+  ispecb1_teleseismic = 0
+  ispecb2_teleseismic = 0
+  ispecb3_teleseismic = 0
+  ispecb4_teleseismic = 0
+  !<<<
 
   do ispec = 1,nspec
 
@@ -201,19 +225,20 @@
                     jacobian2D_xmax,normal_xmax,NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX)
 
       else
-          ! get 25 GLL points for xmax
-          do k = 1,NGLLZ
-             do j = 1,NGLLY
-                xelm2D(j,k) = xstore(NGLLX,j,k,ispec)
-                yelm2D(j,k) = ystore(NGLLX,j,k,ispec)
-                zelm2D(j,k) = zstore(NGLLX,j,k,ispec)
-             enddo
+        ! get 25 GLL points for xmax
+        do k = 1,NGLLZ
+          do j = 1,NGLLY
+            xelm2D(j,k) = xstore(NGLLX,j,k,ispec)
+            yelm2D(j,k) = ystore(NGLLX,j,k,ispec)
+            zelm2D(j,k) = zstore(NGLLX,j,k,ispec)
           enddo
-          ! recalculate Jacobian according to 2D GLL points
-          call recalc_jacobian_gll2D(ispecb2,xelm2D,yelm2D,zelm2D, &
-                          yigll,zigll,jacobian2D_xmax,normal_xmax, &
-                          NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX)
-       endif
+        enddo
+        ! recalculate Jacobian according to 2D GLL points
+        call recalc_jacobian_gll2D(ispecb2,xelm2D,yelm2D,zelm2D, &
+                        yigll,zigll,jacobian2D_xmax,normal_xmax, &
+                        NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX)
+      endif
+
     endif
 
   ! on boundary: ymin
@@ -256,28 +281,29 @@
           call compute_jacobian_2D(ispecb3,xelm,yelm,zelm,dershape2D_y, &
                     jacobian2D_ymin,normal_ymin,NGLLX,NGLLZ,NSPEC2DMAX_YMIN_YMAX)
 
-     else
-          ! get 25 GLL points for ymin
-          do k = 1 ,NGLLZ
-             do i = 1,NGLLX
-                xelm2D(i,k) = xstore(i,1,k,ispec)
-                yelm2D(i,k) = ystore(i,1,k,ispec)
-                zelm2D(i,k) = zstore(i,1,k,ispec)
-             enddo
-          enddo
-          ! recalculate 2D Jacobian according to GLL points
-          call recalc_jacobian_gll2D(ispecb3,xelm2D,yelm2D,zelm2D, &
+      else
+        ! get 25 GLL points for ymin
+        do k = 1 ,NGLLZ
+           do i = 1,NGLLX
+              xelm2D(i,k) = xstore(i,1,k,ispec)
+              yelm2D(i,k) = ystore(i,1,k,ispec)
+              zelm2D(i,k) = zstore(i,1,k,ispec)
+           enddo
+        enddo
+        ! recalculate 2D Jacobian according to GLL points
+        call recalc_jacobian_gll2D(ispecb3,xelm2D,yelm2D,zelm2D, &
                           xigll,zigll,jacobian2D_ymin,normal_ymin, &
                           NGLLX,NGLLZ,NSPEC2DMAX_YMIN_YMAX)
-     endif
+      endif
+
     endif
 
   ! on boundary: ymax
 
     if (iboun(4,ispec)) then
 
-      ispecb4=ispecb4+1
-      ibelm_ymax(ispecb4)=ispec
+      ispecb4 = ispecb4 + 1
+      ibelm_ymax(ispecb4) = ispec
 
       if (.not. USE_GLL) then
           !   specify the 9 nodes for the 2-D boundary element
@@ -326,6 +352,7 @@
                           xigll,zigll,jacobian2D_ymax,normal_ymax, &
                           NGLLX,NGLLZ,NSPEC2DMAX_YMIN_YMAX)
       endif
+
     endif
 
   ! on boundary: bottom
@@ -456,6 +483,45 @@
   nspec2D_xmax = ispecb2
   nspec2D_ymin = ispecb3
   nspec2D_ymax = ispecb4
+
+  !>>>KTAO
+  do ispecb1 = 1, nspec2D_xmin
+    ispec = ibelm_xmin(ispecb1)
+    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
+      ispecb1_teleseismic = ispecb1_teleseismic + 1
+      ibelm_teleseismic_xmin(ispecb1_teleseismic) = ispec
+      jacobian2D_teleseismic_xmin(:,:,ispecb1_teleseismic) = jacobian2D_xmin(:,:,ispecb1)
+    endif
+  enddo
+  do ispecb2 = 1, nspec2D_xmax
+    ispec = ibelm_xmax(ispecb2)
+    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
+      ispecb2_teleseismic = ispecb2_teleseismic + 1
+      ibelm_teleseismic_xmax(ispecb2_teleseismic) = ispec
+      jacobian2D_teleseismic_xmax(:,:,ispecb2_teleseismic) = jacobian2D_xmax(:,:,ispecb2)
+    endif
+  enddo
+  do ispecb3 = 1, nspec2D_ymin
+    ispec = ibelm_ymin(ispecb3)
+    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
+      ispecb3_teleseismic = ispecb3_teleseismic + 1
+      ibelm_teleseismic_ymin(ispecb3_teleseismic) = ispec
+      jacobian2D_teleseismic_ymin(:,:,ispecb3_teleseismic) = jacobian2D_ymin(:,:,ispecb3)
+    endif
+  enddo
+  do ispecb4 = 1, nspec2D_ymax
+    ispec = ibelm_ymax(ispecb4)
+    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
+      ispecb4_teleseismic = ispecb4_teleseismic + 1
+      ibelm_teleseismic_ymax(ispecb4_teleseismic) = ispec
+      jacobian2D_teleseismic_ymax(:,:,ispecb4_teleseismic) = jacobian2D_ymax(:,:,ispecb4)
+    endif
+  enddo
+  nspec2D_teleseismic_xmin = ispecb1_teleseismic
+  nspec2D_teleseismic_xmax = ispecb2_teleseismic
+  nspec2D_teleseismic_ymin = ispecb3_teleseismic
+  nspec2D_teleseismic_ymax = ispecb4_teleseismic
+  !<<<
 
   end subroutine get_jacobian_boundaries
 

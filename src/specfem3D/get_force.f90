@@ -51,7 +51,10 @@
   double precision, dimension(3,NSOURCES), intent(out) :: comp_dir_vect_source
 
   ! local variables below
-  integer :: isource,dummyval
+  !>>> KTAO
+  !integer :: isource,dummyval
+  integer :: isource
+  !<<<
   double precision :: scaleF
   double precision :: t_shift(NSOURCES)
   double precision :: length
@@ -106,13 +109,13 @@
       read(IIN,"(a)") string
     enddo
 
-    !-- ktao: get rid of reading lines of FORCESOLUTION at a specified position
-    !-- ktao: the comment string on first column should not have spaces or quoted 
-    !-- ktao: FIXME it's better to put value field at the first column in CMT or FORCESOLUTION 
+    !-- ktao: avoid reading FORCESOLUTION using fixed index
+    !-- ktao: the comments in first column should not have spaces or quoted 
+    !-- ktao: FIXME better to place value field in the first column in CMTSOLUTION/FORCESOLUTION 
 
     ! read header with event information
     !read(string,"(a6,i4)") dummy,dummyval
-    read(string,*) dummy_string !--ktao: FIXME this could be used to set the origin time in SAC output
+    read(string,*) dummy_string !--ktao: FIXME this could be used to set the origin time for SAC output
 
     ! read time shift
     read(IIN,"(a)") string

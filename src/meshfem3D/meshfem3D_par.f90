@@ -332,6 +332,17 @@
   integer, dimension(:), allocatable :: ibelm_xmin,ibelm_xmax, &
     ibelm_ymin,ibelm_ymax,ibelm_bottom,ibelm_top
 
+  !>>>>KTAO flag ibelm for teleseismic incidence
+  logical, dimension(:), allocatable :: above_teleseismic_bottom
+  integer :: nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+    nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax
+  integer, dimension(:), allocatable :: ibelm_teleseismic_xmin, &
+    ibelm_teleseismic_xmax, ibelm_teleseismic_ymin, ibelm_teleseismic_ymax
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: &
+    jacobian2D_teleseismic_xmin, jacobian2D_teleseismic_xmax, &
+    jacobian2D_teleseismic_ymin, jacobian2D_teleseismic_ymax
+  !<<<<KTAO
+
   ! 2-D Jacobians and normals
   real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: &
     jacobian2D_xmin,jacobian2D_xmax, &
@@ -371,6 +382,15 @@
   integer :: ispec2D_moho_top,ispec2D_moho_bot,ispec2D_400_top,ispec2D_400_bot, &
     ispec2D_670_top,ispec2D_670_bot
   double precision :: r_moho,r_400,r_670
+
+  !>>>>> KTAO
+  double precision :: r_teleseismic_bottom
+  integer :: NSPEC2D_teleseismic_bottom
+  integer :: ispec2D_teleseismic_bottom
+  integer, dimension(:), allocatable :: ibelm_teleseismic_bottom
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: normal_teleseismic_bottom
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: jacobian2D_teleseismic_bottom
+  !<<<<< KTAO
 
   ! flags for transverse isotropic elements
   logical, dimension(:), allocatable :: ispec_is_tiso

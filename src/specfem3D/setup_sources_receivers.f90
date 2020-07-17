@@ -1085,7 +1085,7 @@
   integer :: ier
   integer :: nadj_hprec_local
 
-  ! KT KT: local parameters used for the case of SIMULATION_TYPE == 2
+  ! KTAO: local parameters used for the case of SIMULATION_TYPE == 2
   integer :: irec,irec_local
   double precision, dimension(NGLLX) :: hxir,hpxir
   double precision, dimension(NGLLY) :: hpetar,hetar
@@ -1166,7 +1166,7 @@
     if (ier /= 0 ) call exit_MPI(myrank,'Error allocating dummy receiver interpolators')
   endif
 
-  ! KT KT: need to define hxi at receivers in the case of SIMULATION_TYPE == 2
+  ! KTAO: need to define hxi at receivers in the case of SIMULATION_TYPE == 2
   if (SIMULATION_TYPE == 2 .and. nadj_rec_local > 0) then
     ! allocates Lagrange interpolators for receivers
     allocate(hxir_adj_store(nadj_rec_local,NGLLX), &

@@ -36,17 +36,20 @@
   ! broadcast parameter arrays
   integer, parameter :: nparam_i = 46
   integer, dimension(nparam_i) :: bcast_integer
-  ! ktao: change nparam_l from 64 to 67 to add in following parameters: 
-  ! USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220
-  ! USE_ECEF_COORDINATE
+
   !integer, parameter :: nparam_l = 64
-  integer, parameter :: nparam_l = 67
+  !KTAO: change nparam_l from 64 to 67 to add the following parameters: 
+  !   USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220, USE_ECEF_COORDINATE
+  !integer, parameter :: nparam_l = 67
+  ! KTAO: change nparam_l from 67 to 68 to add TELESEISMIC_INCIDENCE 
+  integer, parameter :: nparam_l = 68
   logical, dimension(nparam_l) :: bcast_logical
 
-  ! ktao: change nparm_dp from 34 to 35 to add in 
-  ! ktao: USER_DT
   !integer, parameter :: nparam_dp = 34
-  integer, parameter :: nparam_dp = 35
+  !KTAO: change nparm_dp from 34 to 35 to add USER_DT
+  !integer, parameter :: nparam_dp = 35
+  !KTAO: change nparm_dp from 35 to 36 to add TELESEISMIC_BOTTOM_KM
+  integer, parameter :: nparam_dp = 36
   double precision, dimension(nparam_dp) :: bcast_double_precision
 
   ! initializes containers
@@ -106,8 +109,12 @@
             ADIOS_FOR_SOLVER_MESHFILES,ADIOS_FOR_AVS_DX, &
             ADIOS_FOR_KERNELS,ADIOS_FOR_MODELS,ADIOS_FOR_UNDO_ATTENUATION, &
             CEM_REQUEST,CEM_ACCEPT,BROADCAST_SAME_MESH_AND_MODEL, &
-            USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220, & ! ktao: add
-            USE_ECEF_COORDINATE /) ! ktao: add
+            !>>>KTAO
+            USE_FULL_TISO_CRUST_UPPER_MANTLE, USE_FULL_TISO_CRUST_220, &
+            USE_ECEF_COORDINATE, &
+            TELESEISMIC_INCIDENCE &
+            !<<<
+            /)
 
     bcast_double_precision = (/ &
             DT,ANGULAR_WIDTH_XI_IN_DEGREES,ANGULAR_WIDTH_ETA_IN_DEGREES,CENTER_LONGITUDE_IN_DEGREES, &
@@ -117,7 +124,10 @@
             MOVIE_TOP,MOVIE_BOTTOM,MOVIE_WEST,MOVIE_EAST,MOVIE_NORTH,MOVIE_SOUTH, &
             RMOHO_FICTITIOUS_IN_MESHER,RATIO_BY_WHICH_TO_INCREASE_IT, &
             MEMORY_INSTALLED_PER_CORE_IN_GB,PERCENT_OF_MEM_TO_USE_PER_CORE, &
-            USER_DT & ! ktao: add
+            !>>>KTAO
+            USER_DT, &
+            TELESEISMIC_BOTTOM_KM &
+            !<<<
             /)
   endif
 
@@ -278,10 +288,12 @@
     CEM_REQUEST = bcast_logical(62)
     CEM_ACCEPT = bcast_logical(63)
     BROADCAST_SAME_MESH_AND_MODEL = bcast_logical(64)
-    ! ktao: add 
+    !>>> KTAO 
     USE_FULL_TISO_CRUST_UPPER_MANTLE = bcast_logical(65)
     USE_FULL_TISO_CRUST_220 = bcast_logical(66)
     USE_ECEF_COORDINATE = bcast_logical(67)
+    TELESEISMIC_INCIDENCE = bcast_logical(68)
+    !<<<
 
     ! double precisions
     DT = bcast_double_precision(1)
@@ -318,7 +330,10 @@
     RATIO_BY_WHICH_TO_INCREASE_IT = bcast_double_precision(32)
     MEMORY_INSTALLED_PER_CORE_IN_GB = bcast_double_precision(33)
     PERCENT_OF_MEM_TO_USE_PER_CORE = bcast_double_precision(34)
-    USER_DT = bcast_double_precision(35) ! ktao: add
+    !>>>KTAO
+    USER_DT = bcast_double_precision(35)
+    TELESEISMIC_BOTTOM_KM = bcast_double_precision(36)
+    !<<<
   endif
 
   end subroutine broadcast_computed_parameters
