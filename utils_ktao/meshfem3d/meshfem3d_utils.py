@@ -314,29 +314,29 @@ def sem_boundary_mesh_read(mesh_file):
   mesh_data['nspec2D_teleseismic_xmax'] = mesh_data['nspec2D_teleseismic_xmax'][0]
   mesh_data['nspec2D_teleseismic_ymin'] = mesh_data['nspec2D_teleseismic_ymin'][0]
   mesh_data['nspec2D_teleseismic_ymax'] = mesh_data['nspec2D_teleseismic_ymax'][0]
-  mesh_data['nspec2D_teleseismic_bottom'] = mesh_data['nspec2D_teleseismic_bottom'][0]
+  mesh_data['nspec2D_teleseismic_zmin'] = mesh_data['nspec2D_teleseismic_zmin'][0]
 
   # reshape
   #NB: binary files are written in Fortran column-major convention !!!
   #NB: reshape 1-D array to matrix by Fortran convention, and 
   #NB: also convert to a contiguous array in memory, in case of direct memory copy or MPI transfer
-  mesh_data['jacobian2D_teleseismic_xmin'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_xmin'], (NGLLY,NGLLZ,-1), order='F'))
-  mesh_data['jacobian2D_teleseismic_xmax'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_xmax'], (NGLLY,NGLLZ,-1), order='F'))
-  mesh_data['jacobian2D_teleseismic_ymin'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_ymin'], (NGLLX,NGLLZ,-1), order='F'))
-  mesh_data['jacobian2D_teleseismic_ymax'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_ymax'], (NGLLX,NGLLZ,-1), order='F'))
-  mesh_data['jacobian2D_teleseismic_bottom'] = np.ascontiguousarray(np.reshape(mesh_data['jacobian2D_teleseismic_bottom'], (NGLLX,NGLLY,-1), order='F'))
+  mesh_data['area_teleseismic_xmin'] = np.ascontiguousarray(np.reshape(mesh_data['area_teleseismic_xmin'], (NGLLY,NGLLZ,-1), order='F'))
+  mesh_data['area_teleseismic_xmax'] = np.ascontiguousarray(np.reshape(mesh_data['area_teleseismic_xmax'], (NGLLY,NGLLZ,-1), order='F'))
+  mesh_data['area_teleseismic_ymin'] = np.ascontiguousarray(np.reshape(mesh_data['area_teleseismic_ymin'], (NGLLX,NGLLZ,-1), order='F'))
+  mesh_data['area_teleseismic_ymax'] = np.ascontiguousarray(np.reshape(mesh_data['area_teleseismic_ymax'], (NGLLX,NGLLZ,-1), order='F'))
+  mesh_data['area_teleseismic_zmin'] = np.ascontiguousarray(np.reshape(mesh_data['area_teleseismic_zmin'], (NGLLX,NGLLY,-1), order='F'))
 
   # cut data arrays to lengths actually used    
   mesh_data['ibelm_teleseismic_xmin'] = mesh_data['ibelm_teleseismic_xmin'][0:mesh_data['nspec2D_teleseismic_xmin']]
   mesh_data['ibelm_teleseismic_xmax'] = mesh_data['ibelm_teleseismic_xmax'][0:mesh_data['nspec2D_teleseismic_xmax']]
   mesh_data['ibelm_teleseismic_ymin'] = mesh_data['ibelm_teleseismic_ymin'][0:mesh_data['nspec2D_teleseismic_ymin']]
   mesh_data['ibelm_teleseismic_ymax'] = mesh_data['ibelm_teleseismic_ymax'][0:mesh_data['nspec2D_teleseismic_ymax']]
-  mesh_data['ibelm_teleseismic_bottom'] = mesh_data['ibelm_teleseismic_bottom'][0:mesh_data['nspec2D_teleseismic_bottom']]
+  mesh_data['ibelm_teleseismic_zmin'] = mesh_data['ibelm_teleseismic_zmin'][0:mesh_data['nspec2D_teleseismic_zmin']]
 
-  mesh_data['jacobian2D_teleseismic_xmin'] = mesh_data['jacobian2D_teleseismic_xmin'][:,:,0:mesh_data['nspec2D_teleseismic_xmin']]
-  mesh_data['jacobian2D_teleseismic_xmax'] = mesh_data['jacobian2D_teleseismic_xmax'][:,:,0:mesh_data['nspec2D_teleseismic_xmax']]
-  mesh_data['jacobian2D_teleseismic_ymin'] = mesh_data['jacobian2D_teleseismic_ymin'][:,:,0:mesh_data['nspec2D_teleseismic_ymin']]
-  mesh_data['jacobian2D_teleseismic_ymax'] = mesh_data['jacobian2D_teleseismic_ymax'][:,:,0:mesh_data['nspec2D_teleseismic_ymax']]
-  mesh_data['jacobian2D_teleseismic_bottom'] = mesh_data['jacobian2D_teleseismic_bottom'][:,:,0:mesh_data['nspec2D_teleseismic_bottom']]
+  mesh_data['area_teleseismic_xmin'] = mesh_data['area_teleseismic_xmin'][:,:,0:mesh_data['nspec2D_teleseismic_xmin']]
+  mesh_data['area_teleseismic_xmax'] = mesh_data['area_teleseismic_xmax'][:,:,0:mesh_data['nspec2D_teleseismic_xmax']]
+  mesh_data['area_teleseismic_ymin'] = mesh_data['area_teleseismic_ymin'][:,:,0:mesh_data['nspec2D_teleseismic_ymin']]
+  mesh_data['area_teleseismic_ymax'] = mesh_data['area_teleseismic_ymax'][:,:,0:mesh_data['nspec2D_teleseismic_ymax']]
+  mesh_data['area_teleseismic_zmin'] = mesh_data['area_teleseismic_zmin'][:,:,0:mesh_data['nspec2D_teleseismic_zmin']]
 
   return mesh_data

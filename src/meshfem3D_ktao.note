@@ -1,0 +1,123 @@
+src/shared/
+|-read_compute_parameters()
+|  |-get_model_parameters()
+|  |  |-get_model_parameters_flags()
+|  |  |-get_model_parameters_radii()
+|  |  |  |-if (HONOR_1D_SPHERICAL_MOHO)
+|  |  |  |  |RMOHO_FICTITIOUS_IN_MESHER = RMOHO
+|  |  |  |  |R80_FICTITIOUS_IN_MESHER = R80
+|  |  |  |-else
+|  |  |  |  |RMOHO_FICTITIOUS_IN_MESHER = (R_EARTH+R80)/2, R80_FICTITIOUS_IN_MESHER = R80
+|  |  |  |  |if (CRUSTAL .and. CASE_3D)
+|  |  |  |  |  |RMOHO_FICTITIOUS_IN_MESHER = (R_EARTH+R80)/2 + RMOHO_STRETCH_ADJUSTMENT
+|  |  |  |  |  |R80_FICTITIOUS_IN_MESHER = R80 + R80_STRETCH_ADJUSTMENT
+|  |-get_timestep_and_layers()
+|  |  |-auto_ner(): use RMOHO_FICTITIOUS_IN_MESHER, R80_FICTITIOUS_IN_MESHER to define bottoms of the first and second layers
+
+
+src/meshfem3D/
+|-meshfem3D
+|  |-initialize_mesher()
+|  |  |-read_compute_parameters() !in src/shared
+|  |  |  |-get_timestep_and_layers(): NER_CRUST,NER_80_MOHO,...,NER_TOPDDOUBLEPRIME_771,...
+|  |  |  |  |-auto_ner(): 
+|  |  |  |-define_all_layers(): elem_doubling_mantle (geochemical mantle layer 1650km to D"),ner,r_top,r_bottom,rmins,rmaxs
+|  |  |  |  |get_model_parameters.F90: ONE_CRUST=true for all 3D models & 1D crust with only one layer, ONE_CRUST=false for 1D crust with 2 layers or with SUPPRESS_CRUSTAL_MESH.
+|  |-create_meshes()
+|  |  |do iregion_code=1,MAX_NUM_REGIONS !CRUST_MANTLE, OUTER_CORE, INNER_CORE
+|  |  |   do ipass=1,2
+|  |  |-create_regions_mesh()
+|  |  |  |-crm_allocate_arrays(): ibelm_xmin/400_top, jacobian2D_xmin/400
+|  |  |  |  |if (ipass == 2 .and. iregion_code == IREGION_CRUST_MANTLE .and. TELESEISMIC_INCIDENCE) then
+|  |  |  |  |  |-KTAO: allocate above_teleseismic_zmin(nspec), ibelm/area_teleseismic_xmin/xmax(NSPEC2D_XMIN_XMAX)/ymin/ymax
+|  |  |  |-crm_setup_layers():
+|  |  |  |  |-initialize_layer(): logical,intent(out) :: iboun(6, nspec), wgllwgll_xy = outer_product(wxgll, wygll), wgllwgll_xz/yz
+|  |  |  |  |if (ipass == 2 .and. iregion_code == IREGION_CRUST_MANTLE .and. TELESEISMIC_INCIDENCE) then
+|  |  |  |  |  |KTAO: find the closest r_teleseismic_zmin: min abs(rmin + (ier0:ner-1)*(rmax-rmin) - TELESEISMIC_BOTTOM_KM)
+|  |  |  |  |  |      skip complications due to doubling layer: ier0=3 if this_region_has_a_doubling==.true.
+|  |  |  |  |  |      determine nspec2D_teleseismic_zmin = NSPEC2D_TOP/4 or /8 (below DEPTH_SECOND_DOUBLING)
+|  |  |  |  |  |      allocate(ibelm/area/normal_teleseismic_zmin(...,nspec2D_teleseismic_zmin))
+|  |  |  |-create_regions_elements()
+|  |  |  |  |do ilayer_loop=ifirst_region(layer),ilast_region(layer) !loop on all the layers in this region of the mesh, e.g. CRUST,80_MOHO,220_80 (src/shared/define_all_layers.f90) 
+|  |  |  | 	|-rmins/rmaxs(ilayer), ner_without_doubling=ner(ilayer), this_region_has_a_doubling(ilayer)
+|  |  |  | 	|-create_regular/doubling_elements()
+|  |  |  | 	|  |-logical :: iboun(6, nspec) !flag elements at xmin=1,xmax=2,ymin=3,ymax=4,zmin(bottom)=5,zmax(top)=6 of each region
+|  |  |  | 	|  |-compute_coord_main_mesh(..., r_top, r_bottom, ... )
+|  |  |  | 	|  |-if (ipass==2 & iregion_code==IREGION_CRUST_MANTLE & (SAVE_BOUNDARY_MESH | TELESEISMIC_INCIDENCE) )
+|  |  |  | 	|  |  |KTAO: r1- r8, get radii of the 8 corners in a spherical symmetry earth (unstretched)
+|  |  |  | 	|  |-compute_element_properties()
+|  |  |  | 	|  | 	|-moho_stretching_honor_crust(_reg)
+|  |  |  | 	|  | 	|-add_topography(_410_650)
+|  |  |  | 	|  |if (ipass==2 & SAVE_BOUNDARY_MESH & iregion_code==IREGION_CRUST_MANTLE)
+|  |  |  |  |  |  |-get_jacobian_discontinuities(...,r1,...,r8,...,ibelm_400_top,..., r_400)
+|  |  |  | 	|  |if (ipass==2 & TELESEISMIC_INCIDENCE & iregion_code==IREGION_CRUST_MANTLE) 
+|  |  |  | 	|  |  |-KTAO: get_jacobian_teleseismic_zmin(...,r1,...,r8,): calculate ibelm/area/normal_teleseismic_zmin and above_teleseismic_zmin 
+|  |  |  |  |  |  |-KTAO: set above_teleseismic_zmin(ispec) = .true. if element is above r_teleseismic_zmin (max(r1,r2,r3,r4)-r_teleseismic_zmin > -SMALLVAL)         
+|  |  |  |ipass == 1:
+|  |  |  |  |-get_absorb() ! check for overlap with other boundaries
+|  |  |  |  |  |!KTAO: in the order of bottom,xmin,xmax,ymin,ymax, exclude gll points from each boundary which overlap with the previous boundaries at edges/corners
+|  |  |  |  |  |!KTAO: I guess the purpose is to avoid conflicting surface normals at corners/edges when calculating the Stacey's absorbing boundary conditions
+|  |  |  |  |  |!KTAO: however, I don't think this is valid since the gll point at edge/corner should account for multiple boundary surfaces.
+|  |  |  |  |  |nkmin_xi/njmin/njmax(itype,ispec2D): itype=1 for xmin, itype=2 for xmax;
+|  |  |  |  |  |nkmin_eta/nimin/nimax(itype,ispec2D): itype=1 for ymin, itype=2 for ymax;
+|  |  |  |ipass == 2:
+|  |  |  |  |-get_jacobian_boundaries(iboun,...,ibelm_xmin,...)
+|  |  |  |  |  |-compute_jacobian_2D(ispecb1,xelm,yelm,zelm,dershape2D_x,jacobian2D_xmin,normal_xmin,NGLLY,NGLLZ,NSPEC2DMAX_XMIN_XMAX)
+|  |  |  |  |  |if (TELESEISMIC_INCIDENCE & iregion_code==IREGION_CRUST_MANTLE) then
+|  |  |  |  |  |  |-KTAO: get nspec2D/ibelm/area_teleseismic_xmin/xmax/ymin/ymax using above_teleseismic_zmin
+|  |  |  |  |-save_arrays_solver()
+|  |  |  |  |if (TELESEISMIC_INCIDENCE .and. iregion_code == IREGION_CRUST_MANTLE)
+|  |  |  |  |  |-save_arrays_teleseismic_boundary()
+|  |  |  |  |  |  |>>>KTAO: save nspec2D/ibelm/area_teleseismic_xmin/xmax/ymin/ymax/bottom to proc***_reg1_boundary_teleseismic.bin
+|  |  |  |  |  |  |>>>KTAO: only save effective length: e.g. ibelm_teleseismic_xmin(1:nspec2D_teleseismic_xmin)
+|  |  |  |  |  |  |>>>KTAO: output area_bottom=jacobian2D*wgllwgll_xy ... which is the area (surface integral weights) of the corresonding gll point. This is used in surface integral.
+
+
+VARIABLES
+---------
+
+1. Par_file:
+  logical :: TELESEISMIC_INCIDENCE
+  double precision :: TELESEISMIC_BOTTOM_KM
+
+2. meshfem3D_par.f90: 
+
+module regions_mesh_par
+
+  !>>>KTAO: for multiplying with jacobian2D to get area of each gll point (teleseismic)
+  double precision, dimension(NGLLX,NGLLY) :: wgllwgll_xy
+  double precision, dimension(NGLLX,NGLLZ) :: wgllwgll_xz
+  double precision, dimension(NGLLY,NGLLZ) :: wgllwgll_yz
+  !<<<
+
+module regions_mesh_par2
+
+  !>>>>KTAO flag ibelm for teleseismic incidence
+  logical, dimension(:), allocatable :: above_teleseismic_zmin
+  integer :: nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+    nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax
+  integer, dimension(:), allocatable :: ibelm_teleseismic_xmin, &
+    ibelm_teleseismic_xmax, ibelm_teleseismic_ymin, ibelm_teleseismic_ymax
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: &
+    area_teleseismic_xmin, area_teleseismic_xmax, &
+    area_teleseismic_ymin, area_teleseismic_ymax
+  !<<<<KTAO
+
+  !>>>>> KTAO
+  double precision :: r_teleseismic_zmin
+  integer :: nspec2D_teleseismic_zmin
+  integer :: ispec2D_teleseismic_zmin
+  integer, dimension(:), allocatable :: ibelm_teleseismic_zmin
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: normal_teleseismic_zmin
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: area_teleseismic_zmin
+  !<<<<< KTAO
+
+NOTE: I use module variables instead of passing in parameters in subroutines.
+
+
+SUBROUTINE
+----------
+
+1. get_jacobian_teleseismic_zmin(): similar as get_jacobian_discontinuities() but only for teleseismic_zmin 
+
+2. save_arrays_teleseismic_boundary()

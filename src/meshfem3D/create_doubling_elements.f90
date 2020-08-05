@@ -59,7 +59,7 @@
 
   !>>>KTAO
   use shared_parameters, only: TELESEISMIC_INCIDENCE
-  use regions_mesh_par2, only: r_teleseismic_bottom,above_teleseismic_bottom
+  use regions_mesh_par2, only: r_teleseismic_zmin,above_teleseismic_zmin
   !<<<KTAO
 
   implicit none
@@ -360,7 +360,11 @@
         idoubling(ispec_loc) = doubling_index(ilayer)
 
         ! save the radii of the nodes before modified through compute_element_properties()
-        if (ipass == 2 .and. SAVE_BOUNDARY_MESH .and. iregion_code == IREGION_CRUST_MANTLE) then
+        !>>>>KTAO: this is also needed for TELESEISMIC_INCIDENCE to get teleseismic_zmin
+        !if (ipass == 2 .and. SAVE_BOUNDARY_MESH .and. iregion_code == IREGION_CRUST_MANTLE) then
+        if (ipass == 2 .and. iregion_code == IREGION_CRUST_MANTLE &
+          .and. (SAVE_BOUNDARY_MESH .or. TELESEISMIC_INCIDENCE) ) &
+        then
           r1 = sqrt(xelm(1)*xelm(1) + yelm(1)*yelm(1) + zelm(1)*zelm(1))
           r2 = sqrt(xelm(2)*xelm(2) + yelm(2)*yelm(2) + zelm(2)*zelm(2))
           r3 = sqrt(xelm(3)*xelm(3) + yelm(3)*yelm(3) + zelm(3)*zelm(3))
@@ -370,6 +374,7 @@
           r7 = sqrt(xelm(7)*xelm(7) + yelm(7)*yelm(7) + zelm(7)*zelm(7))
           r8 = sqrt(xelm(8)*xelm(8) + yelm(8)*yelm(8) + zelm(8)*zelm(8))
         endif
+        !<<<<
 
         ! compute several rheological and geometrical properties for this spectral element
         call compute_element_properties(ispec_loc,iregion_code,idoubling,ipass, &
@@ -397,17 +402,20 @@
               ispec2D_400_bot,ispec2D_670_top,ispec2D_670_bot, &
               NSPEC2D_MOHO,NSPEC2D_400,NSPEC2D_670,r_moho,r_400,r_670, &
               is_superbrick,USE_ONE_LAYER_SB,ispec_superbrick,nex_eta_moho,HONOR_1D_SPHERICAL_MOHO)
+        endif
 
-          !>>>>>>KTAO: above_teleseismic_bottom(ispec)
-          if (TELESEISMIC_INCIDENCE) then
-            above_teleseismic_bottom(ispec_loc) = .false.
-            if ( (r_teleseismic_bottom - max(r1,r2,r3,r4)) < SMALLVAL) then
-              above_teleseismic_bottom(ispec_loc) = .true.
-            endif
+        !>>>>>>KTAO: teleseismic_zmin
+        if (ipass == 2 .and. TELESEISMIC_INCIDENCE .and. iregion_code == IREGION_CRUST_MANTLE) then 
+          call get_jacobian_teleseismic_zmin(ispec_loc,r1,r2,r3,r4, &
+            xstore,ystore,zstore,dershape2D_bottom)
+
+          above_teleseismic_zmin(ispec_loc) = .false.
+          if ( (r_teleseismic_zmin - max(r1,r2,r3,r4)) < SMALLVAL) then
+            above_teleseismic_zmin(ispec_loc) = .true.
           endif
-          !<<<<<<KTAO
 
         endif
+        !<<<<<<KTAO
 
       ! end of loops on the mesh doubling elements
       enddo

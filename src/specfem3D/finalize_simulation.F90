@@ -103,6 +103,26 @@
                absorb_zmin_outer_core)
   endif
 
+  !>>>KTAO: closes teleseismic boundary snapshots
+  if (TELESEISMIC_INCIDENCE) then
+    if (nspec2D_teleseismic_xmin > 0) then
+      call close_file_teleseismic(0)
+    endif
+    if (nspec2D_teleseismic_xmax > 0) then
+      call close_file_teleseismic(1)
+    endif
+    if (nspec2D_teleseismic_ymin > 0) then
+      call close_file_teleseismic(2)
+    endif
+    if (nspec2D_teleseismic_ymax > 0) then
+      call close_file_teleseismic(3)
+    endif
+    if (nspec2D_teleseismic_zmin > 0) then
+      call close_file_teleseismic(4)
+    endif
+  endif
+  !<<<
+
   ! save/read the surface movie using the same c routine as we do for absorbing boundaries (file ID is 9)
   if (NOISE_TOMOGRAPHY /= 0) then
     call close_file_abs(9)
@@ -264,10 +284,12 @@
   if (USE_FORCE_POINT_SOURCE) then
     deallocate(force_stf)
     deallocate(factor_force_source)
+    !>>>KTAO
     !deallocate(comp_dir_vect_source_E)
     !deallocate(comp_dir_vect_source_N)
     !deallocate(comp_dir_vect_source_Z_UP)
     deallocate(comp_dir_vect_source)
+    !<<<
   endif
 
   if (SIMULATION_TYPE == 1 .or. SIMULATION_TYPE == 3) deallocate(sourcearrays)
@@ -297,11 +319,12 @@
     endif
   endif
     
-  ! KTAO: setup_sources_receivers.f90:setup_receivers_precompute_intp()
+  !>>> KTAO: setup_sources_receivers.f90:setup_receivers_precompute_intp()
   if (SIMULATION_TYPE == 2 .and. nadj_rec_local > 0) then
     deallocate(hxir_adj_store, hetar_adj_store, hgammar_adj_store)
     deallocate(number_adj_receiver_global) ! KTAO setup_sources_receivers.f90:setup_receivers_precompute_intp()
   endif
+  !<<<
 
   deallocate(seismograms)
 
@@ -321,6 +344,20 @@
   if (MOVIE_VOLUME) then
     deallocate(nu_3dmovie)
   endif
+
+  !>>>KTAO: teleseismic
+  if (TELESEISMIC_INCIDENCE) then
+    deallocate(ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
+               ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
+               ibelm_teleseismic_zmin)
+    deallocate(area_teleseismic_xmin, area_teleseismic_xmax, &
+               area_teleseismic_ymin, area_teleseismic_ymax, &
+               area_teleseismic_zmin)
+    deallocate(field_teleseismic_xmin,field_teleseismic_xmax, &
+               field_teleseismic_ymin,field_teleseismic_ymax, &
+               field_teleseismic_zmin)
+  endif
+  !<<<
 
   ! noise simulations
   if (NOISE_TOMOGRAPHY /= 0) then

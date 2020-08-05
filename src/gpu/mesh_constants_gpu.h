@@ -748,6 +748,9 @@ typedef struct mesh_ {
   int save_forward;
   int absorbing_conditions;
   int save_stacey;
+  //>>>KTAO
+  int teleseismic_incidence;
+  //<<<
 
   int attenuation;
   int undo_attenuation;
@@ -931,6 +934,36 @@ typedef struct mesh_ {
   gpu_realw_mem d_absorb_zmin_outer_core;
 
   gpu_realw_mem d_vp_outer_core;
+
+  //>>>KTAO
+  // ------------------------------------------------------------------   //
+  // teleseismic incidence 
+  // ------------------------------------------------------------------   //
+
+  int nspec2D_teleseismic_xmin;
+  int nspec2D_teleseismic_xmax;
+  int nspec2D_teleseismic_ymin;
+  int nspec2D_teleseismic_ymax;
+  int nspec2D_teleseismic_zmin;
+
+  gpu_int_mem d_ibelm_teleseismic_xmin;
+  gpu_int_mem d_ibelm_teleseismic_xmax;
+  gpu_int_mem d_ibelm_teleseismic_ymin;
+  gpu_int_mem d_ibelm_teleseismic_ymax;
+  gpu_int_mem d_ibelm_teleseismic_zmin;
+
+  gpu_realw_mem d_area_teleseismic_xmin;
+  gpu_realw_mem d_area_teleseismic_xmax;
+  gpu_realw_mem d_area_teleseismic_ymin;
+  gpu_realw_mem d_area_teleseismic_ymax;
+  gpu_realw_mem d_area_teleseismic_zmin;
+
+  gpu_realw_mem d_field_teleseismic_xmin;
+  gpu_realw_mem d_field_teleseismic_xmax;
+  gpu_realw_mem d_field_teleseismic_ymin;
+  gpu_realw_mem d_field_teleseismic_ymax;
+  gpu_realw_mem d_field_teleseismic_zmin;
+  //<<<
 
   // ------------------------------------------------------------------   //
   // noise tomography

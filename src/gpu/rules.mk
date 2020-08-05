@@ -58,6 +58,8 @@ gpu_specfem3D_OBJECTS = \
 	$O/update_displacement_gpu.o \
 	$O/write_seismograms_gpu.o \
 	$O/save_and_compare_cpu_vs_gpu.o \
+	$O/compute_teleseismic_gradient_gpu.o \
+	$O/compute_add_teleseismic_sources_gpu.o \
 	$(EMPTY_MACRO)
 
 ifeq ($(CUDA),yes)

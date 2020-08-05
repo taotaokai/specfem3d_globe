@@ -260,6 +260,12 @@
         ! outputs movie files
         if (MOVIE_SURFACE .or. MOVIE_VOLUME) call write_movie_output()
 
+        !>>>KTAO: outputs adjoint displacement at teleseismic boundary
+        if (SIMULATION_TYPE == 2 .and. TELESEISMIC_INCIDENCE) then
+          call compute_teleseismic_gradient()
+        endif
+        !<<<
+
         ! first step of noise tomography, i.e., save a surface movie at every time step
         ! modified from the subroutine 'write_movie_surface'
         if (NOISE_TOMOGRAPHY == 1) then
@@ -377,10 +383,10 @@
         ! transfers wavefields from CPU to GPU
         if (GPU_MODE) then
           ! daniel debug: check if these transfers could be made async to overlap
-           call transfer_ofs_b_displ_cm_to_device(NDIM*NGLOB_CRUST_MANTLE_ADJOINT,it_subset_end-it_of_this_subset+1, &
-                                                  b_displ_cm_store_buffer,Mesh_pointer)
-           call transfer_ofs_b_displ_ic_to_device(NDIM*NGLOB_INNER_CORE_ADJOINT,it_subset_end-it_of_this_subset+1, &
-                                                  b_displ_ic_store_buffer,Mesh_pointer)
+          call transfer_ofs_b_displ_cm_to_device(NDIM*NGLOB_CRUST_MANTLE_ADJOINT,it_subset_end-it_of_this_subset+1, &
+                                                 b_displ_cm_store_buffer,Mesh_pointer)
+          call transfer_ofs_b_displ_ic_to_device(NDIM*NGLOB_INNER_CORE_ADJOINT,it_subset_end-it_of_this_subset+1, &
+                                                 b_displ_ic_store_buffer,Mesh_pointer)
           call transfer_ofs_b_displ_oc_to_device(NGLOB_OUTER_CORE_ADJOINT,it_subset_end-it_of_this_subset+1, &
                                                  b_displ_oc_store_buffer,Mesh_pointer)
           call transfer_ofs_b_accel_oc_to_device(NGLOB_OUTER_CORE_ADJOINT,it_subset_end-it_of_this_subset+1, &

@@ -31,7 +31,9 @@ meshfem3D_TARGETS = \
 	$E/xmeshfem3D \
 	$(EMPTY_MACRO)
 
+#KTAO: add get_jacobian_teleseismic_zmin.f90
 meshfem3D_OBJECTS = \
+	$O/get_jacobian_teleseismic_zmin.check.o \
 	$O/meshfem3D_par.check_module.o \
 	$O/meshfem3D.check.o \
 	$O/meshfem3D_models.check.o \

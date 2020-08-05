@@ -90,6 +90,7 @@ void FC_FUNC_ (prepare_constants_device,
                                           int *NSPEC_INNER_CORE_STRAIN_ONLY,
                                           int *SIMULATION_TYPE, int *NOISE_TOMOGRAPHY,
                                           int *SAVE_FORWARD_f, int *ABSORBING_CONDITIONS_f,
+                                          int *TELESEISMIC_INCIDENCE_f, //KTAO
                                           int *OCEANS_f, int *GRAVITY_f,
                                           int *ROTATION_f, int *EXACT_MASS_MATRIX_FOR_ROTATION_f,
                                           int *ATTENUATION_f, int *UNDO_ATTENUATION_f,
@@ -242,6 +243,9 @@ void FC_FUNC_ (prepare_constants_device,
   // simulation flags initialization
   mp->save_forward = *SAVE_FORWARD_f;
   mp->absorbing_conditions = *ABSORBING_CONDITIONS_f;
+  //>>>KTAO: sets flag for teleseismic incidence
+  mp->teleseismic_incidence = *TELESEISMIC_INCIDENCE_f;
+  //<<<
   mp->oceans = *OCEANS_f;
   mp->gravity = *GRAVITY_f;
   mp->rotation = *ROTATION_f;
@@ -981,6 +985,118 @@ void FC_FUNC_ (prepare_fields_absorb_device,
 
   GPU_ERROR_CHECKING ("prepare_fields_absorb_device");
 }
+
+//>>>KTAO: teleseismic incidence
+extern EXTERN_LANG
+void FC_FUNC_ (prepare_fields_teleseismic_device,
+               PREPARE_FIELDS_TELESEISMIC_DEVICE) (long *Mesh_pointer_f,
+                                                   int *nspec2D_teleseismic_xmin,
+                                                   int *nspec2D_teleseismic_xmax,
+                                                   int *nspec2D_teleseismic_ymin,
+                                                   int *nspec2D_teleseismic_ymax,
+                                                   int *nspec2D_teleseismic_zmin,
+                                                   int *ibelm_teleseismic_xmin,
+                                                   int *ibelm_teleseismic_xmax,
+                                                   int *ibelm_teleseismic_ymin,
+                                                   int *ibelm_teleseismic_ymax,
+                                                   int *ibelm_teleseismic_zmin,
+                                                   realw *area_teleseismic_xmin,
+                                                   realw *area_teleseismic_xmax,
+                                                   realw *area_teleseismic_ymin,
+                                                   realw *area_teleseismic_ymax,
+                                                   realw *area_teleseismic_zmin) {
+  TRACE ("prepare_fields_teleseismic_device");
+  //size_t size;
+  Mesh *mp = (Mesh *) *Mesh_pointer_f;
+
+  // checks flag
+  if (! mp->teleseismic_incidence) {
+    exit_on_error ("prepare_fields_teleseismic_device: teleseismic_incidence != true");
+  }
+
+  // crust_mantle
+  mp->nspec2D_teleseismic_xmin = *nspec2D_teleseismic_xmin;
+  mp->nspec2D_teleseismic_xmax = *nspec2D_teleseismic_xmax;
+  mp->nspec2D_teleseismic_ymin = *nspec2D_teleseismic_ymin;
+  mp->nspec2D_teleseismic_ymax = *nspec2D_teleseismic_ymax;
+  mp->nspec2D_teleseismic_zmin = *nspec2D_teleseismic_zmin;
+
+  // xmin
+  if (mp->nspec2D_teleseismic_xmin > 0) {
+    gpuCreateCopy_todevice_int (
+        &mp->d_ibelm_teleseismic_xmin, 
+        ibelm_teleseismic_xmin, 
+        mp->nspec2D_teleseismic_xmin);
+    gpuCreateCopy_todevice_realw (
+        &mp->d_area_teleseismic_xmin, 
+        area_teleseismic_xmin, 
+        NGLL2 * mp->nspec2D_teleseismic_xmin); 
+    gpuMalloc_realw (
+        &mp->d_field_teleseismic_xmin, 
+        NDIM * NGLL2 * mp->nspec2D_teleseismic_xmin); 
+  }
+  // xmax
+  if (mp->nspec2D_teleseismic_xmax > 0) {
+    gpuCreateCopy_todevice_int (
+        &mp->d_ibelm_teleseismic_xmax, 
+        ibelm_teleseismic_xmax, 
+        mp->nspec2D_teleseismic_xmax);
+    gpuCreateCopy_todevice_realw (
+        &mp->d_area_teleseismic_xmax, 
+        area_teleseismic_xmax, 
+        NGLL2 * mp->nspec2D_teleseismic_xmax);
+    gpuMalloc_realw (
+        &mp->d_field_teleseismic_xmax, 
+        NDIM * NGLL2 * mp->nspec2D_teleseismic_xmax); 
+  }
+  // ymin
+  if (mp->nspec2D_teleseismic_ymin > 0) {
+    gpuCreateCopy_todevice_int (
+        &mp->d_ibelm_teleseismic_ymin, 
+        ibelm_teleseismic_ymin, 
+        mp->nspec2D_teleseismic_ymin);
+    gpuCreateCopy_todevice_realw (
+        &mp->d_area_teleseismic_ymin, 
+        area_teleseismic_ymin, 
+        NGLL2 * mp->nspec2D_teleseismic_ymin); 
+    gpuMalloc_realw (
+        &mp->d_field_teleseismic_ymin, 
+        NDIM * NGLL2 * mp->nspec2D_teleseismic_ymin); 
+  }
+  // ymax
+  if (mp->nspec2D_teleseismic_ymax > 0) {
+    gpuCreateCopy_todevice_int (
+        &mp->d_ibelm_teleseismic_ymax, 
+        ibelm_teleseismic_ymax, 
+        mp->nspec2D_teleseismic_ymax);
+    gpuCreateCopy_todevice_realw (
+        &mp->d_area_teleseismic_ymax, 
+        area_teleseismic_ymax, 
+        NGLL2 * mp->nspec2D_teleseismic_ymax); 
+    gpuMalloc_realw (
+        &mp->d_field_teleseismic_ymax, 
+        NDIM * NGLL2 * mp->nspec2D_teleseismic_ymax); 
+  }
+  // zmin
+  if (mp->nspec2D_teleseismic_zmin > 0) {
+    gpuCreateCopy_todevice_int (
+        &mp->d_ibelm_teleseismic_zmin, 
+        ibelm_teleseismic_zmin, 
+        mp->nspec2D_teleseismic_zmin);
+    gpuCreateCopy_todevice_realw (
+        &mp->d_area_teleseismic_zmin, 
+        area_teleseismic_zmin, 
+        NGLL2 * mp->nspec2D_teleseismic_zmin); 
+    gpuMalloc_realw (
+        &mp->d_field_teleseismic_zmin, 
+        NDIM * NGLL2 * mp->nspec2D_teleseismic_zmin); 
+  }
+
+
+  GPU_ERROR_CHECKING ("prepare_fields_teleseismic_device");
+}
+//<<<KTAO
+
 
 /*----------------------------------------------------------------------------------------------- */
 // MPI interfaces
@@ -2877,6 +2993,39 @@ void FC_FUNC_ (prepare_cleanup_device,
       }
     }
   }
+
+  //>>>KTAO
+  //------------------------------------------
+  // teleseismic boundaries arrays
+  //------------------------------------------
+  if (mp->teleseismic_incidence) {
+    if (mp->nspec2D_teleseismic_xmin > 0) {
+      gpuFree (&mp->d_ibelm_teleseismic_xmin);
+      gpuFree (&mp->d_area_teleseismic_xmin);
+      gpuFree (&mp->d_field_teleseismic_xmin);
+    }
+    if (mp->nspec2D_teleseismic_xmax > 0) {
+      gpuFree (&mp->d_ibelm_teleseismic_xmax);
+      gpuFree (&mp->d_area_teleseismic_xmax);
+      gpuFree (&mp->d_field_teleseismic_xmax);
+    }
+    if (mp->nspec2D_teleseismic_ymin > 0) {
+      gpuFree (&mp->d_ibelm_teleseismic_ymin);
+      gpuFree (&mp->d_area_teleseismic_ymin);
+      gpuFree (&mp->d_field_teleseismic_ymin);
+    }
+    if (mp->nspec2D_teleseismic_ymax > 0) {
+      gpuFree (&mp->d_ibelm_teleseismic_ymax);
+      gpuFree (&mp->d_area_teleseismic_ymax);
+      gpuFree (&mp->d_field_teleseismic_ymax);
+    }
+    if (mp->nspec2D_teleseismic_zmin > 0) {
+      gpuFree (&mp->d_ibelm_teleseismic_zmin);
+      gpuFree (&mp->d_area_teleseismic_zmin);
+      gpuFree (&mp->d_field_teleseismic_zmin);
+    }
+  }
+  //<<<KTAO
 
   //------------------------------------------
   // MPI buffers

@@ -46,11 +46,20 @@
   if (NOISE_TOMOGRAPHY /= 0) return
 
   ! sets current initial time
+  !>>>KTAO
+  !if (USE_LDDRK) then
+  !  time_t = dble(it-1)*DT + dble(C_LDDRK(istage))*DT - t0
+  !else
+  !  time_t = dble(it-1)*DT - t0
+  !endif
   if (USE_LDDRK) then
-    time_t = dble(it-1)*DT + dble(C_LDDRK(istage))*DT - t0
+    ! -DT since LDDRK update uses force term from it-1 to it
+    time_t = -t0 + dble(it-1)*DT - DT + dble(C_LDDRK(istage))*DT
   else
-    time_t = dble(it-1)*DT - t0
+    time_t = -t0 + dble(it-1)*DT
   endif
+  !<<<
+
 
   if (.not. GPU_MODE) then
     ! on CPU
@@ -276,12 +285,13 @@
             !           wavefield at the end of the first time loop, such that b_displ(it=1) corresponds to -t0 + (NSTEP-1)*DT.
             !           assuming that until that end the backward/reconstructed wavefield and adjoint fields
             !           have a zero contribution to adjoint kernels.
+            !>>>KTAO: the above comments only applies to the case undo_attenuation == .false. and with Newmark scheme. 
+            !See iterate_time.F90: if (it == 1) then call read_forward_arrays() endif
+            !<<<
 
-            ! ktao: modifies to handle source adjoint SIMULATION_TYPE == 2
-
+            !>>>KTAO: modifies to handle source adjoint SIMULATION_TYPE == 2
             !accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
             !              + stf_array(:) * (hxir_store(irec_local,i) * hetar_store(irec_local,j) * hgammar_store(irec_local,k))
-
             if (SIMULATION_TYPE == 3) then
               accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
                           + stf_array(:)*(hxir_store(irec_local,i)*&
@@ -293,6 +303,7 @@
             else
               call exit_MPI(myrank,'Error SIMULATION_TYPE')
             endif
+            !<<<
 
           enddo ! NGLLX
         enddo ! NGLLY
@@ -414,11 +425,27 @@
   !       this leads to the timing (NSTEP-(it-1)-1)*DT-t0-tshift_src for the source time function here
   !
   ! sets current initial time
+  !>>>KTAO
+  !if (USE_LDDRK) then
+  !  time_t = dble(NSTEP-it_tmp)*DT - dble(C_LDDRK(istage))*DT - t0
+  !else
+  !  time_t = dble(NSTEP-it_tmp)*DT - t0
+  !endif
   if (USE_LDDRK) then
-    time_t = dble(NSTEP-it_tmp)*DT - dble(C_LDDRK(istage))*DT - t0
+    if (UNDO_ATTENUATION) then
+      ! forward from it-1 to it 
+      time_t = -t0 + dble(NSTEP-it_tmp)*DT - DT + dble(C_LDDRK(istage))*DT
+    else
+      ! backward from it+1 to it
+      !FIXME TODO need verification of this formula
+      time_t = -t0 + dble(NSTEP-it_tmp)*DT + DT - dble(C_LDDRK(istage))*DT
+    endif
   else
-    time_t = dble(NSTEP-it_tmp)*DT - t0
+    ! Newmark only explicitly uses force term at it
+    ! forces at it-1 or it are implicitly contained in the acceleration term.
+    time_t = -t0 + dble(NSTEP-it_tmp)*DT
   endif
+  !<<<
 
   if (.not. GPU_MODE) then
     ! on CPU

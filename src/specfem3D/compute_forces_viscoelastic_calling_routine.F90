@@ -167,6 +167,12 @@
           if (SIMULATION_TYPE == 1 .and. nsources_local > 0) &
             call compute_add_sources()
 
+          !>>>KTAO
+          if (SIMULATION_TYPE == 1 .and. TELESEISMIC_INCIDENCE) then
+            call compute_add_teleseismic_sources()
+          endif
+          !<<<
+
        case (1)
           ! the first step of noise tomography is to use |S(\omega)|^2 as a point force source at one of the receivers.
           ! hence, instead of a moment tensor 'sourcearrays', a 'noise_sourcearray' for a point force is needed.
@@ -522,6 +528,12 @@
         ! add sources for backward/reconstructed wavefield
         if (nsources_local > 0 ) &
           call compute_add_sources_backward()
+
+        !>>>KTAO
+        if (SIMULATION_TYPE == 3 .and. TELESEISMIC_INCIDENCE) then
+          call compute_add_teleseismic_sources_backward()
+        endif
+        !<<<
 
       case (3)
         ! third step of noise tomography, i.e., read the surface movie saved at every timestep

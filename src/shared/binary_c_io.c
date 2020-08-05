@@ -183,7 +183,6 @@ static FILE * fp_abs[ABS_FILEID];
 // file work buffers
 static char * work_buffer[ABS_FILEID];
 
-
 void open_file_abs_r_fbin(int *fid, char *filename,int *length, long long *filesize) {
 // opens file for read access
 
@@ -435,6 +434,357 @@ void read_abs_buffer_fbin(int *fid, char *buffer, int *length, int *index, int *
 }
 
 
+//>>>KTAO: file I/O for teleseismic incidence 
+
+//file pointers to field_teleseismic_xmin/... 
+// xmin=0,xmax=1,ymin=2,ymax=3,zmin=4
+#define TELESEISMIC_FILEID 5
+static FILE * fp_teleseismic[TELESEISMIC_FILEID];
+static char * work_buffer_teleseismic[TELESEISMIC_FILEID];
+
+void open_file_teleseismic_r_fbin(int *fid, char *filename,int *length, long long *filesize) {
+// opens file for read access
+
+//This sequence assigns the MAX_B array work_buffer_teleseismic to the file pointer
+// to be used for its buffering. performance should benefit.
+  char * fncopy;
+  char * blank;
+  FILE *ft;
+  int ret;
+
+  // checks filesize
+  if (*filesize == 0 ) {
+    perror("Error file size for reading");
+    exit(EXIT_FAILURE);
+  }
+
+  // Trim the file name. (KTAO: replace the first occuring white space by \0)
+  fncopy = strndup(filename, *length);
+  blank = strchr(fncopy, ' ');
+  if (blank != NULL) {
+    fncopy[blank - fncopy] = '\0';
+  }
+
+  // opens file
+  ft = fopen( fncopy, "rb" );
+  if (ft == NULL ) {
+    fprintf(stderr, "Error opening file: %s exiting\n", fncopy);
+    perror("Error fopen in open_file_teleseismic_r_fbin");
+    exit(-1);
+  }
+
+  // sets mode for full buffering
+  work_buffer_teleseismic[*fid] = (char *)malloc(MAX_B);
+  ret = setvbuf( ft, work_buffer_teleseismic[*fid], _IOFBF, (size_t)MAX_B );
+  if (ret != 0 ) {
+    perror("Error setting working buffer");
+    exit(EXIT_FAILURE);
+  }
+
+  // stores file index id fid: from 0 to 5
+  fp_teleseismic[*fid] = ft;
+
+  free(fncopy);
+}
+
+
+void open_file_teleseismic_w_fbin(int *fid, char *filename, int *length, long long *filesize) {
+// opens file for write access
+
+  //This sequence assigns the MAX_B array work_buffer_teleseismic to the file pointer
+  // to be used for its buffering. performance should benefit.
+  char * fncopy;
+  char * blank;
+  FILE *ft;
+  int ret;
+
+  // checks filesize
+  if (*filesize == 0 ) {
+    perror("Error file size for writing");
+    exit(EXIT_FAILURE);
+  }
+
+  // Trim the file name.
+  fncopy = strndup(filename, *length);
+  blank = strchr(fncopy, ' ');
+  if (blank != NULL) {
+    fncopy[blank - fncopy] = '\0';
+  }
+
+  // opens file
+  ft = fopen( fncopy, "wb+" );
+  if (ft == NULL ) {
+    fprintf(stderr, "Error opening file: %s exiting\n", fncopy);
+    perror("Error fopen in open_file_teleseismic_w_fbin");
+    exit(-1);
+  }
+
+  // sets mode for full buffering
+  work_buffer_teleseismic[*fid] = (char *)malloc(MAX_B);
+  ret = setvbuf( ft, work_buffer_teleseismic[*fid], _IOFBF, (size_t)MAX_B );
+  if (ret != 0 ) {
+    perror("Error setting working buffer");
+    exit(EXIT_FAILURE);
+  }
+
+  // stores file index id fid: from 0 to 8
+  fp_teleseismic[*fid] = ft;
+
+  free(fncopy);
+}
+
+void close_file_teleseismic_fbin(int * fid) {
+// closes file
+
+  fclose(fp_teleseismic[*fid]);
+
+  free(work_buffer_teleseismic[*fid]);
+}
+
+void write_teleseismic_fbin(int *fid, char *buffer, int *length, int *index) {
+// writes binary file data in chunks of MAX_B
+//
+// note: index not used, data will be appended
+  FILE *ft;
+  int itemlen,remlen,donelen,ret;
+  long long pos;
+
+  // file pointer
+  ft = fp_teleseismic[*fid];
+
+  // positions file pointer (for reverse time access)
+  pos = ((long long)*length) * (*index -1 );
+  ret = fseek(ft, pos , SEEK_SET);
+  if (ret != 0) {
+    perror("Error fseek");
+    exit(EXIT_FAILURE);
+  }
+
+  donelen = 0;
+  remlen = *length;
+
+  // writes items of maximum MAX_B to the file
+  while (remlen > 0) {
+
+    itemlen = MIN(remlen,MAX_B);
+    ret = fwrite(buffer,1,itemlen,ft);
+    if (ret > 0) {
+      donelen = donelen + ret;
+      remlen = remlen - MAX_B;
+      buffer += MAX_B;
+    }
+    else{
+      remlen = 0;
+    }
+  }
+}
+
+void write_teleseismic_buffer_fbin(int *fid, char *buffer, int *length, int *index, int *unit_length) {
+// writes binary file data in chunks of MAX_B
+//
+// note: index not used, data will be appended
+//       unit_length not used as well
+//       (given for similar function call as for write_teleseismic_**_map() functions)
+  FILE *ft;
+  int itemlen,remlen,donelen,ret;
+  long long pos;
+
+  // file pointer
+  ft = fp_teleseismic[*fid];
+
+  // positions file pointer (for reverse time access)
+  pos = ((long long)*unit_length) * (*index -1 );
+  ret = fseek(ft, pos , SEEK_SET);
+  if (ret != 0) {
+    perror("Error fseek");
+    exit(EXIT_FAILURE);
+  }
+
+  donelen = 0;
+  remlen = *length;
+
+  // writes items of maximum MAX_B to the file
+  while (remlen > 0) {
+
+    itemlen = MIN(remlen,MAX_B);
+    ret = fwrite(buffer,1,itemlen,ft);
+    if (ret > 0) {
+      donelen = donelen + ret;
+      remlen = remlen - MAX_B;
+      buffer += MAX_B;
+    }
+    else{
+      remlen = 0;
+    }
+  }
+}
+
+void read_teleseismic_fbin(int *fid, char *buffer, int *length, int *index) {
+// reads binary file data in chunks of MAX_B
+
+  FILE *ft;
+  int ret,itemlen,remlen,donelen;
+  long long pos;
+
+  // file pointer
+  ft = fp_teleseismic[*fid];
+
+  // positions file pointer (for reverse time access)
+  pos = ((long long)*length) * (*index -1 );
+
+  ret = fseek(ft, pos , SEEK_SET);
+  if (ret != 0 ) {
+    perror("Error fseek");
+    exit(EXIT_FAILURE);
+  }
+
+  donelen = 0;
+  remlen = *length;
+
+  // reads items of maximum MAX_B to the file
+  while (remlen > 0) {
+
+    // checks end of file
+    if (ferror(ft) || feof(ft)) return;
+
+    itemlen = MIN(remlen,MAX_B);
+    ret = fread(buffer,1,itemlen,ft);
+
+    if (ferror(ft) || feof(ft)) return;
+
+    if (ret > 0) {
+      donelen = donelen + ret;
+      remlen = remlen - MAX_B;
+      buffer += MAX_B;
+    }
+    else{
+      remlen = 0;
+    }
+  }
+}
+
+void read_teleseismic_buffer_fbin(int *fid, char *buffer, int *length, int *index, int *unit_length) {
+// reads binary file data in chunks of MAX_B
+//
+// note: positioning the file head here uses strides of a given unit_length
+//       (opposite to read_teleseismic_fbin which assumes to have same unit_length and buffer length)
+
+  FILE *ft;
+  int ret,itemlen,remlen,donelen;
+  long long pos;
+
+  // file pointer
+  ft = fp_teleseismic[*fid];
+
+  // positions file pointer (for reverse time access)
+  pos = ((long long)*unit_length) * (*index -1 );
+
+  ret = fseek(ft, pos , SEEK_SET);
+  if (ret != 0 ) {
+    perror("Error fseek");
+    exit(EXIT_FAILURE);
+  }
+
+  donelen = 0;
+  remlen = *length;
+
+  // reads items of maximum MAX_B to the file
+  while (remlen > 0) {
+
+    // checks end of file
+    if (ferror(ft) || feof(ft)) return;
+
+    itemlen = MIN(remlen,MAX_B);
+    ret = fread(buffer,1,itemlen,ft);
+
+    if (ferror(ft) || feof(ft)) return;
+
+    if (ret > 0) {
+      donelen = donelen + ret;
+      remlen = remlen - MAX_B;
+      buffer += MAX_B;
+    }
+    else{
+      remlen = 0;
+    }
+  }
+}
+
+//open/close wrapper functions
+
+void
+FC_FUNC_(open_file_teleseismic_w,OPEN_FILE_TELESEISMIC_W)(int *fid, char *filename,int *length, long long *filesize)
+{
+#ifdef USE_MAP_FUNCTION
+  open_file_teleseismic_w_map(fid,filename,length,filesize);
+#else
+  open_file_teleseismic_w_fbin(fid,filename,length,filesize);
+#endif
+}
+
+void
+FC_FUNC_(open_file_teleseismic_r,OPEN_FILE_TELESEISMIC_R)(int *fid, char *filename,int *length, long long *filesize)
+{
+#ifdef USE_MAP_FUNCTION
+  open_file_teleseismic_r_map(fid,filename,length,filesize);
+#else
+  open_file_teleseismic_r_fbin(fid,filename,length,filesize);
+#endif
+}
+
+void
+FC_FUNC_(close_file_teleseismic,CLOSE_FILES_TELESEISMIC)(int *fid)
+{
+#ifdef USE_MAP_FUNCTION
+  close_file_teleseismic_map(fid);
+#else
+  close_file_teleseismic_fbin(fid);
+#endif
+}
+
+// read/write wrappers
+void
+FC_FUNC_(write_teleseismic,WRITE_TELESEISMIC)(int *fid, char *buffer, int *length , int *index)
+{
+#ifdef USE_MAP_FUNCTION
+  write_teleseismic_map(fid,buffer,length,index);
+#else
+  write_teleseismic_fbin(fid,buffer,length,index);
+#endif
+}
+
+void
+FC_FUNC_(read_teleseismic,READ_TELESEISMIC)(int *fid, char *buffer, int *length , int *index)
+{
+#ifdef USE_MAP_FUNCTION
+  read_teleseismic_map(fid,buffer,length,index);
+#else
+  read_teleseismic_fbin(fid,buffer,length,index);
+#endif
+}
+
+// buffered read/write wrappers
+void
+FC_FUNC_(write_teleseismic_buffer,WRITE_TELESEISMIC_BUFFER)(int *fid, char *buffer, int *length , int *index, int *unit_length)
+{
+#ifdef USE_MAP_FUNCTION
+  write_teleseismic_buffer_map(fid,buffer,length,index,unit_length);
+#else
+  write_teleseismic_buffer_fbin(fid,buffer,length,index,unit_length);
+#endif
+}
+
+void
+FC_FUNC_(read_teleseismic_buffer,READ_TELESEISMIC_BUFFER)(int *fid, char *buffer, int *length , int *index, int *unit_length)
+{
+#ifdef USE_MAP_FUNCTION
+  read_teleseismic_buffer_map(fid,buffer,length,index,unit_length);
+#else
+  read_teleseismic_buffer_fbin(fid,buffer,length,index,unit_length);
+#endif
+}
+
+//<<<KTAO
 
 
 /* ---------------------------------------

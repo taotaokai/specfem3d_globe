@@ -191,6 +191,7 @@
         ! note: this is done here after the Newmark time scheme, otherwise the indexing for sources
         !          and adjoint sources will become more complicated
         !          that is, index it for adjoint sources will match index NSTEP - 1 for backward/reconstructed wavefields
+        !>>>KTAO: this only applies to Newmark scheme.
         if (it == 1) then
           call read_forward_arrays()
         endif

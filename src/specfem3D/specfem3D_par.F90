@@ -625,6 +625,35 @@ module specfem_par_crustmantle
   integer :: reclen_xmin_crust_mantle, reclen_xmax_crust_mantle, &
             reclen_ymin_crust_mantle,reclen_ymax_crust_mantle
 
+  !>>>KTAO: TELESEISMIC_INCIDENCE
+  integer :: nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+             nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax, &
+             nspec2D_teleseismic_zmin
+  ! store ispec of each boundary element 
+  integer, dimension(:), allocatable :: &
+    ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
+    ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
+    ibelm_teleseismic_zmin
+  ! area of boundary gll point (NGLL1,NGLL2,NSPEC2D) Dx,y,z/Dxi,eta,gamma * wgllwgll
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: &
+    area_teleseismic_xmin, area_teleseismic_xmax, &
+    area_teleseismic_ymin, area_teleseismic_ymax, &
+    area_teleseismic_zmin
+  ! store teleseismic field (NDIM,NGLL1,NGLL2,NSPEC2D)
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: &
+    field_teleseismic_xmin, field_teleseismic_xmax, &
+    field_teleseismic_ymin, field_teleseismic_ymax, &
+    field_teleseismic_zmin
+  !! store teleseismic source (NDIM,NGLL1,NGLL2,NSPEC2D,NSTEP)
+  !real(kind=CUSTOM_REAL), dimension(:,:,:,:,:), allocatable :: &
+  !  teleseismic_source_xmin, teleseismic_source_xmax, &
+  !  teleseismic_source_ymin, teleseismic_source_ymax, &
+  !  teleseismic_source_zmin
+  integer :: reclen_teleseismic_xmin, reclen_teleseismic_xmax, &
+             reclen_teleseismic_ymin, reclen_teleseismic_ymax, &
+             reclen_teleseismic_zmin
+  !<<<
+
   ! kernels
   real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: &
     rho_kl_crust_mantle,beta_kl_crust_mantle,alpha_kl_crust_mantle

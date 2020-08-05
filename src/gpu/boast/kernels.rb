@@ -77,7 +77,11 @@ small_kernels = [
 :compute_ani_undoatt_kernel,
 :compute_iso_undoatt_kernel,
 :compute_strain_kernel,
-:resort_array
+:resort_array,
+#>>>KTAO
+:compute_teleseismic_gradient_kernel,
+:compute_add_teleseismic_sources_kernel
+#<<<
 ]
 
 big_kernels = [

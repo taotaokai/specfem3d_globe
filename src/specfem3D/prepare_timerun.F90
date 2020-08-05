@@ -81,6 +81,11 @@
   ! prepares Stacey boundary arrays for re-construction of wavefields
   call prepare_stacey()
 
+  !>>>KTAO: allocate arrays for teleseismic_gradient/source_xmin...
+  ! and read in teleseismic_source_xmin/xmax/....bin files
+  call prepare_teleseismic_incidence()
+  !<<<
+
   ! prepares noise simulations
   call prepare_noise()
 

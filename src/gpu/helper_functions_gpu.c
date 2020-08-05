@@ -763,7 +763,10 @@ void exit_on_gpu_error (const char *kernel_name) {
 #endif
 #ifdef USE_CUDA
   if (run_cuda) {
-    cudaThreadSynchronize();
+    //>>>KTAO: cudaThreadSynchronize is deprecated
+    //cudaThreadSynchronize();
+    cudaDeviceSynchronize();
+    //<<<
     cudaError_t err = cudaGetLastError();
     error = err != cudaSuccess;
     strerr = cudaGetErrorString(err);

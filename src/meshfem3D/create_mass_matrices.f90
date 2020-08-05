@@ -358,8 +358,11 @@
     myrank,DT,NCHUNKS,ichunk,nspec, &
     ROTATION,EXACT_MASS_MATRIX_FOR_ROTATION
 
+  !>>>KTAO
   use regions_mesh_par, only: &
-    wxgll,wygll,wzgll
+    wgllwgll_xy,wgllwgll_xz,wgllwgll_yz
+    !wxgll,wygll,wzgll
+  !<<<
 
   use regions_mesh_par2, only: &
     rmassx,rmassy,rmassz,b_rmassx,b_rmassy, &
@@ -382,9 +385,11 @@
 
   ! local parameters
   double precision :: weight
-  double precision, dimension(NGLLX,NGLLY) :: wgllwgll_xy
-  double precision, dimension(NGLLX,NGLLZ) :: wgllwgll_xz
-  double precision, dimension(NGLLY,NGLLZ) :: wgllwgll_yz
+  !>>>KTAO: move into meshfem3D_par.f90 and calculated in initialize_layers.f90
+  !double precision, dimension(NGLLX,NGLLY) :: wgllwgll_xy
+  !double precision, dimension(NGLLX,NGLLZ) :: wgllwgll_xz
+  !double precision, dimension(NGLLY,NGLLZ) :: wgllwgll_yz
+  !<<<
 
   real(kind=CUSTOM_REAL) :: deltat,deltatover2
   real(kind=CUSTOM_REAL) :: tx,ty,tz,sn
@@ -406,22 +411,24 @@
   deltat = real(DT*dsqrt(PI*GRAV*RHOAV), kind=CUSTOM_REAL)
   deltatover2 = real(0.5d0*deltat, kind=CUSTOM_REAL)
 
+  !>>>KTAO: move into initialize_layers.f90
   ! weights on surfaces
-  do i = 1,NGLLX
-    do j = 1,NGLLY
-       wgllwgll_xy(i,j) = wxgll(i)*wygll(j)
-    enddo
-  enddo
-  do i = 1,NGLLX
-    do k = 1,NGLLZ
-       wgllwgll_xz(i,k) = wxgll(i)*wzgll(k)
-    enddo
-  enddo
-  do j = 1,NGLLY
-    do k = 1,NGLLZ
-       wgllwgll_yz(j,k) = wygll(j)*wzgll(k)
-    enddo
-  enddo
+  !do i = 1,NGLLX
+  !  do j = 1,NGLLY
+  !     wgllwgll_xy(i,j) = wxgll(i)*wygll(j)
+  !  enddo
+  !enddo
+  !do i = 1,NGLLX
+  !  do k = 1,NGLLZ
+  !     wgllwgll_xz(i,k) = wxgll(i)*wzgll(k)
+  !  enddo
+  !enddo
+  !do j = 1,NGLLY
+  !  do k = 1,NGLLZ
+  !     wgllwgll_yz(j,k) = wygll(j)*wzgll(k)
+  !  enddo
+  !enddo
+  !<<<
 
   ! adds contributions to mass matrix to stabilize Stacey conditions
   select case (iregion_code)

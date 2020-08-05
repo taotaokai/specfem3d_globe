@@ -439,7 +439,7 @@
       ! on GPU
       if (nspec2D_xmax_crust_mantle > 0 ) call compute_stacey_elastic_backward_gpu(Mesh_pointer, &
                                                                                    absorb_xmax_crust_mantle, &
-                                                                                   1) ! <= xmin
+                                                                                   1) ! <= xmax
     endif
 
   endif ! NCHUNKS_VAL == 1 .or. ichunk == CHUNK_AB

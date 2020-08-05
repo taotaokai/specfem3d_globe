@@ -7,18 +7,18 @@ import argparse
 from meshfem3d_utils import  sem_mesh_read,sem_boundary_mesh_read,NGLLX,NGLLY,NGLLZ
 
 #====== user input
-parser = argparse.ArgumentParser(description='Make vtk file from the boundary_teleseismic.bin files.')
+parser = argparse.ArgumentParser(description='Make vtk file from the teleseismic_boundary.bin files.')
 parser.add_argument(dest='procnum_begin', type=int, help="begin number of iproc (>= 0)")
 parser.add_argument(dest='procnum_end', type=int, help="end number of iproc (< nproc)")
-parser.add_argument(dest='mesh_dir', type=str, help="directory containing solver_data.bin and boundary_teleseismic.bin")
-parser.add_argument('--output', type=argparse.FileType('w', encoding='UTF-8'), default='boundary_teleseismic.vtk', dest='vtk_file')
+parser.add_argument(dest='mesh_dir', type=str, help="directory containing solver_data.bin and teleseismic_boundary.bin")
+parser.add_argument('--output', type=argparse.FileType('w', encoding='UTF-8'), default='teleseismic_boundary.vtk', dest='vtk_file')
 args = parser.parse_args()
 print(args)
 
 #procnum_begin = 0
 #procnum_end = 4
 #mesh_dir = 'mesh/DATABASES_MPI/'
-#vtk_file = 'boundary_teleseismic.vtk'
+#vtk_file = 'teleseismic_boundary.vtk'
 
 #====== 
 point_data_total = np.zeros((3,0), dtype=np.float)
@@ -26,14 +26,14 @@ cell_data_total = np.zeros((4,0), dtype=np.uint32)
 point_num_total = 0
 cell_num_total = 0
  
-for iproc in range(args.procnum_begin, args.procnum_end):
+for iproc in range(args.procnum_begin, args.procnum_end + 1):
 
   print('# iproc = ', iproc)
 
-  prname = args.mesh_dir + 'proc%06d_reg1_'%(iproc)
+  prname = args.mesh_dir + '/proc%06d_reg1_'%(iproc)
   mesh_file = prname + 'solver_data.bin'
   mesh_data = sem_mesh_read(mesh_file)
-  boundary_file = prname + 'boundary_teleseismic.bin'
+  boundary_file = prname + 'teleseismic_boundary.bin'
   boundary_data = sem_boundary_mesh_read(boundary_file)
 
   print(mesh_file)
@@ -52,7 +52,7 @@ for iproc in range(args.procnum_begin, args.procnum_end):
 
   point_num = 0 # point count
   cell_num = 0 # cell count
-  for position in ['xmin','xmax','ymin','ymax','bottom']:
+  for position in ['xmin','xmax','ymin','ymax','zmin']:
     tag = 'ibelm_teleseismic_' + position 
     for ispec in boundary_data[tag]:
       ipoint_cell = 0 # point count in one cell
@@ -60,7 +60,7 @@ for iproc in range(args.procnum_begin, args.procnum_end):
       if position == 'xmax': iglob_list = [ibool[NGLLX-1,0,0,ispec-1], ibool[NGLLX-1,NGLLY-1,0,ispec-1],ibool[NGLLX-1,NGLLY-1,NGLLZ-1,ispec-1],ibool[NGLLX-1,0,NGLLZ-1,ispec-1]]
       if position == 'ymin': iglob_list = [ibool[0,0,0,ispec-1], ibool[NGLLX-1,0,0,ispec-1],ibool[NGLLX-1,0,NGLLZ-1,ispec-1],ibool[0,0,NGLLZ-1,ispec-1]]
       if position == 'ymax': iglob_list = [ibool[0,NGLLY-1,0,ispec-1], ibool[NGLLX-1,NGLLY-1,0,ispec-1],ibool[NGLLX-1,NGLLY-1,NGLLZ-1,ispec-1],ibool[0,NGLLY-1,NGLLZ-1,ispec-1]]
-      if position == 'bottom': iglob_list = [ibool[0,0,0,ispec-1], ibool[NGLLX-1,0,0,ispec-1],ibool[NGLLX-1,NGLLY-1,0,ispec-1],ibool[0,NGLLY-1,0,ispec-1]]
+      if position == 'zmin': iglob_list = [ibool[0,0,0,ispec-1], ibool[NGLLX-1,0,0,ispec-1],ibool[NGLLX-1,NGLLY-1,0,ispec-1],ibool[0,NGLLY-1,0,ispec-1]]
       iglob_list = [ i-1 for i in iglob_list]
       for iglob in iglob_list:
         if new_iglob[iglob]: # register unseen iglob into point_data

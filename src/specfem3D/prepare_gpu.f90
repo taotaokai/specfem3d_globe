@@ -87,6 +87,7 @@
                                 NSPEC_INNER_CORE_STRAIN_ONLY, &
                                 SIMULATION_TYPE,NOISE_TOMOGRAPHY, &
                                 SAVE_FORWARD,ABSORBING_CONDITIONS, &
+                                TELESEISMIC_INCIDENCE, & !KTAO
                                 OCEANS_VAL,GRAVITY_VAL, &
                                 ROTATION_VAL,EXACT_MASS_MATRIX_FOR_ROTATION_VAL, &
                                 ATTENUATION_VAL,UNDO_ATTENUATION, &
@@ -293,6 +294,29 @@
 
   endif
   call synchronize_all()
+
+  !>>>KTAO: prepares arrays for teleseismic incidence
+  if (NCHUNKS_VAL /= 6 .and. TELESEISMIC_INCIDENCE) then
+    if (myrank == 0) then
+      write(IMAIN,*) "  loading absorbing boundaries"
+      call flush_IMAIN()
+    endif
+    call synchronize_all()
+
+    call prepare_fields_teleseismic_device( &
+      Mesh_pointer, & 
+      nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, & 
+      nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax, & 
+      nspec2D_teleseismic_zmin, & 
+      ibelm_teleseismic_xmin,ibelm_teleseismic_xmax, & 
+      ibelm_teleseismic_ymin,ibelm_teleseismic_ymax, &
+      ibelm_teleseismic_zmin, &
+      area_teleseismic_xmin,area_teleseismic_xmax, & 
+      area_teleseismic_ymin,area_teleseismic_ymax, &
+      area_teleseismic_zmin)
+  endif
+  call synchronize_all()
+  !<<<
 
   ! prepares MPI interfaces
   if (myrank == 0) then

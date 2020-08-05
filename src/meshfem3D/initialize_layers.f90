@@ -41,6 +41,10 @@
 
   use constants
 
+  !>>>KTAO
+  use regions_mesh_par, only: wgllwgll_xy,wgllwgll_xz,wgllwgll_yz
+  !<<<
+
   implicit none
 
   integer,intent(in) :: ipass
@@ -85,10 +89,32 @@
 ! this for non blocking MPI
   logical, dimension(nspec),intent(out) :: is_on_a_slice_edge
 
+  !>>>KTAO: wgllwgll_xy/xz/yz
+  integer :: i,j,k
+  !<<<
+
 ! set up coordinates of the Gauss-Lobatto-Legendre points
   call zwgljd(xigll,wxgll,NGLLX,GAUSSALPHA,GAUSSBETA)
   call zwgljd(yigll,wygll,NGLLY,GAUSSALPHA,GAUSSBETA)
   call zwgljd(zigll,wzgll,NGLLZ,GAUSSALPHA,GAUSSBETA)
+
+  !>>>KTAO: weights on surfaces
+  do i = 1,NGLLX
+    do j = 1,NGLLY
+       wgllwgll_xy(i,j) = wxgll(i)*wygll(j)
+    enddo
+  enddo
+  do i = 1,NGLLX
+    do k = 1,NGLLZ
+       wgllwgll_xz(i,k) = wxgll(i)*wzgll(k)
+    enddo
+  enddo
+  do j = 1,NGLLY
+    do k = 1,NGLLZ
+       wgllwgll_yz(j,k) = wygll(j)*wzgll(k)
+    enddo
+  enddo
+  !<<<
 
 ! get the 3-D shape functions
   call get_shape3D(shape3D,dershape3D,xigll,yigll,zigll)

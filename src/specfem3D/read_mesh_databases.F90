@@ -882,6 +882,46 @@
       read(IIN) jacobian2D_top_crust_mantle
       close(IIN)
 
+      !>>>KTAO: read in boundary_teleseismic.bin
+      if (TELESEISMIC_INCIDENCE) then
+        open(unit=IIN,file=prname(1:len_trim(prname))//'teleseismic_boundary.bin', &
+              status='old',form='unformatted',action='read',iostat=ier)
+        if (ier /= 0 ) call exit_mpi(myrank,'Error opening teleseismic_boundary.bin file')
+
+        read(IIN) nspec2D_teleseismic_xmin
+        allocate(ibelm_teleseismic_xmin(nspec2D_teleseismic_xmin))
+        allocate(area_teleseismic_xmin(NGLLY,NGLLZ,nspec2D_teleseismic_xmin))
+        read(IIN) ibelm_teleseismic_xmin
+        read(IIN) area_teleseismic_xmin
+
+        read(IIN) nspec2D_teleseismic_xmax
+        allocate(ibelm_teleseismic_xmax(nspec2D_teleseismic_xmax))
+        allocate(area_teleseismic_xmax(NGLLY,NGLLZ,nspec2D_teleseismic_xmax))
+        read(IIN) ibelm_teleseismic_xmax
+        read(IIN) area_teleseismic_xmax
+
+        read(IIN) nspec2D_teleseismic_ymin
+        allocate(ibelm_teleseismic_ymin(nspec2D_teleseismic_ymin))
+        allocate(area_teleseismic_ymin(NGLLX,NGLLZ,nspec2D_teleseismic_ymin))
+        read(IIN) ibelm_teleseismic_ymin
+        read(IIN) area_teleseismic_ymin
+
+        read(IIN) nspec2D_teleseismic_ymax
+        allocate(ibelm_teleseismic_ymax(nspec2D_teleseismic_ymax))
+        allocate(area_teleseismic_ymax(NGLLX,NGLLZ,nspec2D_teleseismic_ymax))
+        read(IIN) ibelm_teleseismic_ymax
+        read(IIN) area_teleseismic_ymax
+
+        read(IIN) nspec2D_teleseismic_zmin
+        allocate(ibelm_teleseismic_zmin(nspec2D_teleseismic_zmin))
+        allocate(area_teleseismic_zmin(NGLLX,NGLLY,nspec2D_teleseismic_zmin))
+        read(IIN) ibelm_teleseismic_zmin
+        read(IIN) area_teleseismic_zmin
+
+        close(IIN)
+      endif
+      !<<<
+
       ! read parameters to couple fluid and solid regions
       !
       ! outer core

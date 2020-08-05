@@ -116,7 +116,12 @@ specfem3D_OBJECTS += \
 	$O/write_movie_surface.solverstatic.o \
 	$O/write_output_ASCII.solverstatic.o \
 	$O/write_output_SAC.solverstatic.o \
+	$O/prepare_teleseismic_incidence.solverstatic.o \
+	$O/compute_teleseismic_gradient.solverstatic.o \
+	$O/compute_add_teleseismic_sources.solverstatic.o \
 	$(EMPTY_MACRO)
+
+#KTAO add prepare_teleseismic_gradient, compute_teleseismic_gradient, compute_add_teleseismic_sources.
 
 specfem3D_MODULES = \
 	$(FC_MODDIR)/asdf_data.$(FC_MODEXT) \
@@ -319,7 +324,7 @@ $(specfem3D_OBJECTS): S = ${S_TOP}/src/specfem3D
 $O/write_output_ASDF.solverstatic.o: $O/asdf_data.solverstatic_module.o
 $O/compute_arrays_source.solverstatic.o: $O/write_seismograms.solverstatic.o
 $O/iterate_time.solverstatic.o: $O/write_seismograms.solverstatic.o
-$O/iterate_time_undoatt.solverstatic.o: $O/write_seismograms.solverstatic.o
+$O/iterate_time_undoatt.solverstatic.o: $O/write_seismograms.solverstatic.o #$O/write_teleseismic_gradient.solverstatic.o
 $O/locate_receivers.solverstatic.o: $O/write_seismograms.solverstatic.o
 $O/read_adjoint_sources.solverstatic.o: $O/write_seismograms.solverstatic.o
 

@@ -141,6 +141,21 @@ void FC_FUNC_(transfer_adj_to_device_async,
 
 
 //
+// src/gpu/compute_add_teleseismic_sources_gpu.c
+//
+
+void FC_FUNC_ (compute_add_teleseismic_sources_gpu,
+               compute_add_teleseismic_sources_gpu) (long *Mesh_pointer_f,
+                                                     realw *field_teleseismic,
+                                                     int *itype) {}
+
+void FC_FUNC_ (compute_add_teleseismic_sources_backward_gpu,
+               compute_add_teleseismic_sources_backward_gpu) (long *Mesh_pointer_f,
+                                                              realw *field_teleseismic,
+                                                              int *itype) {}
+
+
+//
 // src/gpu/compute_coupling_gpu.c
 //
 
@@ -221,13 +236,16 @@ void FC_FUNC_ (compute_kernels_hess_gpu,
 void FC_FUNC_ (resort_array,
                RESORT_ARRAY) (long *Mesh_pointer_f) {}
 
+
 //
 // src/gpu/compute_seismograms_gpu.c
 //
+
 void FC_FUNC_ (compute_seismograms_gpu,
                COMPUTE_SEISMOGRAMS_GPU) (long *Mesh_pointer_f,
                                          realw* seismograms,
-                                         int* seismo_currentf) {}
+                                         int* seismo_currentf,int* itf, double* scale_displf,int* NTSTEP_BETWEEN_OUTPUT_SEISMOSf,int* NSTEPf) {}
+
 
 //
 // src/gpu/compute_stacey_acoustic_gpu.c
@@ -273,6 +291,17 @@ void FC_FUNC_ (compute_stacey_elastic_undoatt_gpu,
 
 void FC_FUNC_ (compute_strain_gpu,
                COMPUTE_STRAIN_GPU) (long *Mesh_pointer_f, realw *deltat_f, int *FORWARD_OR_ADJOINT) {}
+
+
+//
+// src/gpu/compute_teleseismic_gradient_gpu.c
+//
+
+void FC_FUNC_ (compute_teleseismic_gradient_gpu,
+               COMPUTE_TELESEISMIC_GRADIENT_GPU) (long *Mesh_pointer_f,
+                                                  realw *field_teleseismic,
+                                                  double *scale_displf,
+                                                  int *itype) {}
 
 
 //
@@ -343,6 +372,7 @@ void FC_FUNC_ (prepare_constants_device,
                                           int *NSPEC_INNER_CORE_STRAIN_ONLY,
                                           int *SIMULATION_TYPE, int *NOISE_TOMOGRAPHY,
                                           int *SAVE_FORWARD_f, int *ABSORBING_CONDITIONS_f,
+                                          int *TELESEISMIC_INCIDENCE_f, //KTAO
                                           int *OCEANS_f, int *GRAVITY_f,
                                           int *ROTATION_f, int *EXACT_MASS_MATRIX_FOR_ROTATION_f,
                                           int *ATTENUATION_f, int *UNDO_ATTENUATION_f,
@@ -354,7 +384,7 @@ void FC_FUNC_ (prepare_constants_device,
                                           int *ANISOTROPIC_KL_f, int *APPROXIMATE_HESS_KL_f,
                                           realw *deltat_f, realw *b_deltat_f,
                                           int *GPU_ASYNC_COPY_f,
-                                          double * h_xir,double * h_etar,double * h_gammar) {}
+                                          double * h_xir,double * h_etar,double * h_gammar,double * h_nu ) {}
 
 void FC_FUNC_ (prepare_fields_rotation_device,
                PREPARE_FIELDS_ROTATION_DEVICE) (long *Mesh_pointer_f,
@@ -464,6 +494,24 @@ void FC_FUNC_ (prepare_fields_absorb_device,
                                               realw *jacobian2D_xmin_outer_core, realw *jacobian2D_xmax_outer_core,
                                               realw *jacobian2D_ymin_outer_core, realw *jacobian2D_ymax_outer_core,
                                               realw *vp_outer_core) {}
+
+void FC_FUNC_ (prepare_fields_teleseismic_device,
+               PREPARE_FIELDS_TELESEISMIC_DEVICE) (long *Mesh_pointer_f,
+                                                   int *nspec2D_teleseismic_xmin,
+                                                   int *nspec2D_teleseismic_xmax,
+                                                   int *nspec2D_teleseismic_ymin,
+                                                   int *nspec2D_teleseismic_ymax,
+                                                   int *nspec2D_teleseismic_zmin,
+                                                   int *ibelm_teleseismic_xmin,
+                                                   int *ibelm_teleseismic_xmax,
+                                                   int *ibelm_teleseismic_ymin,
+                                                   int *ibelm_teleseismic_ymax,
+                                                   int *ibelm_teleseismic_zmin,
+                                                   realw *area_teleseismic_xmin,
+                                                   realw *area_teleseismic_xmax,
+                                                   realw *area_teleseismic_ymin,
+                                                   realw *area_teleseismic_ymax,
+                                                   realw *area_teleseismic_zmin) {}
 
 void FC_FUNC_ (prepare_mpi_buffers_device,
                PREPARE_MPI_BUFFERS_DEVICE) (long *Mesh_pointer_f,
@@ -823,6 +871,12 @@ void FC_FUNC_(transfer_kernels_hess_cm_tohost,
               TRANSFER_KERNELS_HESS_CM_TOHOST)(long *Mesh_pointer_f,
                                                realw *h_hess_kl,
                                                int *NSPEC) {}
+
+void FC_FUNC_(register_host_array,
+              REGISTER_HOST_ARRAY)(int *size, realw *h_array) {}
+
+void FC_FUNC_(unregister_host_array,
+              UNREGISTER_HOST_ARRAY)(realw *h_array) {}
 
 
 //

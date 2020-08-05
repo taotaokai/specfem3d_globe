@@ -1,0 +1,349 @@
+!!!!! I/O for field_teleseismic 
+src/shared
+|-binary_c_io.c
+|  |#define TELESEISMIC_FILEID 5
+|  |static FILE * fp_teleseismic[TELESEISMIC_FILEID]
+|  |static char * work_buffer_teleseismic[TELESEISMIC_FILEID];
+|  |void open/close_file_teleseismic_r/w_fbin(...)
+|  |void write/read_teleseismic(_buffer)_fbin(...)
+|  |! wrapper functions 
+|  |void FC_FUNC_(open_file_teleseismic_w,OPEN_FILE_TELESEISMIC_W) (...) {open_file_teleseismic_w_fbin();...}
+|  |void FC_FUNC_(write_teleseismic,WRITE_TELESEISMIC) (...) {write_teleseismic_fbin();...}
+
+src/gpu
+|-mesh_constants_gpu.h
+|  |typedef struct mesh_ {...;int teleseismic_incidence; int nspec2D_teleseismic_xmin; gpu_int_mem d_ibelm_teleseismic_xmin;
+|  |                      gpu_realw_mem d_area_teleseismic_xmin; gpu_realw_mem d_field_teleseismic_xmin; ...} !KTAO: add variables for teleseismic incidence
+|-prepare_mesh_constants_gpu.c
+|  |void FC_FUNC_ (prepare_cleanup_device,..)
+|  |  |gpuFree (&mp->d_ibelm_teleseismic_xmin) !KTAO: free up teleseismic arrays (ibelm,area,field)
+|-compute_teleseismic_gradient_gpu.c
+|  |-compute_teleseismic_gradient_kernel<<<>>> (boast/compute_teleseismic_gradient_kernel.rb; boast/references/compute_teleseismic_gradient_kernel.cu)
+|  |  |b_field_teleseismic[INDEX3(NDIM,NGLL2,0,igll,iface)] = accel[iglob*3+1]*scale_displ*area
+|-compute_add_teleseismic_sources_gpu.c
+|  |-compute_add_teleseismic_sources_gpu()
+|  |  |-compute_add_teleseismic_sources_kernel(mp->d_accel_crust_mantle.cuda,...) 
+|  |  |  |(boast/compute_add_teleseismic_sources_kernel.rb; boast/references/compute_add_teleseismic_sources_kernel.cu)
+|  |  |  |atomicAdd(&accel[iglob*3  ], field_teleseismic[INDEX3(NDIM,NGLL2,0,igll,iface)]);
+|  |-compute_add_teleseismic_sources_backward_gpu()
+|  |  |-compute_add_teleseismic_sources_kernel(mp->d_b_accel_crust_mantle.cuda,...)
+
+src/specfem3D/
+|-specfem3D
+|  |-...
+|  |-setup_GLL_points(): sets up reference element GLL points/weights/derivatives 
+|  |  |-define_derivation_matrices(): wgllwgll_xy(NGLLX,NGLLY), ... ! jacobian2D_zmin * wgllwgll_xy is the area of the corresponding gll point
+|  |-...
+|  |-read_mesh_databases()
+|  |  |-read_mesh_databases_coupling()
+|  |  |  |>>>KTAO: read nspec/ibelm/area_teleseismic_xmin/xmax/ymin/ymax/zmin
+|  |-...
+|  |-setup_sources_receivers()
+|  |  |-setup_sources()
+|  |  |  |-setup_stf_constants(): start time -t0
+|  |  |  |-setup_timesteps(): NSTEP
+|  |  |-setup_receivers()
+|  |  |  |-check_adjoint_sources(): ! checks net.sta.MX*.adj files length == NSTEP
+|  |  |  |  |>>>KTAO: allows length != NSTEP with cut-off or zero padding at beginning since the file is read from the end 
+|  |-...
+|  |-prepare_timerun()
+|  |  |-prepare_timerun_mass_matrices()
+|  |  |  |! for efficiency, invert final mass matrix once and for all on each slice
+|  |  |  |rmassx_crust_mantle = 1._CUSTOM_REAL / rmassx_crust_mantle
+|  |  |-prepare_timerun_constants()
+|  |  |  |if (SIMULATION_TYPE == 3)
+|  |  |  |  |if (UNDO_ATTENUATION) b_deltat = deltat ! reconstruct wavefield in forward time simulation (in subsets of timesteps and using wavefield buffer) 
+|  |  |  |  |else b_deltat = -delta ! reconstruct wavefield in backward time simulation (not good in case of attenuation)
+|  |  |-prepare_stacey() !prepares Stacey boundary arrays for re-construction of wavefields
+|  |  |  |if (UNDO_ATTENUATION) SAVE_STACEY = .false. 
+|  |  |  |elif (SIMULATION_TYPE == 3 .or. (SIMULATION_TYPE == 1 .and. SAVE_FORWARD)) SAVE_STACEY = .true. 
+|  |  |  |else SAVE_STACEY = .false. 
+|  |  |-prepare_teleseismic_incidence() !KTAO: allocate arrays for teleseismic incidence
+|  |  |  |if (TELESEISMIC_INCIDENCE)
+|  |  |  |  |allocate(field_teleseismic_xmin(NDIM,NGLLY,NGLLZ,nspec2D_teleseismic_xmin),...)
+|  |  |  |  |reclen_teleseismic_xmin = CUSTOM_REAL * (NDIM * NGLLY * NGLLZ * nspec2D_teleseismic_xmin)
+|  |  |  |  |if (SIMULATION_TYPE == 2) open_file_teleseismic_w() ! open file for writing out teleseismic gradient
+|  |  |  |  |else open_file_teleseismic_r() ! open file for reading in teleseismic source
+|  |  |-prepare_GPU()
+|  |  |  |-prepare_constants_device(...,TELESEISMIC_INCIDENCE,...) !KTAO: add TELESEISMIC_INCIDENCE 
+|  |  |  |  |void FC_FUNC_ (prepare_constants_device,...) (...,int *TELESEISMIC_INCIDENCE_f,...) !KTAO: add flag TELESEISMIC_INCIDENCE_f (specfem3D/specfem3D_gpu_method_stubs.c)
+|  |  |  |  |  |mp->teleseismic_incidence = *TELESEISMIC_INCIDENCE_f; !KTAO: sets flag for teleseismic incidence (gpu/prepare_mesh_constants_gpu.c)
+|  |  |  |-prepare_fields_absorb_device() !copy nspec2D/ibelm/jacobian2D_xmin_crust_mantle from host(CPU RAM) to device(GPU)
+|  |  |  |  |! src/gpu/prepare_mesh_constants_gpu.c
+|  |  |  |  |mp->nspec2D_xmin_crust_mantle = *nspec2D_xmin_crust_mantle
+|  |  |  |  |gpuCreateCopy_todevice_int (&mp->d_ibelm_xmin_crust_mantle, ibelm_xmin_crust_mantle, mp->nspec2D_xmin_crust_mantle)
+|  |  |  |  |if (mp->save_stacey) gpuMalloc_realw (&mp->d_absorb_xmin_crust_mantle, NDIM * NGLL2 * mp->nspec2D_xmin_crust_mantle)
+|  |  |  |void FC_FUNC_ (prepare_fields_teleseismic_device,...) ! specfem3D/specfem3D_gpu_method_stubs.c
+|  |  |  |-prepare_teleseismic_incidence_device() ! gpu/prepare_mesh_constants_gpu.c
+|  |  |  |  |! copy nspec2D/ibelm/area_teleseismic_xmin/... from host(CPU RAM) to device(GPU)
+|  |  |  |  |gpuCreateCopy_todevice_int(&mp->d_ibelm_teleseismic_xmin,ibelm_teleseismic_xmin,mp->nspec2D_teleseismic_xmin)
+|  |  |  |  |! allocate buffer array for transferring teleseismic gradient from device to host (SIMULATION_TYPE==2) or teleseismic source from host to device (SIMULATION_TYPE==1 or 3)
+|  |  |  |  |gpuMalloc_realw (&mp->d_field_teleseismic_xmin, NDIM*NGLL2*mp->nspec2D_teleseismic_xmin)
+|  |-...
+|  |-iterate_time_undoatt()
+|  |  |do iteration_on_subset = 1, NSUBSET_ITERATIONS ! loops over time subsets
+|  |  |  |if (SIMULATION_TYPE == 1 .and. SAVE_FORWARD) save_forward_arrays_undoatt() 
+|  |  |  |if (SIMULATION_TYPE == 3) read_forward_arrays_undoatt()
+|  |  |  |  |- read forward wavefield from save_frame_at(NSUBSET_ITERATIONS - iteration_on_subset + 1).bin (in time-reversed order)
+|  |  |  |if (SIMULATION_TYPE == 1 or 2)
+|  |  |  |  |it_subset_end = NSTEP-(NSUBSET_ITERATIONS-1)*NT_DUMP_ATTENUATION if (iteration_on_subset==NSUBSET_ITERATIONS) else NT_DUMP_ATTENUATION
+|  |  |  |  |do it_of_this_subset = 1, it_subset_end
+|  |  |  |  |  |do istage = 1, NSTAGE_TIME_SCHEME
+|  |  |  |  |  |  |-update_displ_lddrk/Newmark(): LDDRK consists of multiple fractional steps (NSTAGE_TIME_SCHEME) in each time step
+|  |  |  |  |  |  |-compute_forces_acoustic()
+|  |  |  |  |  |  |-compute_forces_viscoelastic()
+|  |  |  |  |  |  |  |! compute internal forces in the solid regions
+|  |  |  |  |  |  |  |-compute_forces_crust_mantle(_gpu)
+|  |  |  |  |  |  |  |-compute_forces_inner_core(_gpu)
+|  |  |  |  |  |  |  |! computes additional contributions to acceleration field
+|  |  |  |  |  |  |  |-compute_stacey_cm_forward() (ABSORBING_CONDITIONS) ! compute_forces_viscoelastic_calling_routine.F90
+|  |  |  |  |  |  |  |  |-accel_crust_mantle(1,iglob) = accel_crust_mantle(1,iglob) - tx*weight
+|  |  |  |  |  |  |  |  |-absorb_xmin_crust_mantle(1,j,k,ispec2D) = tx*weight
+|  |  |  |  |  |  |  |  |if (SAVE_STACEY)  (prepare_stacey(): if (UNDO_ATTENUATION) SAVE_STACEY = false)
+|  |  |  |  |  |  |  |  |  |if (nspec2D_xmin_crust_mantle > 0) call write_abs(0,absorb_xmin_crust_mantle, reclen_xmin_crust_mantle,it)
+|  |  |  |  |  |  |  |if (SIMULATION_TYPE == 2 or 3) compute_add_sources_adjoint()  ! in compute_forces_viscoelastic_calling_routine.F90
+|  |  |  |  |  |  |  |  |-read_adjoint_sources()
+|  |  |  |  |  |  |  |  |  |-read_adjoint_sources_local()
+|  |  |  |  |  |  |  |  |  |  |-compute_arrays_source_adjoint()
+|  |  |  |  |  |  |  |if (SIMULATION_TYPE == 1 .and. nsources_local > 0)
+|  |  |  |  |  |  |  |  |-compute_add_sources() 
+|  |  |  |  |  |  |  |if (SIMULATION_TYPE == 1 .and. TELESEISMIC_INCIDENCE) 
+|  |  |  |  |  |  |  |  |-compute_add_teleseismic_sources() !KTAO
+|  |  |  |  |  |  |  |  |  |-read_teleseismic(0,field_teleseismic_xmin,reclen_teleseismic_xmin,it)
+|  |  |  |  |  |  |  |  |  |if (.not. GPU_MODE)
+|  |  |  |  |  |  |  |  |  |  | accel_crust_mantle(:,iglob) += field_teleseismic_source_xmin(:,j,k,ispec2D,it_tmp)
+|  |  |  |  |  |  |  |  |  |else compute_add_teleseismic_sources_gpu() (compute_add_teleseismic_sources_gpu.c)
+|  |  |  |  |  |  |  |  |  |  |!gpu/boast/compute_add_teleseismic_sources_kernel.rb, gpu/boast/references/boast/compute_add_teleseismic_sources_kernel.cu
+|  |  |  |  |  |  |  |  |  |  |-compute_add_teleseismic_sources_kernel<<<grid,threads,0,mp->compute_stream>>>(...)
+|  |  |  |  |  |  |  |  |  |  |  |atomicAdd(&accel[iglob*3], field_teleseismic[INDEX3(NDIM,NGLL2,0,igll,iface)]);
+|  |  |  |  |  |  |  |-multiply_accel_elastic(): ! divides forces by mass matrix to get acceleration 
+|  |  |  |  |  |  |  |-update_veloc_elastic_newmark(): ! add corrector term on velocity
+|  |  |  |  |  |-write_seismograms()
+|  |  |  |  |  |-write_movie_output()
+|  |  |  |  |  |if (SIMULATION_TYPE == 2 .and. TELESEISMIC_INCIDENCE) compute_teleseismic_gradient()
+|  |  |  |  |  |  |!KTAO: gradient = displ * gll_area... ! this gives gradient of teleseismic boundary forces at each gll point
+|  |  |  |  |  |  |if (.not. GPU_MODE)
+|  |  |  |  |  |  |  |field_teleseismic_xmin(:,j,k,ispec2D) = displ(:,iglob) * area_teleseismic_xmin...
+|  |  |  |  |  |  |else compute_teleseismic_gradient_gpu(...,field_teleseismic_xmin, scale_displ) (compute_teleseismic_gradient_gpu.c)
+|  |  |  |  |  |  |  |!gpu/boast/compute_teleseismic_gradient_kernel.rb, gpu/boast/references/boast/compute_teleseismic_gradient_kernel.cu
+|  |  |  |  |  |  |  |compute_teleseismic_gradient_kernel<<<grid,threads,0,mp->compute_stream>>>
+|  |  |  |  |  |  |  |gpuCopy_from_device_realw(&d_b_field_teleseismic,field_teleseismic, NDIM*NGLL2*num_teleseismic_boundary_faces)
+|  |  |  |  |  |  |write_teleseismic(0,field_teleseismic_xmin,reclen_teleseismic_xmin,it)
+|  |  |  |if (SIMULATION_TYPE == 3)
+|  |  |  |  |!reversed order on subsets
+|  |  |  |  |it_subset_end = NSTEP - (NSUBSET_ITERATIONS-1)*NT_DUMP_ATTENUATION if (iteration_on_subset == 1) else NT_DUMP_ATTENUATION
+|  |  |  |  |! reconstructs forward wavefields based on stored wavefield snapshots 
+|  |  |  |  |do it_of_this_subset = 1, it_subset_end 
+|  |  |  |  |  |-update_displ_lddrk/Newmark_backward()
+|  |  |  |  |  |-compute_forces_acoustic_backward()
+|  |  |  |  |  |-compute_forces_viscoelastic_backward()
+|  |  |  |  |  |  |...
+|  |  |  |  |  |  |if (UNDO_ATTENUATION) compute_stacey_cm_backward_undoatt()
+|  |  |  |  |  |  |else compute_stacey_cm_backward()
+|  |  |  |  |  |  |  |-read_abs(0,absorb_xmin_crust_mantle,reclen_xmin_crust_mantle,NSTEP-it+1)
+|  |  |  |  |  |  |  |if (.not. GPU_MODE) b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) - absorb_xmin_crust_mantle(:,j,k,ispec2D)
+|  |  |  |  |  |  |  |else compute_stacey_elastic_backward_gpu(Mesh_pointer,absorb_xmin_crust_mantle,0)
+|  |  |  |  |  |  |  |  |gpuCopy_todevice_realw (&d_b_absorb_field, absorb_field, NDIM * NGLL2 * num_abs_boundary_faces)
+|  |  |  |  |  |  |  |  |gpuCopy_todevice_realw (&d_b_absorb_field, absorb_field, NDIM * NGLL2 * num_abs_boundary_faces)
+|  |  |  |  |  |  |...
+|  |  |  |  |  |  |-compute_add_teleseismic_sources_backward() if (SIMULATION_TYPE == 3 .and. TELESEISMIC_INCIDENCE)
+|  |  |  |  |  |  |...
+|  |  |  |  |! adjoint wavefield simulation
+|  |  |  |  |do it_of_this_subset = 1, it_subset_end 
+|  |  |  |  |  |-update_displ_lddrk/Newmark()
+|  |  |  |  |  |-compute_forces_acoustic()
+|  |  |  |  |  |-compute_forces_viscoelastic()
+|  |-...
+|  |-finalize_simulation()
+|  |  |if (TELESEISMIC_INCIDENCE) 
+|  |  |  |if (nspec2D_teleseismic_xmin >0) close_file_teleseismic(0)
+|  |  |-finalize_simulation_cleanup()
+|  |  |  |if (TELESEISMIC_INCIDENCE) deallocate(ibelm/area/field_teleseismic_xmin/...)
+
+|  |-iterate_time()
+|  |  |do it = it_begin,it_end
+|  |  |  |-update_displ_Newmark():
+|  |  |  |  |-update_displ_elastic_acoustic(): ! update velocity and displacement, no corrector term on velocity
+|  |  |  |-compute_forces_acoustic()
+|  |  |  |-compute_forces_viscoelastic()
+|  |  |  |  |! compute internal forces in the solid regions
+|  |  |  |  |-compute_forces_crust_mantle(_gpu)
+|  |  |  |  |-compute_forces_inner_core(_gpu)
+|  |  |  |  |! computes additional contributions to acceleration field
+|  |  |  |  |-compute_stacey_cm_forward() (ABSORBING_CONDITIONS) ! compute_forces_viscoelastic_calling_routine.F90
+|  |  |  |  |  |-accel_crust_mantle(1,iglob) = accel_crust_mantle(1,iglob) - tx*weight
+|  |  |  |  |  |-absorb_xmin_crust_mantle(1,j,k,ispec2D) = tx*weight
+|  |  |  |  |  |-if (nspec2D_xmin_crust_mantle > 0) call write_abs(0,absorb_xmin_crust_mantle, reclen_xmin_crust_mantle,it)
+|  |  |  |  |-compute_add_sources_adjoint (SIMULATION_TYPE == 2 or 3) ! compute_forces_viscoelastic_calling_routine.F90
+|  |  |  |  |  |-read_adjoint_sources()
+|  |  |  |  |  |  |-read_adjoint_sources_local()
+|  |  |  |  |  |  |  |-compute_arrays_source_adjoint()
+|  |  |  |  |-compute_add_sources (SIMULATION_TYPE == 1) 
+|  |  |  |  |-multiply_accel_elastic(): ! divides forces by mass matrix to get acceleration 
+|  |  |  |  |-update_veloc_elastic_newmark(): ! add corrector term on velocity
+|  |  |  |if (SIMULATION_TYPE == 3) ! backward/reconstructed wavefields only
+|  |  |  |  |-update_displ_Newmark_backward()
+|  |  |  |  |-compute_forces_acoustic_backward()
+|  |  |  |  |-compute_forces_viscoelastic_backward()
+|  |  |  |  |  |! compute internal forces in the solid regions
+|  |  |  |  |  |-compute_forces_crust_mantle(_gpu)
+|  |  |  |  |  |-compute_forces_inner_core(_gpu)
+|  |  |  |  |  |! computes additional contributions to acceleration field
+|  |  |  |  |  |-compute_stacey_cm_backward(_undoatt) (ABSORBING_CONDITIONS)
+|  |  |  |  |  |-compute_add_sources_backward()
+|  |  |  |  |if (it == 1) read_forward_arrays()
+
+
+>>>>> NOTES ABOUT NEWMARK AND LDDRK
+
+  - The initial time is set at t = -dt, and each iteration at count it updates from it-1 to it. So after the first iteration (it=1) the wavefeild is at time t = 0. So after it iterations t = (it-1)*dt.
+
+  - For Newmark scheme the update rule (from t_n to t_n+1) only requires force term at t_n+1 (force term at t_n is implicitly carried by a_n).
+    | d_n+1 = d_n + dt*v_n + dt^2/2*a_n
+    | v'_n+1 = v_n + dt/2*a_n
+    | (M + dt/2*C)*a_n+1 = F_n+1 - C*v'_n+1 - Kd_n+1
+    | v_n+1 = v'_n+1 + dt/2*a_n+1
+    , where v'_n+1 is the predictor; M is the mass matrix; C is the absorbing boundary; K is stiffness matrix.
+
+    The force term is computed at t = (it-1)*dt. For it = 1, the force term at t = 0 is used.
+    So the wavefield after the first iteration is also at t = 0, which should be seen as updated from t = -dt to 0. 
+    This is evident that the velocity (after iteration) at it = 1 (i.e. t=0) may be different from the "initial"(actually not) value at t = 0.
+    The wavefield at t = -dt is always zero (t=-dt,displ=0,veloc=0,accel=0,force=0) and thus has no effect on kernel computation nor need stored.
+
+  - For LDDRK scheme the update rule (t_n -> t_n+1) requires force term at several substeps from t_n(included) to t_n+1(not included).
+    The force term is computed at t = ((it-1) -1 + C_LDDRK(istage))*dt, which starts at ((it-1)-1)*dt, one step ahead the current iteration.
+    So the wavefield after the first iteration (it = 1) also corresponds to time t = 0, which is updated from t = -dt to 0 using multiple substeps (stages).
+
+  - To conclude, to update from t_n to t_n+1, the Newmark scheme only explicitly uses force term at t_n+1, while LDDRK scheme use force term from t_n to t_n+1 through several substeps. 
+
+
+  it_forward:   ---->1---->2----->3---->...--->N-1---->N
+
+  t/dt:        -1    0     1      2     ...    N-2    N-1   N (wavefield and seismogramgs are only recorded from 0 to (N-1)*dt, N*dt is not calculated, -1 is the zero initial condition)
+
+  it_backward:       N<---N-1<---N-2<---...<----2<-----1<---- (UNDO_ATTENUATION == .false., backward reconstruction of forward wavefield from last time step)
+                                                       ^read in last wavefield snapshot and overwrite current wavefield at the end of the first backward iteration 
+
+  it_adjoint:        N<---N-1<---N-2<---...<----2<-----1<---0 (0: zero initial condition)
+                                                        ^^^^^for LDDRK the adjoint source is required after the last time step at t = (N-1)*dt, which can be interpolated from 0 to 1 (assuming zero source at 0). For Newmark the initial zero acceleration implicitly assumes zero source at 0. This can be true since adjoint source is usually windowed and tapered to zero at both ends.
+
+
+  **** UNDO_ATTENUATION: (NT_DUMP_ATTENUATION = 3, N = 3*NSUBSET_ITERATIONS)
+
+                        v--->>>>>>>----v-->>>>>>--v------>>>>>>>>------v-------------------  write out wavefield snapshots at the beginning of every subsets.
+  it_forward:           --->1--->2--->3--->4  ... --->N-5--->N-4--->N-3--->N-2--->N-1---->N
+
+  t/dt:               -1    0    1    2    3  ...     N-6    N-5    N-4    N-3    N-2    N-1
+
+  it_of_this_subset:    --->1--->2--->3--->1  ... ---->1----->2----->3----->1----->2----->3    (NT_DUMP_ATTENUATION = 3, N = 3*NSUBSET_ITERATIONS)
+                        ^___<<<<<<<____^__<<<<<___^_____<<<<<<________^ read back wavefield snapshots in reversed time order, but stepping forward in time to reconstruct forward wavefield, which is stored in memory buffer and correlated with adjoint wavefield for the corresponding subsets of time steps. The last subset may contains less than NT_DUMP_ATTENUATION steps depending on N. 
+
+
+>>>>> NOTES ABOUT NEWMARK SHCEME IN BACKWARD RECONSTRUCTION (UNDO_ATTENUATION == .false.)
+
+  Forward scheme:
+  (1) d_n+1 = d_n + dt*v_n + dt^2/2*a_n
+  (2) v'_n+1 = v_n + dt/2*a_n
+  (3) (M + dt/2*C)*a_n+1 = F_n+1 - C*v'_n+1 - K*d_n+1
+  (4) v_n+1 = v'_n+1 + dt/2*a_n+1
+
+  the equation of motion which is hold at every time step:
+  (3') M*a_n = F_n - C*v_n - K*d_n
+
+  Backward scheme:
+  (1,2,4) => d_n = d_n+1 - dt*v_n+1 + dt^2/2*a_n+1
+  (2,4)   => v_n = v_n+1 - dt/2*a_n+1 - dt/2*a_n
+  let (4') v"_n := v_n+1 - dt/2*a_n+1, so v_n = v"_n - dt/2*a_n
+  (3',4')  => (M - dt/2*C)*a_n = F_n - C*v"_n - K*d_n
+
+  to conclude the backward scheme:
+  | d_n = d_n+1 - dt*v_n+1 + dt^2/2*a_n+1
+  | v"_n = v_n+1 - dt/2*a_n+1
+  | (M - dt/2*C)*a_n = F_n - C*v"_n - K*d_n
+  | v_n = v"_n - dt/2*a_n
+
+  This is similar to the forward scheme by swapping n and n+1 and negating dt to -dt. So the wavefield can be reconstructed backward from the last wavefield snapshot using the same forward scheme but with the negative timestep -dt.
+
+
+>>>>> NOTES ABOUT LDDRK SHCEME IN BACKWARD RECONSTRUCTION (UNDO_ATTENUATION == .false.)
+
+  TODO: I am not sure   
+
+
+
+>>>>> NEW VARIABLES INTRODUCED:
+
+1. specfem3D_par.f90: 
+
+module specfem_par_crustmantle
+  !>>>KTAO: TELESEISMIC_INCIDENCE
+  integer :: nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+             nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax, &
+             nspec2D_teleseismic_zmin
+  ! store ispec of each boundary element 
+  integer, dimension(:), allocatable :: &
+    ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
+    ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
+    ibelm_teleseismic_zmin
+  ! area = jacobian2D (NGLL1,NGLL2,NSPEC2D) Dx,y,z/Dxi,eta,gamma * wgllwgll_xy
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: &
+    area_teleseismic_xmin, area_teleseismic_xmax, &
+    area_teleseismic_ymin, area_teleseismic_ymax, &
+    area_teleseismic_zmin
+  ! store teleseismic field (NDIM,NGLL1,NGLL2,NSPEC2D)
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: &
+    field_teleseismic_xmin, field_teleseismic_xmax, &
+    field_teleseismic_ymin, field_teleseismic_ymax, &
+    field_teleseismic_zmin
+  ! record length of field teleseismic_xmin = NDIM*NGLLY*NGLLZ*NSPEC2D
+  integer :: &
+    reclen_teleseismic_xmin,reclen_teleseismic_xmax, &
+    reclen_teleseismic_ymin,reclen_teleseismic_ymax, &
+    reclen_teleseismic_zmin
+  !<<<
+
+!!!!! I/O for field_teleseismic 
+|-shared
+|  |-binary_c_io.c
+|  |  |#define TELESEISMIC_FILEID 5
+|  |  |static FILE * fp_teleseismic[TELESEISMIC_FILEID]
+|  |  |static char * work_buffer_teleseismic[TELESEISMIC_FILEID];
+|  |  |void open/close_file_teleseismic_r/w_fbin(...)
+|  |  |void write/read_teleseismic(_buffer)_fbin(...)
+|  |  |! wrapper functions 
+|  |  |void FC_FUNC_(open_file_teleseismic_w,OPEN_FILE_TELESEISMIC_W) (...) {open_file_teleseismic_w_fbin();...}
+|  |  |void FC_FUNC_(write_teleseismic,WRITE_TELESEISMIC) (...) {write_teleseismic_fbin();...}
+
+
+!!!!! write out teleseismic gradient (TELESEISMIC_INCIDENCE .and. SIMULATION_TYPE == 2)
+|-specfem3D
+|  |-read_mesh_databases()
+|  |  |-read_mesh_databases_coupling()
+|  |  |  |>>>KTAO: read nspec/ibelm/area_teleseismic_xmin/xmax/ymin/ymax/zmin
+|  |-prepare_timerun()
+|  |  |-prepare_teleseismic_incidence() ! allocate arrays and open files for read/write
+|  |  |  |if (TELESEISMIC_INCIDENCE)
+|  |  |  |  |allocate(field_teleseismic_xmin(NDIM,NGLLY,NGLLZ,nspec2D_teleseismic_xmin),...)
+|  |  |  |  |reclen_teleseismic_xmin = CUSTOM_REAL * (NDIM * NGLLY * NGLLZ * nspec2D_teleseismic_xmin)
+|  |  |  |  |if (SIMULATION_TYPE == 2) open_file_teleseismic_w() ! open file for writing out teleseismic gradient
+|  |  |  |  |else open_file_teleseismic_r() ! open file for reading in teleseismic source
+|  |  |-prepare_GPU()
+|  |  |  |void FC_FUNC_ (prepare_fields_teleseismic_device,...) ! specfem3D/specfem3D_gpu_method_stubs.c
+|  |  |  |-prepare_teleseismic_incidence_device() ! gpu/prepare_mesh_constants_gpu.c
+|  |  |  |  |! copy nspec2D/ibelm/area_teleseismic_xmin/... from host(CPU RAM) to device(GPU)
+|  |  |  |  |gpuCreateCopy_todevice_int(&mp->d_ibelm_teleseismic_xmin,ibelm_teleseismic_xmin,mp->nspec2D_teleseismic_xmin)
+|  |  |  |  |! allocate buffer array for transferring teleseismic gradient from device to host (SIMULATION_TYPE==2) or teleseismic source from host to device (SIMULATION_TYPE==1 or 3)
+|  |  |  |  |gpuMalloc_realw (&mp->d_field_teleseismic_xmin, NDIM*NGLL2*mp->nspec2D_teleseismic_xmin)
+|  |-iterate_time_undoatt()
+|  |  |  |if (SIMULATION_TYPE == 1 or 2)
+|  |  |  |  |it_subset_end = NSTEP-(NSUBSET_ITERATIONS-1)*NT_DUMP_ATTENUATION if (iteration_on_subset==NSUBSET_ITERATIONS) else NT_DUMP_ATTENUATION
+|  |  |  |  |do it_of_this_subset = 1, it_subset_end
+|  |  |  |  |  |do istage = 1, NSTAGE_TIME_SCHEME
+|  |  |  |  |  |-...
+|  |  |  |  |  |if (SIMULATION_TYPE == 2 .and. TELESEISMIC_INCIDENCE) compute_teleseismic_gradient()
+|  |  |  |  |  |  |!KTAO: gradient = displ * gll_area... ! this gives gradient of teleseismic boundary forces at each gll point
+|  |  |  |  |  |  |if (.not. GPU_MODE)
+|  |  |  |  |  |  |  |field_teleseismic_xmin(:,j,k,ispec2D) = displ(:,iglob) * area_teleseismic_xmin...
+|  |  |  |  |  |  |else
+|  |  |  |  |  |  |  |-compute_teleseismic_gradient_gpu(...,field_teleseismic_xmin)
+|  |  |  |  |  |  |-write_field_teleseismic(0, field_teleseismic_xmin, reclen_teleseismic_xmin); ...

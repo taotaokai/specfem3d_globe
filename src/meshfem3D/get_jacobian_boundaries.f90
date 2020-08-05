@@ -43,14 +43,17 @@
   use meshfem3D_par, only: nspec
 
   !>>>KTAO
+  use meshfem3D_par, only: myrank ! debug
+  use meshfem3D_par, only: iregion_code
   use shared_parameters, only: TELESEISMIC_INCIDENCE
-  use regions_mesh_par2, only: above_teleseismic_bottom, &
+  use regions_mesh_par, only: wgllwgll_xz,wgllwgll_yz
+  use regions_mesh_par2, only: above_teleseismic_zmin, &
     nspec2D_teleseismic_xmin, nspec2D_teleseismic_xmax, &
     nspec2D_teleseismic_ymin, nspec2D_teleseismic_ymax, &
     ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
     ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
-    jacobian2D_teleseismic_xmin, jacobian2D_teleseismic_xmax, &
-    jacobian2D_teleseismic_ymin, jacobian2D_teleseismic_ymax
+    area_teleseismic_xmin, area_teleseismic_xmax, &
+    area_teleseismic_ymin, area_teleseismic_ymax
   !<<<
 
   implicit none
@@ -484,43 +487,58 @@
   nspec2D_ymin = ispecb3
   nspec2D_ymax = ispecb4
 
+  print *,"KTAO: iproc,nsepc2D_xmin/xmax/ymin/ymax = ", myrank, &
+    nspec2D_xmin,nspec2D_xmax, &
+    nspec2D_ymin,nspec2D_ymax
+
   !>>>KTAO
-  do ispecb1 = 1, nspec2D_xmin
-    ispec = ibelm_xmin(ispecb1)
-    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
-      ispecb1_teleseismic = ispecb1_teleseismic + 1
-      ibelm_teleseismic_xmin(ispecb1_teleseismic) = ispec
-      jacobian2D_teleseismic_xmin(:,:,ispecb1_teleseismic) = jacobian2D_xmin(:,:,ispecb1)
-    endif
-  enddo
-  do ispecb2 = 1, nspec2D_xmax
-    ispec = ibelm_xmax(ispecb2)
-    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
-      ispecb2_teleseismic = ispecb2_teleseismic + 1
-      ibelm_teleseismic_xmax(ispecb2_teleseismic) = ispec
-      jacobian2D_teleseismic_xmax(:,:,ispecb2_teleseismic) = jacobian2D_xmax(:,:,ispecb2)
-    endif
-  enddo
-  do ispecb3 = 1, nspec2D_ymin
-    ispec = ibelm_ymin(ispecb3)
-    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
-      ispecb3_teleseismic = ispecb3_teleseismic + 1
-      ibelm_teleseismic_ymin(ispecb3_teleseismic) = ispec
-      jacobian2D_teleseismic_ymin(:,:,ispecb3_teleseismic) = jacobian2D_ymin(:,:,ispecb3)
-    endif
-  enddo
-  do ispecb4 = 1, nspec2D_ymax
-    ispec = ibelm_ymax(ispecb4)
-    if (TELESEISMIC_INCIDENCE .and. above_teleseismic_bottom(ispec)) then
-      ispecb4_teleseismic = ispecb4_teleseismic + 1
-      ibelm_teleseismic_ymax(ispecb4_teleseismic) = ispec
-      jacobian2D_teleseismic_ymax(:,:,ispecb4_teleseismic) = jacobian2D_ymax(:,:,ispecb4)
-    endif
-  enddo
-  nspec2D_teleseismic_xmin = ispecb1_teleseismic
-  nspec2D_teleseismic_xmax = ispecb2_teleseismic
-  nspec2D_teleseismic_ymin = ispecb3_teleseismic
-  nspec2D_teleseismic_ymax = ispecb4_teleseismic
+  if (TELESEISMIC_INCIDENCE .and. iregion_code == IREGION_CRUST_MANTLE) then
+    do ispecb1 = 1, nspec2D_xmin
+      ispec = ibelm_xmin(ispecb1)
+      if (above_teleseismic_zmin(ispec)) then
+        ispecb1_teleseismic = ispecb1_teleseismic + 1
+        ibelm_teleseismic_xmin(ispecb1_teleseismic) = ispec
+        area_teleseismic_xmin(:,:,ispecb1_teleseismic) = &
+          jacobian2D_xmin(:,:,ispecb1) * wgllwgll_yz
+      endif
+    enddo
+    do ispecb2 = 1, nspec2D_xmax
+      ispec = ibelm_xmax(ispecb2)
+      if (above_teleseismic_zmin(ispec)) then
+        ispecb2_teleseismic = ispecb2_teleseismic + 1
+        ibelm_teleseismic_xmax(ispecb2_teleseismic) = ispec
+        area_teleseismic_xmax(:,:,ispecb2_teleseismic) = &
+          jacobian2D_xmax(:,:,ispecb2) * wgllwgll_yz
+      endif
+    enddo
+    do ispecb3 = 1, nspec2D_ymin
+      ispec = ibelm_ymin(ispecb3)
+      if (above_teleseismic_zmin(ispec)) then
+        ispecb3_teleseismic = ispecb3_teleseismic + 1
+        ibelm_teleseismic_ymin(ispecb3_teleseismic) = ispec
+        area_teleseismic_ymin(:,:,ispecb3_teleseismic) = &
+          jacobian2D_ymin(:,:,ispecb3) * wgllwgll_xz
+      endif
+    enddo
+    do ispecb4 = 1, nspec2D_ymax
+      ispec = ibelm_ymax(ispecb4)
+      if (above_teleseismic_zmin(ispec)) then
+        ispecb4_teleseismic = ispecb4_teleseismic + 1
+        ibelm_teleseismic_ymax(ispecb4_teleseismic) = ispec
+        area_teleseismic_ymax(:,:,ispecb4_teleseismic) = &
+          jacobian2D_ymax(:,:,ispecb4) * wgllwgll_xz
+      endif
+    enddo
+    nspec2D_teleseismic_xmin = ispecb1_teleseismic
+    nspec2D_teleseismic_xmax = ispecb2_teleseismic
+    nspec2D_teleseismic_ymin = ispecb3_teleseismic
+    nspec2D_teleseismic_ymax = ispecb4_teleseismic
+
+    print *,"iproc,nsepc2D_teleseismic_xmin/xmax/ymin/ymax = ", myrank, &
+      nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+      nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax
+
+  endif
   !<<<
 
   end subroutine get_jacobian_boundaries

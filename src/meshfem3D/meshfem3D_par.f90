@@ -267,6 +267,12 @@
   double precision, dimension(NGLLY) :: yigll,wygll
   double precision, dimension(NGLLZ) :: zigll,wzgll
 
+  !>>>KTAO: for multiplying with jacobian2D to get area of each gll point (teleseismic)
+  double precision, dimension(NGLLX,NGLLY) :: wgllwgll_xy
+  double precision, dimension(NGLLX,NGLLZ) :: wgllwgll_xz
+  double precision, dimension(NGLLY,NGLLZ) :: wgllwgll_yz
+  !<<<
+
   ! 3D shape functions and their derivatives
   double precision, dimension(NGNOD,NGLLX,NGLLY,NGLLZ) :: shape3D
   double precision, dimension(NDIM,NGNOD,NGLLX,NGLLY,NGLLZ) :: dershape3D
@@ -333,14 +339,14 @@
     ibelm_ymin,ibelm_ymax,ibelm_bottom,ibelm_top
 
   !>>>>KTAO flag ibelm for teleseismic incidence
-  logical, dimension(:), allocatable :: above_teleseismic_bottom
+  logical, dimension(:), allocatable :: above_teleseismic_zmin
   integer :: nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
     nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax
   integer, dimension(:), allocatable :: ibelm_teleseismic_xmin, &
     ibelm_teleseismic_xmax, ibelm_teleseismic_ymin, ibelm_teleseismic_ymax
   real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: &
-    jacobian2D_teleseismic_xmin, jacobian2D_teleseismic_xmax, &
-    jacobian2D_teleseismic_ymin, jacobian2D_teleseismic_ymax
+    area_teleseismic_xmin, area_teleseismic_xmax, &
+    area_teleseismic_ymin, area_teleseismic_ymax
   !<<<<KTAO
 
   ! 2-D Jacobians and normals
@@ -384,12 +390,12 @@
   double precision :: r_moho,r_400,r_670
 
   !>>>>> KTAO
-  double precision :: r_teleseismic_bottom
-  integer :: NSPEC2D_teleseismic_bottom
-  integer :: ispec2D_teleseismic_bottom
-  integer, dimension(:), allocatable :: ibelm_teleseismic_bottom
-  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: normal_teleseismic_bottom
-  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: jacobian2D_teleseismic_bottom
+  double precision :: r_teleseismic_zmin
+  integer :: nspec2D_teleseismic_zmin
+  integer :: ispec2D_teleseismic_zmin
+  integer, dimension(:), allocatable :: ibelm_teleseismic_zmin
+  real(kind=CUSTOM_REAL), dimension(:,:,:,:), allocatable :: normal_teleseismic_zmin
+  real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: area_teleseismic_zmin
   !<<<<< KTAO
 
   ! flags for transverse isotropic elements

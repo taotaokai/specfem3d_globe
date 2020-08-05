@@ -35,15 +35,6 @@
 
   use constants
 
-  !>>>KTAO 
-  use shared_parameters, only: TELESEISMIC_INCIDENCE
-  use regions_mesh_par2, only: &
-    r_teleseismic_bottom, &
-    ispec2D_teleseismic_bottom,NSPEC2D_teleseismic_bottom, &
-    ibelm_teleseismic_bottom, &
-    jacobian2D_teleseismic_bottom,normal_teleseismic_bottom
-  !<<<
-
   implicit none
 
   ! input
@@ -194,22 +185,6 @@
       ispec2D_670_bot = ispec2D_670_bot + 1
       ibelm_670_bot(ispec2D_670_bot) = ispec
     endif
-
-    !>>>> KTAO: get boundary element for teleseismic incidence 
-    if (TELESEISMIC_INCIDENCE) then
-      if (    abs(r1-r_teleseismic_bottom)/r_teleseismic_bottom < SMALLVAL &
-        .and. abs(r2-r_teleseismic_bottom)/r_teleseismic_bottom < SMALLVAL &
-        .and. abs(r3-r_teleseismic_bottom)/r_teleseismic_bottom < SMALLVAL &
-        .and. abs(r4-r_teleseismic_bottom)/r_teleseismic_bottom < SMALLVAL ) then
-        ispec2D_teleseismic_bottom = ispec2D_teleseismic_bottom + 1
-        ibelm_teleseismic_bottom(ispec2D_teleseismic_bottom) = ispec
-        call compute_jacobian_2D(ispec2D_teleseismic_bottom, &
-          xelm2,yelm2,zelm2,dershape2D_bottom, & 
-          jacobian2D_teleseismic_bottom,normal_teleseismic_bottom, &
-          NGLLX,NGLLY,NSPEC2D_teleseismic_bottom)
-      endif
-    endif 
-    !<<<<KTAO
 
   else
     ! superbrick case

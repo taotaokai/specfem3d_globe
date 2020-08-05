@@ -930,10 +930,12 @@
               endif
 
               ! normalizes vector
+              !>>> KTAO
               !comp_dir_vect_source_E(isource) = comp_dir_vect_source_E(isource) / norm
               !comp_dir_vect_source_N(isource) = comp_dir_vect_source_N(isource) / norm
               !comp_dir_vect_source_Z_UP(isource) = comp_dir_vect_source_Z_UP(isource) / norm
-              comp_dir_vect_source = comp_dir_vect_source / norm ! ktao modified 
+              comp_dir_vect_source = comp_dir_vect_source / norm ! KTAO modified to use vector 
+              !<<<
 
               ! we use a tilted force defined by its magnitude and the projections
               ! of an arbitrary (non-unitary) direction vector on the E/N/Z_UP basis
