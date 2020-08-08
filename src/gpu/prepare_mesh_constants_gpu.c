@@ -321,9 +321,9 @@ void FC_FUNC_ (prepare_constants_device,
       gpuCreateCopy_todevice_realw (&mp->d_hxir   , hxir     , NGLLX * mp->nrec_local);
       gpuCreateCopy_todevice_realw (&mp->d_hetar  , hetar    , NGLLX * mp->nrec_local);
       gpuCreateCopy_todevice_realw (&mp->d_hgammar, hgammar  , NGLLX * mp->nrec_local);
-      free(xir);
-      free(etar);
-      free(gammar);
+      free(hxir);
+      free(hetar);
+      free(hgammar);
 
       // local seismograms
       gpuMalloc_realw (&mp->d_seismograms, NDIM * mp->nrec_local);
