@@ -309,18 +309,18 @@ void FC_FUNC_ (prepare_constants_device,
     // for seismograms
     if (mp->simulation_type == 1 || mp->simulation_type == 3 ) {
       // forward/kernel simulations
-      realw * xir    = (realw *)malloc(NGLLX * mp->nrec_local*sizeof(realw));
-      realw * etar   = (realw *)malloc(NGLLX * mp->nrec_local*sizeof(realw));
-      realw * gammar = (realw *)malloc(NGLLX * mp->nrec_local*sizeof(realw));
-      // converts to double to realw arrays, assumes NGLLX == NGLLY == NGLLZ
+      realw * hxir    = (realw *)malloc(NGLLX * mp->nrec_local*sizeof(realw));
+      realw * hetar   = (realw *)malloc(NGLLX * mp->nrec_local*sizeof(realw));
+      realw * hgammar = (realw *)malloc(NGLLX * mp->nrec_local*sizeof(realw));
+      // converts double to realw arrays, assumes NGLLX == NGLLY == NGLLZ
       for (int i=0;i<NGLLX * mp->nrec_local;i++){
-        xir[i]    = (realw)h_hxir_store[i];
-        etar[i]   = (realw)h_hetar_store[i];
-        gammar[i] = (realw)h_hgammar_store[i];
+        hxir[i]    = (realw)h_hxir_store[i];
+        hetar[i]   = (realw)h_hetar_store[i];
+        hgammar[i] = (realw)h_hgammar_store[i];
       }
-      gpuCreateCopy_todevice_realw (&mp->d_hxir   , xir     , NGLLX * mp->nrec_local);
-      gpuCreateCopy_todevice_realw (&mp->d_hetar  , etar    , NGLLX * mp->nrec_local);
-      gpuCreateCopy_todevice_realw (&mp->d_hgammar, gammar  , NGLLX * mp->nrec_local);
+      gpuCreateCopy_todevice_realw (&mp->d_hxir   , hxir     , NGLLX * mp->nrec_local);
+      gpuCreateCopy_todevice_realw (&mp->d_hetar  , hetar    , NGLLX * mp->nrec_local);
+      gpuCreateCopy_todevice_realw (&mp->d_hgammar, hgammar  , NGLLX * mp->nrec_local);
       free(xir);
       free(etar);
       free(gammar);
@@ -2830,9 +2830,9 @@ void FC_FUNC_ (prepare_cleanup_device,
   if (mp->nrec_local > 0) {
     gpuFree (&mp->d_number_receiver_global);
     if (mp->simulation_type == 1 || mp->simulation_type == 3 ) {
-      gpuFree (&mp->d_xir);
-      gpuFree (&mp->d_etar);
-      gpuFree (&mp->d_gammar);
+      gpuFree (&mp->d_hxir);
+      gpuFree (&mp->d_hetar);
+      gpuFree (&mp->d_hgammar);
       gpuFree (&mp->d_nu);
       gpuFree (&mp->d_seismograms);
     }else {
