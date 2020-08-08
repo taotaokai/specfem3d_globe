@@ -295,8 +295,7 @@ module specfem_par
   ! receiver information
   integer :: nrec,nrec_local
   integer, dimension(:), allocatable :: islice_selected_rec,ispec_selected_rec
-  integer, dimension(:), allocatable :: number_receiver_global
-  integer, dimension(:), allocatable :: number_adj_receiver_global ! KTAO setup_sources_receivers.f90:setup_receivers_precompute_intp()
+  integer, dimension(:), allocatable, target :: number_receiver_global
   double precision, dimension(:), allocatable :: xi_receiver,eta_receiver,gamma_receiver
   double precision, dimension(:,:,:), allocatable :: nu
   double precision, allocatable, dimension(:) :: stlat,stlon,stele,stbur
@@ -305,9 +304,14 @@ module specfem_par
   character(len=MAX_STRING_LEN) :: STATIONS_FILE
 
   ! Lagrange interpolators at receivers
-  double precision, dimension(:,:), allocatable :: hxir_store,hetar_store,hgammar_store
+  double precision, dimension(:,:), allocatable, target :: hxir_store,hetar_store,hgammar_store
   double precision, dimension(:,:,:,:), allocatable :: hlagrange_store
-  double precision, dimension(:,:), allocatable :: hxir_adj_store,hetar_adj_store,hgammar_adj_store ! KTAO setup_sources_receivers.f90:setup_receivers_precompute_intp()
+
+  !>>>KTAO: arrays for adjoint sources 
+  !used in setup_sources_receivers.f90:setup_receivers_precompute_intp()
+  integer, dimension(:), pointer :: number_adjsources_global
+  double precision, dimension(:,:), pointer :: hxir_adjstore,hetar_adjstore,hgammar_adjstore
+  !<<<
 
   ! ADJOINT sources
   real(kind=CUSTOM_REAL), dimension(:,:,:), allocatable :: source_adjoint

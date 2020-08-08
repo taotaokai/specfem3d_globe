@@ -1087,11 +1087,19 @@
   integer :: ier
   integer :: nadj_hprec_local
 
-  ! KTAO: local parameters used for the case of SIMULATION_TYPE == 2
+  !>>> KTAO: local parameters used for the case of SIMULATION_TYPE == 2
   integer :: irec,irec_local
   double precision, dimension(NGLLX) :: hxir,hpxir
-  double precision, dimension(NGLLY) :: hpetar,hetar
+  double precision, dimension(NGLLY) :: heta,hpetar
   double precision, dimension(NGLLZ) :: hgammar,hpgammar
+  !<<<
+
+  ! note: for adjoint simulations (SIMULATION_TYPE == 2),
+  !         nrec_local     - is set to the number of sources (CMTSOLUTIONs), which act as "receiver" locations
+  !                          for storing seismograms or strains
+  !
+  !         nadj_rec_local - determines the number of adjoint sources, i.e., number of station locations (STATIONS_ADJOINT), which
+  !                          act as sources to drive the adjoint wavefield
 
   ! define local to global receiver numbering mapping
   ! needs to be allocated for subroutine calls (even if nrec_local == 0)
@@ -1101,9 +1109,9 @@
   ! allocates receiver interpolators
   if (nrec_local > 0) then
     ! allocates Lagrange interpolators for receivers
-    allocate(hxir_store(nrec_local,NGLLX), &
-             hetar_store(nrec_local,NGLLY), &
-             hgammar_store(nrec_local,NGLLZ),stat=ier)
+    allocate(hxir_store(NGLLX,nrec_local), &
+             hetar_store(NGLLY,nrec_local), &
+             hgammar_store(NGLLZ,nrec_local),stat=ier)
     if (ier /= 0 ) call exit_MPI(myrank,'Error allocating receiver interpolators')
 
     allocate(hlagrange_store(NGLLX, NGLLY, NGLLZ, nrec_local), stat=ier)
@@ -1115,9 +1123,9 @@
     else
       nadj_hprec_local = 1
     endif
-    allocate(hpxir_store(nadj_hprec_local,NGLLX), &
-             hpetar_store(nadj_hprec_local,NGLLY), &
-             hpgammar_store(nadj_hprec_local,NGLLZ),stat=ier)
+    allocate(hpxir_store(NGLLX,nadj_hprec_local), &
+             hpetar_store(NGLLY,nadj_hprec_local), &
+             hpgammar_store(NGLLZ,nadj_hprec_local),stat=ier)
     if (ier /= 0 ) call exit_MPI(myrank,'Error allocating derivative interpolators')
 
     ! stores interpolators for receiver positions
@@ -1168,42 +1176,65 @@
     if (ier /= 0 ) call exit_MPI(myrank,'Error allocating dummy receiver interpolators')
   endif
 
-  ! KTAO: need to define hxi at receivers in the case of SIMULATION_TYPE == 2
-  if (SIMULATION_TYPE == 2 .and. nadj_rec_local > 0) then
-    ! allocates Lagrange interpolators for receivers
-    allocate(hxir_adj_store(nadj_rec_local,NGLLX), &
-             hetar_adj_store(nadj_rec_local,NGLLY), &
-             hgammar_adj_store(nadj_rec_local,NGLLZ),stat=ier)
-    if (ier /= 0 ) call exit_MPI(myrank,'Error allocating adj receiver interpolators')
-    ! define local to global receiver numbering mapping
-    allocate(number_adj_receiver_global(nadj_rec_local),stat=ier)
-    if (ier /= 0 ) call exit_MPI(myrank,'Error allocating global adj receiver numbering')
-    irec_local = 0
-    do irec = 1,nrec
-      if (myrank == islice_selected_rec(irec)) then
-        irec_local = irec_local + 1
-        ! checks counter
-        if (irec_local > nadj_rec_local) call exit_MPI(myrank,'Error receiver interpolators: irec_local exceeds bounds')
-        ! stores local to global receiver ids
-        number_adj_receiver_global(irec_local) = irec
-      endif
-    enddo
-    ! checks if all local receivers have been found
-    if (irec_local /= nadj_rec_local) call exit_MPI(myrank,'Error Error number of local adj receivers do not match')
-    ! define and store Lagrange interpolators at all the receivers
-    do irec_local = 1,nadj_rec_local
-      irec = number_adj_receiver_global(irec_local)
-      ! receiver positions
-      call lagrange_any(xi_receiver(irec),NGLLX,xigll,hxir,hpxir)
-      call lagrange_any(eta_receiver(irec),NGLLY,yigll,hetar,hpetar)
-      call lagrange_any(gamma_receiver(irec),NGLLZ,zigll,hgammar,hpgammar)
-      ! stores interpolators
-      hxir_adj_store(irec_local,:) = hxir(:)
-      hetar_adj_store(irec_local,:) = hetar(:)
-      hgammar_adj_store(irec_local,:) = hgammar(:)
-    enddo
+  !>>> KTAO: need to define hxi at receivers in case of SIMULATION_TYPE == 2
+  ! since "receiver" is defined at source locations for pure adjoint simulation
+  ! see setup_sources_receivers_intp()
+  if (nadj_rec_local > 0) then
+
+    if (SIMULATION_TYPE == 2) then
+
+      allocate(number_adjsources_global(nadj_rec_local),stat=ier)
+      if (ier /= 0 ) call exit_MPI(myrank,'Error allocating global adj receiver numbering')
+      number_adjsources_global(:) = 0
+
+      ! define local to global receiver numbering mapping
+      irec_local = 0
+      do irec = 1,nrec
+        if (myrank == islice_selected_rec(irec)) then
+          irec_local = irec_local + 1
+          ! checks counter
+          if (irec_local > nadj_rec_local) call exit_MPI(myrank,'Error receiver interpolators: irec_local exceeds bounds')
+          ! stores local to global receiver ids
+          number_adjsources_global(irec_local) = irec
+        endif
+      enddo
+
+      ! checks if all local receivers have been found
+      if (irec_local /= nadj_rec_local) call exit_MPI(myrank,'Error Error number of local adj receivers do not match')
+
+      ! allocates Lagrange interpolators for adjoint sources
+      allocate(hxir_adjstore(NGLLX,nadj_rec_local), &
+               hetar_adjstore(NGLLY,nadj_rec_local), &
+               hgammar_adjstore(NGLLZ,nadj_rec_local),stat=ier)
+      if (ier /= 0 ) call exit_MPI(myrank,'Error allocating adj receiver interpolators')
+
+      ! define and store Lagrange interpolators at all the receivers
+      do irec_local = 1,nadj_rec_local
+        irec = number_adjsources_global(irec_local)
+        ! receiver positions
+        call lagrange_any(xi_receiver(irec),NGLLX,xigll,hxir,hpxir)
+        call lagrange_any(eta_receiver(irec),NGLLY,yigll,hetar,hpetar)
+        call lagrange_any(gamma_receiver(irec),NGLLZ,zigll,hgammar,hpgammar)
+        ! stores interpolators
+        hxir_adjstore(:,irec_local) = hxir(:)
+        hetar_adjstore(:,irec_local) = hetar(:)
+        hgammar_adjstore(:,irec_local) = hgammar(:)
+      enddo
+
+    endif !if (SIMULATION_TYPE == 2) then
+
+    if (SIMULATION_TYPE == 3) then
+      ! adjoint source array is the same as the receiver array
+      ! this is defined to unify adding adjoint sources in compute_add_sources_adjoint() 
+      ! for both simulation_type = 2 and 3
+      number_adjsources_global => number_receiver_global
+      hxir_adjstore => hxir_store
+      hetar_adjstore => hetar_store
+      hgammar_adjstore => hgammar_store
+    endif
 
   endif
+  !<<<<
 
   end subroutine setup_receivers_precompute_intp
 
@@ -1242,15 +1273,15 @@
   integer, dimension(nrec_local) :: number_receiver_global
   double precision, dimension(nrec) :: xi_receiver,eta_receiver,gamma_receiver
 
-  double precision, dimension(nrec_local,NGLLX) :: hxir_store
-  double precision, dimension(nrec_local,NGLLY) :: hetar_store
-  double precision, dimension(nrec_local,NGLLZ) :: hgammar_store
+  double precision, dimension(NGLLX,nrec_local) :: hxir_store
+  double precision, dimension(NGLLY,nrec_local) :: hetar_store
+  double precision, dimension(NGLLZ,nrec_local) :: hgammar_store
   double precision, dimension(NGLLX,NGLLY,NGLLZ,nrec_local) :: hlagrange_store
 
   integer :: nadj_hprec_local
-  double precision, dimension(nadj_hprec_local,NGLLX) :: hpxir_store
-  double precision, dimension(nadj_hprec_local,NGLLY) :: hpetar_store
-  double precision, dimension(nadj_hprec_local,NGLLZ) :: hpgammar_store
+  double precision, dimension(NGLLX,nadj_hprec_local) :: hpxir_store
+  double precision, dimension(NGLLY,nadj_hprec_local) :: hpetar_store
+  double precision, dimension(NGLLZ,nadj_hprec_local) :: hpgammar_store
 
 
   ! local parameters
@@ -1259,12 +1290,12 @@
   double precision, dimension(NGLLY) :: hpetar,hetar
   double precision, dimension(NGLLZ) :: hgammar,hpgammar
 
-
   ! select local receivers
 
   ! define local to global receiver numbering mapping
   irec_local = 0
   if (SIMULATION_TYPE == 1 .or. SIMULATION_TYPE == 3) then
+    ! forward/kernel simulations
     do irec = 1,nrec
       if (myrank == islice_selected_rec(irec)) then
         irec_local = irec_local + 1
@@ -1275,6 +1306,7 @@
       endif
     enddo
   else
+    ! adjoint simulations
     do isource = 1,NSOURCES
       if (myrank == islice_selected_source(isource)) then
         irec_local = irec_local + 1
@@ -1305,23 +1337,25 @@
     endif
 
     ! stores interpolators
-    hxir_store(irec_local,:) = hxir(:)
-    hetar_store(irec_local,:) = hetar(:)
-    hgammar_store(irec_local,:) = hgammar(:)
+    hxir_store(:,irec_local) = hxir(:)
+    hetar_store(:,irec_local) = hetar(:)
+    hgammar_store(:,irec_local) = hgammar(:)
 
     do k = 1,NGLLZ
       do j = 1,NGLLY
         do i = 1,NGLLX
-          hlagrange_store(i,j,k,irec_local) = hxir_store(irec_local,i)*hetar_store(irec_local,j)*hgammar_store(irec_local,k)
+          hlagrange_store(i,j,k,irec_local) = hxir_store(i,irec_local) &
+                                            * hetar_store(j,irec_local) &
+                                            * hgammar_store(k,irec_local)
         enddo
       enddo
     enddo
 
     ! stores derivatives
     if (SIMULATION_TYPE == 2) then
-      hpxir_store(irec_local,:) = hpxir(:)
-      hpetar_store(irec_local,:) = hpetar(:)
-      hpgammar_store(irec_local,:) = hpgammar(:)
+      hpxir_store(:,irec_local) = hpxir(:)
+      hpetar_store(:,irec_local) = hpetar(:)
+      hpgammar_store(:,irec_local) = hpgammar(:)
     endif
   enddo
 

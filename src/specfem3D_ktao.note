@@ -12,14 +12,35 @@ src/shared
 
 src/gpu
 |-mesh_constants_gpu.h
-|  |typedef struct mesh_ {...;int teleseismic_incidence; int nspec2D_teleseismic_xmin; gpu_int_mem d_ibelm_teleseismic_xmin;
-|  |                      gpu_realw_mem d_area_teleseismic_xmin; gpu_realw_mem d_field_teleseismic_xmin; ...} !KTAO: add variables for teleseismic incidence
+|  |typedef struct mesh_ {...;
+|  |  !KTAO: add variables for teleseismic incidence
+|  |  int teleseismic_incidence; int nspec2D_teleseismic_xmin; gpu_int_mem d_ibelm_teleseismic_xmin; gpu_realw_mem d_area_teleseismic_xmin; gpu_realw_mem d_field_teleseismic_xmin; 
+|  |  gpu_int_mem d_number_adjsources_global; gpu_realw_mem d_hxir_adj; ! for adjoint sources
+|  |  ...
+|  |}
 |-prepare_mesh_constants_gpu.c
+|  |void FC_FUNC_ (prepare_constants_adjoint_device,..) ! copy mapping and Lagrange interpolant arrays of adjoint sources to GPU device 
+|  |  |if (mp->simulation_type == 2) 
+|  |  |  |-gpuCreateCopy_todevice_int (&mp->d_number_adjsources_global, h_number_adjsources_global, mp->nadj_rec_local)
+|  |  |  |-gpuCreateCopy_todevice_realw(&mp->d_hxir_adj,xir_adj,NGLLX*mp->nadj_rec_local)
+|  |  |else ! mp->simulation_type == 3
+|  |  |  |mp->d_number_adjsources_global = gpuTakeRef(mp->d_number_receiver_global)
+|  |  |  |mp->d_hxir_adj = gpuTakeRef(mp->d_hxir)
+|  |  |if (GPU_ASYNC_COPY)
+|  |  |  |-cudaMallocHost((void**)&(mp->h_source_adjoint),(mp->nadj_rec_local)*NDIM*sizeof(realw)),6011) ! pinned buffer
+|  |  |else  
+|  |  |  |mp->h_source_adjoint = (realw *) malloc (mp->nadj_rec_local*NDIM*sizeof (realw))
+|  |  |-gpuMalloc_realw (&mp->d_source_adjoint, mp->nadj_rec_local * NDIM );
+|  |...
 |  |void FC_FUNC_ (prepare_cleanup_device,..)
 |  |  |gpuFree (&mp->d_ibelm_teleseismic_xmin) !KTAO: free up teleseismic arrays (ibelm,area,field)
+|  |  |if (GPU_ASYNC_COPY) cudaFreeHost(mp->h_source_adjoint); else free(mp->h_source_adjoint) 
+|  |  |gpuFree (&mp->d_number_adjsources_global); gpuFree (&mp->d_hxir_adj); 
+|  |...
 |-compute_teleseismic_gradient_gpu.c
 |  |-compute_teleseismic_gradient_kernel<<<>>> (boast/compute_teleseismic_gradient_kernel.rb; boast/references/compute_teleseismic_gradient_kernel.cu)
 |  |  |b_field_teleseismic[INDEX3(NDIM,NGLL2,0,igll,iface)] = accel[iglob*3+1]*scale_displ*area
+|  |...
 |-compute_add_teleseismic_sources_gpu.c
 |  |-compute_add_teleseismic_sources_gpu()
 |  |  |-compute_add_teleseismic_sources_kernel(mp->d_accel_crust_mantle.cuda,...) 
@@ -31,6 +52,9 @@ src/gpu
 src/specfem3D/
 |-specfem3D
 |  |-...
+|  |-initialize_simulation()
+|  |  |-nrec !get total number of receivers in STATIONS file
+|  |-...
 |  |-setup_GLL_points(): sets up reference element GLL points/weights/derivatives 
 |  |  |-define_derivation_matrices(): wgllwgll_xy(NGLLX,NGLLY), ... ! jacobian2D_zmin * wgllwgll_xy is the area of the corresponding gll point
 |  |-...
@@ -39,12 +63,26 @@ src/specfem3D/
 |  |  |  |>>>KTAO: read nspec/ibelm/area_teleseismic_xmin/xmax/ymin/ymax/zmin
 |  |-...
 |  |-setup_sources_receivers()
+|  |  |-...
 |  |  |-setup_sources()
 |  |  |  |-setup_stf_constants(): start time -t0
 |  |  |  |-setup_timesteps(): NSTEP
 |  |  |-setup_receivers()
-|  |  |  |-check_adjoint_sources(): ! checks net.sta.MX*.adj files length == NSTEP
-|  |  |  |  |>>>KTAO: allows length != NSTEP with cut-off or zero padding at beginning since the file is read from the end 
+|  |  |  |-locate_receivers() !locate and retain receivers only in the mesh  
+|  |  |  |  |nrec = nrec_found
+|  |  |  |  |islice/ispec_selected_rec(1:nrec) = islice/ispec_selected_rec_found(1:nrec)
+|  |  |  |  |xi/eta/gamma_receiver = xi/eta/gamma_receiver_found(1:nrec)
+|  |  |  |  |...
+|  |  |  |nrec_local !number of receivers inside each mesh slice (seismic stations for simulation_type = 1 or 3 and seismic sources for simulation_type = 2)  
+|  |  |  |if (SIMULATION_TYPE == 2 .or. 3)
+|  |  |  |  |nadj_rec_local !number of adjoint sources(seismic stations) inside each mesh slice
+|  |  |  |  |-check_adjoint_sources(): ! checks existence of net.sta.MX*.adj and ensure file length == NSTEP
+|  |  |  |  |  |>>>KTAO: ??? allows length != NSTEP with cut-off or zero padding at beginning since the file is read from the end 
+|  |  |...
+|  |  |-setup_receivers_precompute_intp()
+|  |  |  | h[xi|eta|gamma]r_store(1:nrec_local): lagrange interpolant at receiver locations for seismogram/strain calculation
+|  |  |  | h[xi|eta|gamma]r_adjstore(1:nadj_rec_local): lagrange interpolant at adjoint source locations for adding adding adjoint sources (see compute_add_sources_adjoint()) 
+
 |  |-...
 |  |-prepare_timerun()
 |  |  |-prepare_timerun_mass_matrices()
@@ -68,6 +106,8 @@ src/specfem3D/
 |  |  |  |-prepare_constants_device(...,TELESEISMIC_INCIDENCE,...) !KTAO: add TELESEISMIC_INCIDENCE 
 |  |  |  |  |void FC_FUNC_ (prepare_constants_device,...) (...,int *TELESEISMIC_INCIDENCE_f,...) !KTAO: add flag TELESEISMIC_INCIDENCE_f (specfem3D/specfem3D_gpu_method_stubs.c)
 |  |  |  |  |  |mp->teleseismic_incidence = *TELESEISMIC_INCIDENCE_f; !KTAO: sets flag for teleseismic incidence (gpu/prepare_mesh_constants_gpu.c)
+|  |  |  |if (SIMULATION_TYPE == 2 or 3)
+|  |  |  |  |-prepare_constants_adjoint_device(nadj_rec_local,number_adjsources_global, h[xi|eta|gamma]r_store]) !for adjoint sources
 |  |  |  |-prepare_fields_absorb_device() !copy nspec2D/ibelm/jacobian2D_xmin_crust_mantle from host(CPU RAM) to device(GPU)
 |  |  |  |  |! src/gpu/prepare_mesh_constants_gpu.c
 |  |  |  |  |mp->nspec2D_xmin_crust_mantle = *nspec2D_xmin_crust_mantle
@@ -101,10 +141,20 @@ src/specfem3D/
 |  |  |  |  |  |  |  |  |-absorb_xmin_crust_mantle(1,j,k,ispec2D) = tx*weight
 |  |  |  |  |  |  |  |  |if (SAVE_STACEY)  (prepare_stacey(): if (UNDO_ATTENUATION) SAVE_STACEY = false)
 |  |  |  |  |  |  |  |  |  |if (nspec2D_xmin_crust_mantle > 0) call write_abs(0,absorb_xmin_crust_mantle, reclen_xmin_crust_mantle,it)
-|  |  |  |  |  |  |  |if (SIMULATION_TYPE == 2 or 3) compute_add_sources_adjoint()  ! in compute_forces_viscoelastic_calling_routine.F90
-|  |  |  |  |  |  |  |  |-read_adjoint_sources()
-|  |  |  |  |  |  |  |  |  |-read_adjoint_sources_local()
-|  |  |  |  |  |  |  |  |  |  |-compute_arrays_source_adjoint()
+|  |  |  |  |  |  |  |if (SIMULATION_TYPE == 2 or 3) 
+|  |  |  |  |  |  |  |  |-compute_add_sources_adjoint()  ! in compute_forces_viscoelastic_calling_routine.F90
+|  |  |  |  |  |  |  |  |  |-read_adjoint_sources() if (it == it_begin) .or. (mod(it-1,NTSTEP_BETWEEN_READ_ADJSRC) == 0
+|  |  |  |  |  |  |  |  |  |  |-read_adjoint_sources_local()
+|  |  |  |  |  |  |  |  |  |  |  |-compute_arrays_source_adjoint()
+|  |  |  |  |  |  |  |  |  |  |  |  |source_adjoint(icomp,1:NSTEP_BLOCK) = adj_src_u(icomp,1:NSTEP_BLOCK) ! ensure bounds since NSTEP_BLOCK may be less than NTSTEP_BETWEEN_READ_ADJSRC
+|  |  |  |  |  |  |  |  |  |if (.not. GPU_MODE) then
+|  |  |  |  |  |  |  |  |  |  |do irec_local = 1, nadj_rec_local
+|  |  |  |  |  |  |  |  |  |  |  |stf_array(:) = source_adjoint(:,irec_local,iadj_vec(it))
+|  |  |  |  |  |  |  |  |  |  |  |hlagrange = hxir_adjstore(i,irec_local) * hetar_adjstore(j,irec_local) * hgammar_adjstore(k,irec_local)
+|  |  |  |  |  |  |  |  |  |  |  |accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) + stf_array(:) * hlagrange
+|  |  |  |  |  |  |  |  |  |else
+|  |  |  |  |  |  |  |  |  |  |-transfer_adj_to_device(Mesh_pointer,nrec,source_adjoint(1,1,ivec_index), islice_selected_rec)
+|  |  |  |  |  |  |  |  |  |  |-compute_add_sources_adjoint_gpu(Mesh_pointer)
 |  |  |  |  |  |  |  |if (SIMULATION_TYPE == 1 .and. nsources_local > 0)
 |  |  |  |  |  |  |  |  |-compute_add_sources() 
 |  |  |  |  |  |  |  |if (SIMULATION_TYPE == 1 .and. TELESEISMIC_INCIDENCE) 
@@ -157,6 +207,7 @@ src/specfem3D/
 |  |-finalize_simulation()
 |  |  |if (TELESEISMIC_INCIDENCE) 
 |  |  |  |if (nspec2D_teleseismic_xmin >0) close_file_teleseismic(0)
+|  |  |  |deallocate([ibelm|area|field]_teleseismic_[xmin|xmax|...])
 |  |  |-finalize_simulation_cleanup()
 |  |  |  |if (TELESEISMIC_INCIDENCE) deallocate(ibelm/area/field_teleseismic_xmin/...)
 
@@ -225,8 +276,8 @@ src/specfem3D/
                                                        ^read in last wavefield snapshot and overwrite current wavefield at the end of the first backward iteration 
 
   it_adjoint:        N<---N-1<---N-2<---...<----2<-----1<---0 (0: zero initial condition)
-                                                        ^^^^^for LDDRK the adjoint source is required after the last time step at t = (N-1)*dt, which can be interpolated from 0 to 1 (assuming zero source at 0). For Newmark the initial zero acceleration implicitly assumes zero source at 0. This can be true since adjoint source is usually windowed and tapered to zero at both ends.
-
+                                                        ^^^^^ for LDDRK the adjoint source is required after the last time step at t = (N-1)*dt, which can be interpolated from 0 to 1 (assuming zero source at 0). For Newmark the initial zero acceleration implicitly assumes zero source at 0. This can be true since adjoint source is usually windowed and tapered to zero at both ends. Also for LDDRK the interpolation of adjoint source at sbusteps could be done first or on-the-fly using Lanczos interpolation for better accuracy. 
+                                                        
 
   **** UNDO_ATTENUATION: (NT_DUMP_ATTENUATION = 3, N = 3*NSUBSET_ITERATIONS)
 

@@ -282,9 +282,9 @@ typedef float realw;
 
 // kernel block size for updating displacements/potential (Newmark time scheme)
 // current hardware: 128 is slightly faster than 256 (~ 4%)
-#define BLOCKSIZE_KERNEL1 128
-#define BLOCKSIZE_KERNEL3 128
-#define BLOCKSIZE_TRANSFER 256
+#define BLOCKSIZE_KERNEL1 128     // update displ kernels
+#define BLOCKSIZE_KERNEL3 128     // update veloc / multiply accel kernels
+#define BLOCKSIZE_TRANSFER 256    // transfer host-device kernels, get maximum kernels
 
 // maximum grid dimension in one direction of GPU
 #define MAXIMUM_GRID_DIM 65535
@@ -440,7 +440,7 @@ typedef struct mesh_ {
   gpu_int_mem d_ispec_is_tiso_crust_mantle;
 
   // mesh locations
-  gpu_realw_mem d_rstore_crust_mantle;
+  gpu_realw_mem d_rstore_crust_mantle;  // needed for tiso
 
   // anisotropic 3D mantle
   gpu_realw_mem d_c11store_crust_mantle;
@@ -826,16 +826,22 @@ typedef struct mesh_ {
   gpu_realw_mem d_station_strain_field;
   realw* h_station_strain_field;
 
+  // lagrange weights of receivers
+  gpu_realw_mem d_hxir;
+  gpu_realw_mem d_hetar;
+  gpu_realw_mem d_hgammar;
+
   // adjoint receivers/sources
   int nadj_rec_local;
   gpu_realw_mem d_source_adjoint;
   realw *h_source_adjoint;
-  gpu_int_mem d_pre_computed_irec;
 
-  // lagrange weights of receivers
-  gpu_realw_mem d_xir;
-  gpu_realw_mem d_etar;
-  gpu_realw_mem d_gammar;
+  gpu_int_mem d_number_adjsources_global;
+
+  // lagrange weights of adjoint sources
+  gpu_realw_mem d_hxir_adj;
+  gpu_realw_mem d_hetar_adj;
+  gpu_realw_mem d_hgammar_adj;
 
   // norm checking
   gpu_realw_mem d_norm_max;

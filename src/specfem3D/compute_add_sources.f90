@@ -138,10 +138,12 @@
 
   ! local parameters
   real(kind=CUSTOM_REAL),dimension(NDIM) :: stf_array
-  integer :: irec,irec_local,num_loc,i,j,k,iglob,ispec
+  !integer :: irec,irec_local,num_loc,i,j,k,iglob,ispec
+  integer :: irec,irec_local,i,j,k,iglob,ispec !KTAO: remove unused num_loc
   integer :: ivec_index
-  integer,dimension(nadj_rec_local) :: rec_local
+  !integer,dimension(nadj_rec_local) :: rec_local !KTAO: comment out
   logical :: ibool_read_adj_arrays
+  double precision :: hlagrange !KTAO: add
 
   ! note: we check if nadj_rec_local > 0 before calling this routine, but better be safe...
   if (nadj_rec_local == 0) return
@@ -193,28 +195,36 @@
 !       cray version 8.6.x needs -O0 when debugging flags are used. as a work around, the following
 !       debugging flags work for crayftn: -g -G0 -O0 -Rb -eF -rm -eC -eD -ec -en -eI -ea
 
-    ! fill local receivers first
-    irec_local = 0
-    rec_local(:) = 0
-    do irec = 1,nrec
-      ! adds source (only if this proc carries the source)
-      if (myrank == islice_selected_rec(irec)) then
-        irec_local = irec_local + 1
-        rec_local(irec_local) = irec
-      endif
-    enddo
-    num_loc = irec_local
+    !>>>KTAO: this is done in setup_sources_receivers.f90:setup_receivers_precompute_intp()  
+    !! fill local receivers first
+    !irec_local = 0
+    !rec_local(:) = 0
+    !do irec = 1,nrec
+    !  ! adds source (only if this proc carries the source)
+    !  if (myrank == islice_selected_rec(irec)) then
+    !    irec_local = irec_local + 1
+    !    rec_local(irec_local) = irec
+    !  endif
+    !enddo
+    !num_loc = irec_local
 
-    ! checks
-    if (irec_local /= nadj_rec_local) then
-      print *,'Invalid number of local adjoint receivers in compute_add_sources_adjoint() routine:',irec_local,nadj_rec_local
-    endif
+    !! checks
+    !if (irec_local /= nadj_rec_local) then
+    !  print *,'Invalid number of local adjoint receivers in compute_add_sources_adjoint() routine:',irec_local,nadj_rec_local
+    !endif
 
-    do irec_local = 1,num_loc
+    !do irec_local = 1,num_loc
+    !  ! adds source (only if this proc carries the source)
+    !  irec = rec_local(irec_local)
+    
+    ! receivers act as sources
+    do irec_local = 1, nadj_rec_local
 
-      ! adds source (only if this proc carries the source)
-      irec = rec_local(irec_local)
+      ! receiver location
+      irec = number_adjsources_global(irec_local)
+    !<<<
 
+      ! element index
       ispec = ispec_selected_rec(irec)
 
       ! adjoint source array index
@@ -226,7 +236,10 @@
       do k = 1,NGLLZ
         do j = 1,NGLLY
           do i = 1,NGLLX
+
             iglob = ibool_crust_mantle(i,j,k,ispec)
+
+            hlagrange = hxir_adjstore(i,irec_local) * hetar_adjstore(j,irec_local) * hgammar_adjstore(k,irec_local)
 
             ! adds adjoint source acting at this time step (it):
             !
@@ -288,22 +301,7 @@
             !>>>KTAO: the above comments only applies to the case undo_attenuation == .false. and with Newmark scheme. 
             !See iterate_time.F90: if (it == 1) then call read_forward_arrays() endif
             !<<<
-
-            !>>>KTAO: modifies to handle source adjoint SIMULATION_TYPE == 2
-            !accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-            !              + stf_array(:) * (hxir_store(irec_local,i) * hetar_store(irec_local,j) * hgammar_store(irec_local,k))
-            if (SIMULATION_TYPE == 3) then
-              accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-                          + stf_array(:)*(hxir_store(irec_local,i)*&
-                                           hetar_store(irec_local,j)*hgammar_store(irec_local,k))
-            else if (SIMULATION_TYPE == 2) then
-              accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-                          + stf_array(:)*(hxir_adj_store(irec_local,i)*&
-                                           hetar_adj_store(irec_local,j)*hgammar_adj_store(irec_local,k))
-            else
-              call exit_MPI(myrank,'Error SIMULATION_TYPE')
-            endif
-            !<<<
+            accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) + stf_array(:) * hlagrange
 
           enddo ! NGLLX
         enddo ! NGLLY
@@ -335,7 +333,7 @@
     endif
 
     ! adds adjoint source contributions
-    call compute_add_sources_adjoint_gpu(Mesh_pointer,nrec)
+    call compute_add_sources_adjoint_gpu(Mesh_pointer)
 
     if (GPU_ASYNC_COPY) then
       ! starts asynchronously transfer of next adjoint arrays to GPU device memory

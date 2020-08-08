@@ -120,6 +120,17 @@
     if (nspec2D_teleseismic_zmin > 0) then
       call close_file_teleseismic(4)
     endif
+
+    ! frees memory
+    deallocate(ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
+               ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
+               ibelm_teleseismic_zmin)
+    deallocate(area_teleseismic_xmin, area_teleseismic_xmax, &
+               area_teleseismic_ymin, area_teleseismic_ymax, &
+               area_teleseismic_zmin)
+    deallocate(field_teleseismic_xmin,field_teleseismic_xmax, &
+               field_teleseismic_ymin,field_teleseismic_ymax, &
+               field_teleseismic_zmin)
   endif
   !<<<
 
@@ -146,8 +157,7 @@
   endif
 
   ! asdf finalizes
-  if (SIMULATION_TYPE == 2 .or. SIMULATION_TYPE == 3 &
-       .and. READ_ADJSRC_ASDF) then
+  if (SIMULATION_TYPE == 2 .or. SIMULATION_TYPE == 3 .and. READ_ADJSRC_ASDF) then
     call asdf_cleanup()
   endif
 
@@ -155,6 +165,9 @@
   ! finalizes LIBXSMM
   call libxsmm_finalize()
 #endif
+
+  ! synchronize all
+  call synchronize_all()
 
   ! frees dynamically allocated memory
   call finalize_simulation_cleanup()
@@ -186,6 +199,10 @@
   use specfem_par_noise
   use specfem_par_movie
   implicit none
+
+  ! from here on, no gpu data is needed anymore
+  ! frees allocated memory on GPU
+  if (GPU_MODE) call prepare_cleanup_device(Mesh_pointer,NCHUNKS_VAL)
 
   ! mass matrices
   ! crust/mantle
@@ -321,8 +338,8 @@
     
   !>>> KTAO: setup_sources_receivers.f90:setup_receivers_precompute_intp()
   if (SIMULATION_TYPE == 2 .and. nadj_rec_local > 0) then
-    deallocate(hxir_adj_store, hetar_adj_store, hgammar_adj_store)
-    deallocate(number_adj_receiver_global) ! KTAO setup_sources_receivers.f90:setup_receivers_precompute_intp()
+    deallocate(hxir_adjstore, hetar_adjstore, hgammar_adjstore)
+    deallocate(number_adjsources_global) ! KTAO setup_sources_receivers.f90:setup_receivers_precompute_intp()
   endif
   !<<<
 
@@ -345,19 +362,7 @@
     deallocate(nu_3dmovie)
   endif
 
-  !>>>KTAO: teleseismic
-  if (TELESEISMIC_INCIDENCE) then
-    deallocate(ibelm_teleseismic_xmin, ibelm_teleseismic_xmax, &
-               ibelm_teleseismic_ymin, ibelm_teleseismic_ymax, &
-               ibelm_teleseismic_zmin)
-    deallocate(area_teleseismic_xmin, area_teleseismic_xmax, &
-               area_teleseismic_ymin, area_teleseismic_ymax, &
-               area_teleseismic_zmin)
-    deallocate(field_teleseismic_xmin,field_teleseismic_xmax, &
-               field_teleseismic_ymin,field_teleseismic_ymax, &
-               field_teleseismic_zmin)
-  endif
-  !<<<
+
 
   ! noise simulations
   if (NOISE_TOMOGRAPHY /= 0) then

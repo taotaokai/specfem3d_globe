@@ -263,13 +263,14 @@
 
     ! interpolators
     ! note: we explicitly copy the store arrays to local temporary arrays here
-    !       the array indexing (irec_local,:) is non-contiguous and compilers would have to do this anyway
-    hxir(:) = hxir_store(irec_local,:)
-    hetar(:) = hetar_store(irec_local,:)
-    hgammar(:) = hgammar_store(irec_local,:)
-    hpxir(:) = hpxir_store(irec_local,:)
-    hpetar(:) = hpetar_store(irec_local,:)
-    hpgammar(:) = hpgammar_store(irec_local,:)
+    !       array indexing (irec_local,:) would be non-contiguous and compilers would have to do this anyway.
+    !       since we now use (:,irec_local), we could however skip this... still, we keep it as an explicit way.
+    hxir(:) = hxir_store(:,irec_local)
+    hetar(:) = hetar_store(:,irec_local)
+    hgammar(:) = hgammar_store(:,irec_local)
+    hpxir(:) = hpxir_store(:,irec_local)
+    hpetar(:) = hpetar_store(:,irec_local)
+    hpgammar(:) = hpgammar_store(:,irec_local)
 
     ! Frechet derivatives of the source
     call compute_adj_source_frechet(displ_s,Mxx(irec),Myy(irec),Mzz(irec), &
