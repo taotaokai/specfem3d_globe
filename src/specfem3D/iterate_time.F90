@@ -74,14 +74,14 @@
 
   ! synchronize all processes to make sure everybody is ready to start time loop
   call synchronize_all()
-  if (myrank == 0) write(IMAIN,*) 'All processes are synchronized before time loop'
-
   if (myrank == 0) then
+    write(IMAIN,*) 'All processes are synchronized before time loop'
     write(IMAIN,*)
     write(IMAIN,*) 'Starting time iteration loop...'
     write(IMAIN,*)
     call flush_IMAIN()
   endif
+  call synchronize_all()
 
   ! create an empty file to monitor the start of the simulation
   if (myrank == 0) then
@@ -105,7 +105,6 @@
 
   ! time loop
   do it = it_begin,it_end
-
 
     ! simulation status output and stability check
     if (mod(it,NTSTEP_BETWEEN_OUTPUT_INFO) == 0 .or. it == it_begin + 4 .or. it == it_end) then
@@ -350,6 +349,7 @@
     call transfer_kernels_cm_to_host(Mesh_pointer, &
                                      rho_kl_crust_mantle,alpha_kl_crust_mantle,beta_kl_crust_mantle, &
                                      NSPEC_CRUST_MANTLE)
+
     ! full anisotropic kernel
     if (ANISOTROPIC_KL) then
       call transfer_kernels_ani_cm_to_host(Mesh_pointer,cijkl_kl_crust_mantle,NSPEC_CRUST_MANTLE)
@@ -366,10 +366,6 @@
     endif
 
   endif
-
-  ! from here on, no gpu data is needed anymore
-  ! frees allocated memory on GPU
-  call prepare_cleanup_device(Mesh_pointer,NCHUNKS_VAL)
 
   end subroutine it_transfer_from_GPU
 
