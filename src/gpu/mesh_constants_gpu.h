@@ -833,6 +833,7 @@ typedef struct mesh_ {
 
   // adjoint receivers/sources
   int nadj_rec_local;
+
   gpu_realw_mem d_source_adjoint;
   realw *h_source_adjoint;
 
