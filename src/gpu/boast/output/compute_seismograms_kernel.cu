@@ -48,7 +48,7 @@
 #define NDIM 3
 #endif
 #ifndef NGLLX
-#define NGLLX false
+#define NGLLX 5
 #endif
 #ifndef NGLL2
 #define NGLL2 25
@@ -84,7 +84,7 @@
 #define BLOCKSIZE_TRANSFER 256
 #endif
 
-__global__ void compute_seismograms_kernel(const int nrec_local, const float * displ, const int * d_ibool, const float * xir, const float * etar, const float * gammar, float * seismograms, const float * nu, const int * ispec_selected_rec, const int * number_receiver_global, const float scale_displ){
+__global__ void compute_seismograms_kernel(const int nrec_local, const float * displ, const int * d_ibool, const float * hxir, const float * hetar, const float * hgammar, float * seismograms, const float * nu, const int * ispec_selected_rec, const int * number_receiver_global, const float scale_displ){
   int ispec;
   int iglob;
   int irec_local;
@@ -111,11 +111,11 @@ __global__ void compute_seismograms_kernel(const int nrec_local, const float * d
     sh_dyd[tx] = 0;
     sh_dzd[tx] = 0;
     if (tx < NGLL3) {
-      lagrange = ((xir[irec_local + (nrec_local) * (i)]) * (etar[irec_local + (nrec_local) * (j)])) * (gammar[irec_local + (nrec_local) * (k)]);
+      lagrange = ((hxir[INDEX2(NGLLX, i, irec_local)]) * (hetar[INDEX2(NGLLX, j, irec_local)])) * (hgammar[INDEX2(NGLLX, k, irec_local)]);
       iglob = d_ibool[INDEX4(NGLLX, NGLLX, NGLLX, i, j, k, ispec)] - (1);
-      sh_dxd[tx] = (lagrange) * (displ[(iglob) * (3) + 0]);
-      sh_dyd[tx] = (lagrange) * (displ[(iglob) * (3) + 1]);
-      sh_dzd[tx] = (lagrange) * (displ[(iglob) * (3) + 2]);
+      sh_dxd[tx] = (lagrange) * (displ[INDEX2(NDIM, 0, iglob)]);
+      sh_dyd[tx] = (lagrange) * (displ[INDEX2(NDIM, 1, iglob)]);
+      sh_dzd[tx] = (lagrange) * (displ[INDEX2(NDIM, 2, iglob)]);
     }
     __syncthreads();
     l = 1;
@@ -176,13 +176,13 @@ __global__ void compute_seismograms_kernel(const int nrec_local, const float * d
     __syncthreads();
     l = (l) * (2);
     if (tx == 0) {
-      seismograms[(irec_local) * (3) + 0] = (scale_displ) * ((nu[((irec_local) * (3)) * (3) + 0]) * (sh_dxd[0]) + (nu[((irec_local) * (3) + 1) * (3) + 0]) * (sh_dyd[0]) + (nu[((irec_local) * (3) + 2) * (3) + 0]) * (sh_dzd[0]));
+      seismograms[INDEX2(3, 0, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 0, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 2, irec_local)]) * (sh_dzd[0]));
     }
     if (tx == 1) {
-      seismograms[(irec_local) * (3) + 1] = (scale_displ) * ((nu[((irec_local) * (3)) * (3) + 1]) * (sh_dxd[0]) + (nu[((irec_local) * (3) + 1) * (3) + 1]) * (sh_dyd[0]) + (nu[((irec_local) * (3) + 2) * (3) + 1]) * (sh_dzd[0]));
+      seismograms[INDEX2(3, 1, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 1, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 2, irec_local)]) * (sh_dzd[0]));
     }
     if (tx == 2) {
-      seismograms[(irec_local) * (3) + 2] = (scale_displ) * ((nu[((irec_local) * (3)) * (3) + 2]) * (sh_dxd[0]) + (nu[((irec_local) * (3) + 1) * (3) + 2]) * (sh_dyd[0]) + (nu[((irec_local) * (3) + 2) * (3) + 2]) * (sh_dzd[0]));
+      seismograms[INDEX2(3, 2, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 2, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 2, irec_local)]) * (sh_dzd[0]));
     }
   }
 }

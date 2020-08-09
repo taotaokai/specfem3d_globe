@@ -502,8 +502,10 @@
 
         ! checks **net**.**sta**.**MX**.adj files for correct number of time steps
         if (READ_ADJSRC_ASDF) then
+          ! ASDF format
           call check_adjoint_sources_asdf(irec,nadj_files_found)
         else
+          ! ASCII format
           call check_adjoint_sources(irec,nadj_files_found)
         endif
       endif
@@ -1090,7 +1092,7 @@
   !>>> KTAO: local parameters used for the case of SIMULATION_TYPE == 2
   integer :: irec,irec_local
   double precision, dimension(NGLLX) :: hxir,hpxir
-  double precision, dimension(NGLLY) :: heta,hpetar
+  double precision, dimension(NGLLY) :: hetar,hpetar
   double precision, dimension(NGLLZ) :: hgammar,hpgammar
   !<<<
 
@@ -1287,7 +1289,7 @@
   ! local parameters
   integer :: isource,irec,irec_local, i, j, k
   double precision, dimension(NGLLX) :: hxir,hpxir
-  double precision, dimension(NGLLY) :: hpetar,hetar
+  double precision, dimension(NGLLY) :: hetar,hpetar
   double precision, dimension(NGLLZ) :: hgammar,hpgammar
 
   ! select local receivers

@@ -484,7 +484,6 @@
     call iterate_time()
   endif
 
-
   ! saves last time frame and finishes kernel calculations
   call finalize_simulation()
 

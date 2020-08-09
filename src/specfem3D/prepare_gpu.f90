@@ -107,6 +107,7 @@
   endif
   call synchronize_all()
 
+
   ! prepares rotation arrays
   if (ROTATION_VAL) then
     if (myrank == 0) then

@@ -334,8 +334,10 @@ void FC_FUNC_ (prepare_constants_device,
       int irec_loc = 0;
       for (int i=0;i < (*nrec);i++) {
         if ( mp->myrank == h_islice_selected_rec[i]) {
-         for (int j=0;j < 9;j++) nu[j + 9*irec_loc] = (float)h_nu[j + 9*i];
-         irec_loc = irec_loc + 1;
+          for (int j=0;j < 9;j++) {
+		nu[j + 9*irec_loc] = (float)h_nu[j + 9*i];
+	  }
+          irec_loc = irec_loc + 1;
         }
       }
       gpuCreateCopy_todevice_realw (&mp->d_nu, nu, 3*3* mp->nrec_local);
@@ -452,21 +454,21 @@ void FC_FUNC_ (prepare_constants_adjoint_device,
     if (mp->simulation_type == 2){
       // adjoint simulations
       // hxir for receivers and hxir_adj for adjoint source might be different
-      realw * xir_adj    = (realw *)malloc(NGLLX * mp->nadj_rec_local*sizeof(realw));
-      realw * etar_adj   = (realw *)malloc(NGLLX * mp->nadj_rec_local*sizeof(realw));
-      realw * gammar_adj = (realw *)malloc(NGLLX * mp->nadj_rec_local*sizeof(realw));
+      realw * hxir_adj    = (realw *)malloc(NGLLX * mp->nadj_rec_local*sizeof(realw));
+      realw * hetar_adj   = (realw *)malloc(NGLLX * mp->nadj_rec_local*sizeof(realw));
+      realw * hgammar_adj = (realw *)malloc(NGLLX * mp->nadj_rec_local*sizeof(realw));
       // converts double to realw arrays, assumes NGLLX == NGLLY == NGLLZ
       for (int i=0;i<NGLLX * mp->nadj_rec_local;i++){
-        xir_adj[i]    = (realw)h_hxir_adjstore[i];
-        etar_adj[i]   = (realw)h_hetar_adjstore[i];
-        gammar_adj[i] = (realw)h_hgammar_adjstore[i];
+        hxir_adj[i]    = (realw)h_hxir_adjstore[i];
+        hetar_adj[i]   = (realw)h_hetar_adjstore[i];
+        hgammar_adj[i] = (realw)h_hgammar_adjstore[i];
       }
-      gpuCreateCopy_todevice_realw (&mp->d_hxir_adj   , xir_adj     , NGLLX * mp->nadj_rec_local);
-      gpuCreateCopy_todevice_realw (&mp->d_hetar_adj  , etar_adj    , NGLLX * mp->nadj_rec_local);
-      gpuCreateCopy_todevice_realw (&mp->d_hgammar_adj, gammar_adj  , NGLLX * mp->nadj_rec_local);
-      free(xir_adj);
-      free(etar_adj);
-      free(gammar_adj);
+      gpuCreateCopy_todevice_realw (&mp->d_hxir_adj   , hxir_adj     , NGLLX * mp->nadj_rec_local);
+      gpuCreateCopy_todevice_realw (&mp->d_hetar_adj  , hetar_adj    , NGLLX * mp->nadj_rec_local);
+      gpuCreateCopy_todevice_realw (&mp->d_hgammar_adj, hgammar_adj  , NGLLX * mp->nadj_rec_local);
+      free(hxir_adj);
+      free(hetar_adj);
+      free(hgammar_adj);
     }else{
       // kernel simulation
       // adjoint source arrays and receiver arrays are the same, no need to allocate new arrays, just point to the existing ones

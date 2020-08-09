@@ -54,44 +54,47 @@
 
   ! compute & store the seismograms only if there is at least one receiver located in this slice
   if (nrec_local > 0) then
+
     ! gets resulting array values onto CPU
     if (GPU_MODE) then
+      ! for forward and kernel simulations, seismograms are computed by the GPU, thus no need to transfer the wavefield
       ! gets field values from GPU
-      ! this transfers fields only in elements with stations for efficiency
       if (SIMULATION_TYPE == 2) then
-
+        ! this transfers fields only in elements with stations for efficiency
         call write_seismograms_transfer_gpu(Mesh_pointer, &
-                                          displ_crust_mantle,b_displ_crust_mantle, &
-                                          eps_trace_over_3_crust_mantle, &
-                                          epsilondev_xx_crust_mantle,epsilondev_yy_crust_mantle,epsilondev_xy_crust_mantle, &
-                                          epsilondev_xz_crust_mantle,epsilondev_yz_crust_mantle, &
-                                          number_receiver_global, &
-                                          ispec_selected_rec,ispec_selected_source, &
-                                          ibool_crust_mantle)
-
+                                            displ_crust_mantle,b_displ_crust_mantle, &
+                                            eps_trace_over_3_crust_mantle, &
+                                            epsilondev_xx_crust_mantle,epsilondev_yy_crust_mantle,epsilondev_xy_crust_mantle, &
+                                            epsilondev_xz_crust_mantle,epsilondev_yz_crust_mantle, &
+                                            number_receiver_global, &
+                                            ispec_selected_rec,ispec_selected_source, &
+                                            ibool_crust_mantle)
         ! synchronizes field values from GPU
         if (GPU_ASYNC_COPY) then
           call transfer_seismo_from_device_async(Mesh_pointer, &
-                                               displ_crust_mantle,b_displ_crust_mantle, &
-                                               number_receiver_global,ispec_selected_rec,ispec_selected_source, &
-                                               ibool_crust_mantle)
+                                                 displ_crust_mantle,b_displ_crust_mantle, &
+                                                 number_receiver_global,ispec_selected_rec,ispec_selected_source, &
+                                                 ibool_crust_mantle)
         endif
-      ! for forward and kernel simulations, seismograms are computed by the GPU, thus no need to transfer the wavefield
-      else
-        if (.not. ( SIMULATION_TYPE == 3 .and. (.not. SAVE_SEISMOGRAMS_IN_ADJOINT_RUN) ) ) &
-          call compute_seismograms_gpu(Mesh_pointer,seismograms,seismo_current,it,scale_displ,NTSTEP_BETWEEN_OUTPUT_SEISMOS,NSTEP)
       endif
-
-    endif
+    endif ! GPU_MODE
 
     ! computes traces at interpolated receiver locations
     select case (SIMULATION_TYPE)
     case (1)
-      if (.not. GPU_MODE) &
-        call compute_seismograms(NGLOB_CRUST_MANTLE,displ_crust_mantle, &
-                               seismo_current,seismograms)
+      ! forward run
+      if (.not. GPU_MODE) then
+        ! on CPU
+        call compute_seismograms(NGLOB_CRUST_MANTLE,displ_crust_mantle,seismo_current,seismograms)
+      else
+        ! on GPU
+        call compute_seismograms_gpu(Mesh_pointer,seismograms,seismo_current,it,it_end, &
+                                     scale_displ,NTSTEP_BETWEEN_OUTPUT_SEISMOS,NSTEP)
+
+      endif
     case (2)
-        call compute_seismograms_adjoint(displ_crust_mantle, &
+      ! adjoint run
+      call compute_seismograms_adjoint(displ_crust_mantle, &
                                        eps_trace_over_3_crust_mantle, &
                                        epsilondev_xx_crust_mantle,epsilondev_yy_crust_mantle,epsilondev_xy_crust_mantle, &
                                        epsilondev_xz_crust_mantle,epsilondev_yz_crust_mantle, &
@@ -99,9 +102,20 @@
                                        moment_der,sloc_der,stshift_der,shdur_der, &
                                        seismograms)
     case (3)
-      if (.not. GPU_MODE .or. (.not. ( SIMULATION_TYPE == 3 .and. (.not. SAVE_SEISMOGRAMS_IN_ADJOINT_RUN)) ) ) &
-        call compute_seismograms(NGLOB_CRUST_MANTLE_ADJOINT,b_displ_crust_mantle, &
-                               seismo_current,seismograms)
+      ! kernel run
+      if (.not. GPU_MODE) then
+        ! on CPU
+        if (SAVE_SEISMOGRAMS_IN_ADJOINT_RUN) then
+          ! default, backward reconstructed wavefield seismos
+          call compute_seismograms(NGLOB_CRUST_MANTLE_ADJOINT,b_displ_crust_mantle,seismo_current,seismograms)
+        endif
+      else
+        ! on GPU
+        if (SAVE_SEISMOGRAMS_IN_ADJOINT_RUN) then
+          call compute_seismograms_gpu(Mesh_pointer,seismograms,seismo_current,it,it_end, &
+                                       scale_displ,NTSTEP_BETWEEN_OUTPUT_SEISMOS,NSTEP)
+        endif
+      endif
     end select
   endif ! nrec_local
 
@@ -483,8 +497,8 @@
          phi = 0.d0
       endif
 
-      cphi=cos(phi*DEGREES_TO_RADIANS)
-      sphi=sin(phi*DEGREES_TO_RADIANS)
+      cphi = cos(phi*DEGREES_TO_RADIANS)
+      sphi = sin(phi*DEGREES_TO_RADIANS)
 
       ! BS BS do the rotation of the components and put result in
       ! new variable seismogram_tmp

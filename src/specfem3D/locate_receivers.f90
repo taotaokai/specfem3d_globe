@@ -349,17 +349,24 @@
     phi = lon*DEGREES_TO_RADIANS
     call reduce(theta,phi)
 
+    sint = sin(theta)
+    cost = cos(theta)
+    sinp = sin(phi)
+    cosp = cos(phi)
+
     ! compute epicentral distance
     !>> Kai Tao: may cause error because the terms inside acos could be larger
     !>> than 1 due to floating rounding error. Modification is done.
     ! epidist(irec) = acos(cos(theta)*cos(theta_source) + &
     !                      sin(theta)*sin(theta_source)*cos(phi-phi_source))*RADIANS_TO_DEGREES
-    epidist(irec) = cos(theta)*cos(theta_source) + sin(theta)*sin(theta_source)*cos(phi-phi_source) ! cosine of angular dist
+    epidist(irec) = cost*cos(theta_source) &
+                  + sint*sin(theta_source)*cos(phi-phi_source) ! cosine of angular dist
     if (abs(epidist(irec)) >= 1.0) then
       epidist(irec) = 0.0
     else
       epidist(irec) = acos(epidist(irec))*RADIANS_TO_DEGREES
     endif
+    !<<<
 
     ! record three components for each station
     do iorientation = 1,3
@@ -380,8 +387,8 @@
       endif
 
       !     get the orientation of the seismometer
-      thetan=(90.0d0+stdip)*DEGREES_TO_RADIANS
-      phin=stazi*DEGREES_TO_RADIANS
+      thetan = (90.0d0+stdip)*DEGREES_TO_RADIANS
+      phin = stazi*DEGREES_TO_RADIANS
 
       ! we use the same convention as in Harvard normal modes for the orientation
 
@@ -393,13 +400,10 @@
       n(3) = sin(thetan)*sin(phin)
 
       !     get the Cartesian components of n in the model: nu
-      sint = sin(theta)
-      cost = cos(theta)
-      sinp = sin(phi)
-      cosp = cos(phi)
-      nu(iorientation,1,irec) = n(1)*sint*cosp+n(2)*cost*cosp-n(3)*sinp
-      nu(iorientation,2,irec) = n(1)*sint*sinp+n(2)*cost*sinp+n(3)*cosp
-      nu(iorientation,3,irec) = n(1)*cost-n(2)*sint
+      !KTAO: N-E-Up dot X-Y-Z, e.g. nu(1,1:3,irec) = N dot X-Y-Z for irec
+      nu(iorientation,1,irec) = n(1)*sint*cosp + n(2)*cost*cosp - n(3)*sinp
+      nu(iorientation,2,irec) = n(1)*sint*sinp + n(2)*cost*sinp + n(3)*cosp
+      nu(iorientation,3,irec) = n(1)*cost - n(2)*sint
     enddo
 
     ! normalized receiver radius
@@ -410,16 +414,18 @@
        call get_topo_bathy(lat,lon,elevation,ibathy_topo)
        r0 = r0 + elevation/R_EARTH
     endif
+
     ! ellipticity
     if (ELLIPTICITY_VAL) then
-      cost=cos(theta)
       ! this is the Legendre polynomial of degree two, P2(cos(theta)),
       ! see the discussion above eq (14.4) in Dahlen and Tromp (1998)
-      p20=0.5d0*(3.0d0*cost*cost-1.0d0)
+      p20 = 0.5d0*(3.0d0*cost*cost-1.0d0)
+
       ! get ellipticity using spline evaluation
       call spline_evaluation(rspl,espl,espl2,nspl,r0,ell)
+
       ! this is eq (14.4) in Dahlen and Tromp (1998)
-      r0=r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
+      r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
     endif
 
     ! subtract station burial depth (in meters)
@@ -549,7 +555,7 @@
     ! therefore only the station name is included below
     ! compute total number of samples for normal modes with 1 sample per second
     open(unit=IOUT,file=trim(OUTPUT_FILES)//'/RECORDHEADERS', &
-          status='unknown',iostat=ier)
+         status='unknown',iostat=ier)
     if (ier /= 0 ) call exit_MPI(myrank,'Error opening file RECORDHEADERS')
 
     nsamp = nint(dble(NSTEP-1)*DT)
@@ -806,28 +812,34 @@
     ! this is executed by main process only
     if (myrank == 0) then
 
+      ! selects best location in all slices
       ! MPI loop on all the results to determine the best slice
       do irec_in_this_subset = 1,nrec_SUBSET_current_size
 
         ! mapping from station number in current subset to real station number in all the subsets
         irec = irec_in_this_subset + irec_already_done
 
+        ! loop on all the results to determine the best slice
         distmin_not_squared = HUGEVAL
         do iprocloop = 0,NPROCTOT_VAL-1
           if (final_distance_all(irec_in_this_subset,iprocloop) < distmin_not_squared) then
+            ! stores this slice's info
             distmin_not_squared = final_distance_all(irec_in_this_subset,iprocloop)
-
             islice_selected_rec(irec) = iprocloop
             ispec_selected_rec(irec) = ispec_selected_rec_all(irec_in_this_subset,iprocloop)
+
             xi_receiver(irec) = xi_receiver_all(irec_in_this_subset,iprocloop)
             eta_receiver(irec) = eta_receiver_all(irec_in_this_subset,iprocloop)
             gamma_receiver(irec) = gamma_receiver_all(irec_in_this_subset,iprocloop)
+
             x_found(irec) = x_found_all(irec_in_this_subset,iprocloop)
             y_found(irec) = y_found_all(irec_in_this_subset,iprocloop)
             z_found(irec) = z_found_all(irec_in_this_subset,iprocloop)
           endif
         enddo
         final_distance(irec) = distmin_not_squared
+        if (final_distance(irec) == HUGEVAL) call exit_MPI(myrank,'Error locating receiver')
+
       enddo
     endif ! end of section executed by main process only
 
@@ -862,9 +874,8 @@
     nrec_found = 0
     do irec = 1,nrec
 
-      if (final_distance(irec) == HUGEVAL) call exit_MPI(myrank,'Error locating receiver')
-
       if (DISPLAY_DETAILS_STATIONS .or. final_distance(irec) > 0.01d0) then
+
         write(IMAIN,*)
         write(IMAIN,*) 'Station #',irec,': ',trim(network_name(irec))//'.'//trim(station_name(irec))
         write(IMAIN,*) '       original latitude: ',sngl(stlat(irec))
@@ -873,6 +884,7 @@
         write(IMAIN,*) '  closest estimate found: ',sngl(final_distance(irec)),' km away'
         write(IMAIN,*) '   in slice ',islice_selected_rec(irec),' in element ',ispec_selected_rec(irec)
         write(IMAIN,*) '   at xi,eta,gamma coordinates = ',xi_receiver(irec),eta_receiver(irec),gamma_receiver(irec)
+
         ! converts geocentric coordinates x/y/z to geographic radius/latitude/longitude (in degrees)
         call xyz_2_rlatlon_dble(x_found(irec),y_found(irec),z_found(irec),r,lat,lon)
         write(IMAIN,*) '   at lat/lon = ',sngl(lat),sngl(lon)
@@ -894,15 +906,19 @@
 
         islice_selected_rec_found(nrec_found) = islice_selected_rec(irec)
         ispec_selected_rec_found(nrec_found) = ispec_selected_rec(irec)
+
         xi_receiver_found(nrec_found) = xi_receiver(irec)
         eta_receiver_found(nrec_found) = eta_receiver(irec)
         gamma_receiver_found(nrec_found) = gamma_receiver(irec)
+
         station_name_found(nrec_found) = station_name(irec)
         network_name_found(nrec_found) = network_name(irec)
+
         stlat_found(nrec_found) = stlat(irec)
         stlon_found(nrec_found) = stlon(irec)
         stele_found(nrec_found) = stele(irec)
         stbur_found(nrec_found) = stbur(irec)
+
         nu_found(:,:,nrec_found) = nu(:,:,irec)
         epidist_found(nrec_found) = epidist(irec)
 
@@ -934,14 +950,20 @@
     endif
     call flush_IMAIN()
 
+    ! replaces list of all receivers with list of only those which were found
+    ! (in particular: for a 1-chunk simulation, only stations in this chunk)
     nrec = nrec_found
+
     islice_selected_rec(1:nrec) = islice_selected_rec_found(1:nrec)
     ispec_selected_rec(1:nrec) = ispec_selected_rec_found(1:nrec)
+
     xi_receiver(1:nrec) = xi_receiver_found(1:nrec)
     eta_receiver(1:nrec) = eta_receiver_found(1:nrec)
     gamma_receiver(1:nrec) = gamma_receiver_found(1:nrec)
+
     station_name(1:nrec) = station_name_found(1:nrec)
     network_name(1:nrec) = network_name_found(1:nrec)
+
     stlat(1:nrec) = stlat_found(1:nrec)
     stlon(1:nrec) = stlon_found(1:nrec)
     stele(1:nrec) = stele_found(1:nrec)

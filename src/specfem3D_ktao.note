@@ -169,6 +169,8 @@ src/specfem3D/
 |  |  |  |  |  |  |  |-multiply_accel_elastic(): ! divides forces by mass matrix to get acceleration 
 |  |  |  |  |  |  |  |-update_veloc_elastic_newmark(): ! add corrector term on velocity
 |  |  |  |  |  |-write_seismograms()
+|  |  |  |  |  |  |-compute_seismograms()
+|  |  |  |  |  |  |-compute_seismograms_gpu()
 |  |  |  |  |  |-write_movie_output()
 |  |  |  |  |  |if (SIMULATION_TYPE == 2 .and. TELESEISMIC_INCIDENCE) compute_teleseismic_gradient()
 |  |  |  |  |  |  |!KTAO: gradient = displ * gll_area... ! this gives gradient of teleseismic boundary forces at each gll point
