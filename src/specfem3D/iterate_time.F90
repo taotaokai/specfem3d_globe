@@ -244,6 +244,12 @@
     ! outputs movie files
     if (MOVIE_SURFACE .or. MOVIE_VOLUME) call write_movie_output()
 
+    !>>>KTAO: outputs adjoint displacement at teleseismic boundary
+    if (SIMULATION_TYPE == 2 .and. TELESEISMIC_INCIDENCE) then
+      call compute_teleseismic_gradient()
+    endif
+    !<<<
+
     ! first step of noise tomography, i.e., save a surface movie at every time step
     ! modified from the subroutine 'write_movie_surface'
     if (NOISE_TOMOGRAPHY == 1) then
