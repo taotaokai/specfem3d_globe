@@ -15,8 +15,8 @@ NCHUNKS                         = 1
 # angular width of the first chunk (not used if full sphere with six chunks)
 ANGULAR_WIDTH_XI_IN_DEGREES     = 20.d0   # angular size of a chunk
 ANGULAR_WIDTH_ETA_IN_DEGREES    = 20.d0
-CENTER_LATITUDE_IN_DEGREES      = 24.d0
-CENTER_LONGITUDE_IN_DEGREES     = 97.d0
+CENTER_LATITUDE_IN_DEGREES      = 10.d0
+CENTER_LONGITUDE_IN_DEGREES     = 10.d0
 GAMMA_ROTATION_AZIMUTH          = 0.d0
 
 # number of elements at the surface along the two sides of the first chunk
@@ -30,7 +30,7 @@ NPROC_ETA                       = 2
 
 # KTAO: user defined time step (ignore if <=0)
 # KTAO: instability also occurs when unphysically small Vp/Vs ratio is set (the physical system itself is unstalbe instead of numerical issue) 
-USER_DT                         = 0.05d0
+USER_DT                         = -0.05d0
 
 #-----------------------------------------------------------
 #
@@ -61,27 +61,27 @@ USER_DT                         = 0.05d0
 #                          associated reference model rather than the default 3D crustal model
 #                          e.g. s20rts_1Dcrust, s362ani_1Dcrust, etc.
 #
-MODEL                           = s362ani
+MODEL                           = 1D_isotropic_prem
 
 # parameters describing the Earth model
-OCEANS                          = .true.
-ELLIPTICITY                     = .true.
-TOPOGRAPHY                      = .true.
-GRAVITY                         = .true.
-ROTATION                        = .true.
-ATTENUATION                     = .true.
+OCEANS                          = .false.
+ELLIPTICITY                     = .false.
+TOPOGRAPHY                      = .false.
+GRAVITY                         = .false.
+ROTATION                        = .false.
+ATTENUATION                     = .false.
 
 # absorbing boundary conditions for a regional simulation
 ABSORBING_CONDITIONS            = .true.
 
 # record length in minutes
-RECORD_LENGTH_IN_MINUTES        = 2.5d0
+RECORD_LENGTH_IN_MINUTES        = 10.d0
 
 # to undo attenuation for sensitivity kernel calculations or forward runs with SAVE_FORWARD
 # use one (and only one) of the two flags below. UNDO_ATTENUATION is much better (it is exact)
 # but requires a significant amount of disk space for temporary storage.
-PARTIAL_PHYS_DISPERSION_ONLY    = .true.
-UNDO_ATTENUATION                = .false.
+PARTIAL_PHYS_DISPERSION_ONLY    = .false.
+UNDO_ATTENUATION                = .true.
 # How much memory (in GB) is installed on your machine per CPU core (only used for UNDO_ATTENUATION, can be ignored otherwise)
 #         (or per GPU card or per INTEL MIC Phi board)
 #   Beware, this value MUST be given per core, i.e. per MPI thread, i.e. per MPI rank, NOT per node.
@@ -100,14 +100,14 @@ UNDO_ATTENUATION                = .false.
 # and run your job with "aprun -n$NPROC -N1 -S1 -j1"
 # (each host has 32 GB on Titan, each GPU has 6 GB, thus even if all the GPU arrays are duplicated on the host
 #  this leaves 32 - 6 = 26 GB free on the host; leaving 1 GB for the Linux system, we can safely use 100% of 25 GB)
-MEMORY_INSTALLED_PER_CORE_IN_GB = 1.4d0
+MEMORY_INSTALLED_PER_CORE_IN_GB = 4.0d0
 # What percentage of this total do you allow us to use for arrays to undo attenuation, keeping in mind that you
 # need to leave some memory available for the GNU/Linux system to run
 #   (a typical value is 85%; any value below is fine but the code will then save a lot of data to disk;
 #    values above, say 90% or 92%, can be OK on some systems but can make the adjoint code run out of memory
 #    on other systems, depending on how much memory per node the GNU/Linux system needs for itself; thus you can try
 #    a higher value and if the adjoint crashes then try again with a lower value)
-PERCENT_OF_MEM_TO_USE_PER_CORE  = 92.d0
+PERCENT_OF_MEM_TO_USE_PER_CORE  = 85.d0
 
 # three mass matrices instead of one are needed to handle rotation very accurately;
 # otherwise rotation is handled slightly less accurately (but still reasonably well);
@@ -247,6 +247,7 @@ USE_ECEF_COORDINATE             = .false.
 USE_FORCE_POINT_SOURCE          = .false.
 
 #>>>KTAO teleseismic incidence
+#TELESEISMIC_INCIDENCE           = .true.
 TELESEISMIC_INCIDENCE           = .true.
 # depth (in km) of the bottom 'source' boundary for teleseismic incidence
 TELESEISMIC_BOTTOM_KM           = 1000.d0
@@ -279,7 +280,7 @@ SAVE_ALL_SEISMOS_IN_ONE_FILE    = .false.
 USE_BINARY_FOR_LARGE_FILE       = .false.
 
 # flag to impose receivers at the surface or allow them to be buried
-RECEIVERS_CAN_BE_BURIED         = .true.
+RECEIVERS_CAN_BE_BURIED         = .false.
 
 # print source time function
 PRINT_SOURCE_TIME_FUNCTION      = .true.
@@ -317,7 +318,7 @@ APPROXIMATE_HESS_KL             = .false.
 #  REFERENCE_1D_MODEL == REFERENCE_MODEL_1DREF: tiso between surface and 670
 #  other: tiso between surface and 220
 # see src/meshfem3D/compute_element_properties.f90: subroutine compute_element_tiso_flag(...)
-USE_FULL_TISO_CRUST_220                = .true.  # TISO between surface and 220
+USE_FULL_TISO_CRUST_220                = .false.  # TISO between surface and 220
 USE_FULL_TISO_CRUST_UPPER_MANTLE       = .false. # TISO between surface and 670
 USE_FULL_TISO_MANTLE                   = .false. # TISO between moho and CMB 
 
@@ -380,12 +381,12 @@ BROADCAST_SAME_MESH_AND_MODEL   = .false.
 #-----------------------------------------------------------
 
 # set to true to use GPUs
-GPU_MODE                        = .false.
+GPU_MODE                        = .true.
 # Only used if GPU_MODE = .true. :
 GPU_RUNTIME                     = 1
 # 2 (OpenCL), 1 (Cuda) ou 0 (Compile-time -- does not work if configured with --with-cuda *AND* --with-opencl)
 GPU_PLATFORM                    = NVIDIA
-GPU_DEVICE                      = Tesla
+GPU_DEVICE                      = *
 
 # set to true to use the ADIOS library for I/Os
 ADIOS_ENABLED                   = .false.

@@ -53,23 +53,21 @@
   if (NCHUNKS_VAL == 1 .or. ichunk == CHUNK_AC) then
     if (nspec2D_teleseismic_xmin > 0) then
       call read_teleseismic(0,field_teleseismic_xmin,reclen_teleseismic_xmin,it_tmp)
-    endif
-    if (.not. GPU_MODE) then
-      ! on CPU
-      do ispec2D = 1,nspec2D_teleseismic_xmin
-        ispec = ibelm_teleseismic_xmin(ispec2D)
-        i = 1
-        do k = 1,NGLLZ
-          do j = 1,NGLLY
-            iglob = ibool_crust_mantle(i,j,k,ispec)
-            accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-              + field_teleseismic_xmin(:,j,k,ispec2D)
+      if (.not. GPU_MODE) then
+        ! on CPU
+        do ispec2D = 1,nspec2D_teleseismic_xmin
+          ispec = ibelm_teleseismic_xmin(ispec2D)
+          i = 1
+          do k = 1,NGLLZ
+            do j = 1,NGLLY
+              iglob = ibool_crust_mantle(i,j,k,ispec)
+              accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+                + field_teleseismic_xmin(:,j,k,ispec2D)
+            enddo
           enddo
         enddo
-      enddo
-    else
-      ! on GPU
-      if (nspec2D_teleseismic_xmin > 0 ) then
+      else
+        ! on GPU
         call compute_add_teleseismic_sources_gpu(Mesh_pointer, field_teleseismic_xmin, 0)
       endif
     endif
@@ -79,22 +77,20 @@
   ! if two chunks exclude this face for one of them
   if (NCHUNKS_VAL == 1 .or. ichunk == CHUNK_AB) then
     if (nspec2D_teleseismic_xmax > 0) then
-      call read_teleseismic(0,field_teleseismic_xmax,reclen_teleseismic_xmax,it_tmp)
-    endif
-    if (.not. GPU_MODE) then ! on CPU
-      do ispec2D = 1,nspec2D_teleseismic_xmax
-        ispec = ibelm_teleseismic_xmax(ispec2D)
-        i = NGLLX
-        do k = 1,NGLLZ
-          do j = 1,NGLLY
-            iglob = ibool_crust_mantle(i,j,k,ispec)
-            accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-              + field_teleseismic_xmax(:,j,k,ispec2D)
+      call read_teleseismic(1,field_teleseismic_xmax,reclen_teleseismic_xmax,it_tmp)
+      if (.not. GPU_MODE) then ! on CPU
+        do ispec2D = 1,nspec2D_teleseismic_xmax
+          ispec = ibelm_teleseismic_xmax(ispec2D)
+          i = NGLLX
+          do k = 1,NGLLZ
+            do j = 1,NGLLY
+              iglob = ibool_crust_mantle(i,j,k,ispec)
+              accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+                + field_teleseismic_xmax(:,j,k,ispec2D)
+            enddo
           enddo
         enddo
-      enddo
-    else ! on GPU
-      if (nspec2D_teleseismic_xmax > 0 ) then
+      else ! on GPU
         call compute_add_teleseismic_sources_gpu(Mesh_pointer, field_teleseismic_xmax, 1)
       endif
     endif
@@ -102,72 +98,66 @@
 
   ! ymin
   if (nspec2D_teleseismic_ymin > 0) then
-    call read_teleseismic(0,field_teleseismic_ymin,reclen_teleseismic_ymin,it_tmp)
-  endif
-  if (.not. GPU_MODE) then
-    ! on CPU
-    do ispec2D = 1,nspec2D_teleseismic_ymin
-      ispec = ibelm_teleseismic_ymin(ispec2D)
-      j = 1
-      do k = 1,NGLLZ
-        do i = 1,NGLLX
-          iglob = ibool_crust_mantle(i,j,k,ispec)
-          accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-            + field_teleseismic_ymin(:,j,k,ispec2D)
+    call read_teleseismic(2,field_teleseismic_ymin,reclen_teleseismic_ymin,it_tmp)
+    if (.not. GPU_MODE) then
+      ! on CPU
+      do ispec2D = 1,nspec2D_teleseismic_ymin
+        ispec = ibelm_teleseismic_ymin(ispec2D)
+        j = 1
+        do k = 1,NGLLZ
+          do i = 1,NGLLX
+            iglob = ibool_crust_mantle(i,j,k,ispec)
+            accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+              + field_teleseismic_ymin(:,j,k,ispec2D)
+          enddo
         enddo
       enddo
-    enddo
-  else
-    ! on GPU
-    if (nspec2D_teleseismic_ymin > 0 ) then
+    else
+      ! on GPU
       call compute_add_teleseismic_sources_gpu(Mesh_pointer, field_teleseismic_ymin, 2)
     endif
   endif
 
   ! ymax
   if (nspec2D_teleseismic_ymax > 0) then
-    call read_teleseismic(0,field_teleseismic_ymax,reclen_teleseismic_ymin,it_tmp)
-  endif
-  if (.not. GPU_MODE) then
-    ! on CPU
-    do ispec2D = 1,nspec2D_teleseismic_ymax
-      ispec = ibelm_teleseismic_ymax(ispec2D)
-      j = NGLLY
-      do k = 1,NGLLZ
-        do i = 1,NGLLX
-          iglob = ibool_crust_mantle(i,j,k,ispec)
-          accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-            + field_teleseismic_ymax(:,j,k,ispec2D)
+    call read_teleseismic(3,field_teleseismic_ymax,reclen_teleseismic_ymax,it_tmp)
+    if (.not. GPU_MODE) then
+      ! on CPU
+      do ispec2D = 1,nspec2D_teleseismic_ymax
+        ispec = ibelm_teleseismic_ymax(ispec2D)
+        j = NGLLY
+        do k = 1,NGLLZ
+          do i = 1,NGLLX
+            iglob = ibool_crust_mantle(i,j,k,ispec)
+            accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+              + field_teleseismic_ymax(:,j,k,ispec2D)
+          enddo
         enddo
       enddo
-    enddo
-  else
-    ! on GPU
-    if (nspec2D_teleseismic_ymax > 0 ) then
+    else
+      ! on GPU
       call compute_add_teleseismic_sources_gpu(Mesh_pointer, field_teleseismic_ymax, 3)
     endif
   endif
 
   ! zmin
   if (nspec2D_teleseismic_zmin > 0) then
-    call read_teleseismic(0,field_teleseismic_zmin,reclen_teleseismic_ymin,it_tmp)
-  endif
-  if (.not. GPU_MODE) then
-    ! on CPU
-    do ispec2D = 1,nspec2D_teleseismic_zmin
-      ispec = ibelm_teleseismic_zmin(ispec2D)
-      k = 1
-      do j = 1,NGLLY
-        do i = 1,NGLLX
-          iglob = ibool_crust_mantle(i,j,k,ispec)
-          accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
-            + field_teleseismic_zmin(:,j,k,ispec2D)
+    call read_teleseismic(4,field_teleseismic_zmin,reclen_teleseismic_zmin,it_tmp)
+    if (.not. GPU_MODE) then
+      ! on CPU
+      do ispec2D = 1,nspec2D_teleseismic_zmin
+        ispec = ibelm_teleseismic_zmin(ispec2D)
+        k = 1
+        do j = 1,NGLLY
+          do i = 1,NGLLX
+            iglob = ibool_crust_mantle(i,j,k,ispec)
+            accel_crust_mantle(:,iglob) = accel_crust_mantle(:,iglob) &
+              + field_teleseismic_zmin(:,j,k,ispec2D)
+          enddo
         enddo
       enddo
-    enddo
-  else
-    ! on GPU
-    if (nspec2D_teleseismic_zmin > 0 ) then
+    else
+      ! on GPU
       call compute_add_teleseismic_sources_gpu(Mesh_pointer, field_teleseismic_zmin, 4)
     endif
   endif
@@ -302,23 +292,21 @@
   if (NCHUNKS_VAL == 1 .or. ichunk == CHUNK_AC) then
     if (nspec2D_teleseismic_xmin > 0) then
       call read_teleseismic(0,field_teleseismic_xmin,reclen_teleseismic_xmin,it_tmp)
-    endif
-    if (.not. GPU_MODE) then
-      ! on CPU
-      do ispec2D = 1,nspec2D_teleseismic_xmin
-        ispec = ibelm_teleseismic_xmin(ispec2D)
-        i = 1
-        do k = 1,NGLLZ
-          do j = 1,NGLLY
-            iglob = ibool_crust_mantle(i,j,k,ispec)
-            b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
-              + field_teleseismic_xmin(:,j,k,ispec2D)
+      if (.not. GPU_MODE) then
+        ! on CPU
+        do ispec2D = 1,nspec2D_teleseismic_xmin
+          ispec = ibelm_teleseismic_xmin(ispec2D)
+          i = 1
+          do k = 1,NGLLZ
+            do j = 1,NGLLY
+              iglob = ibool_crust_mantle(i,j,k,ispec)
+              b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
+                + field_teleseismic_xmin(:,j,k,ispec2D)
+            enddo
           enddo
         enddo
-      enddo
-    else
-      ! on GPU
-      if (nspec2D_teleseismic_xmin > 0 ) then
+      else
+        ! on GPU
         call compute_add_teleseismic_sources_backward_gpu(Mesh_pointer, field_teleseismic_xmin, 0)
       endif
     endif
@@ -328,22 +316,20 @@
   ! if two chunks exclude this face for one of them
   if (NCHUNKS_VAL == 1 .or. ichunk == CHUNK_AB) then
     if (nspec2D_teleseismic_xmax > 0) then
-      call read_teleseismic(0,field_teleseismic_xmax,reclen_teleseismic_xmax,it_tmp)
-    endif
-    if (.not. GPU_MODE) then ! on CPU
-      do ispec2D = 1,nspec2D_teleseismic_xmax
-        ispec = ibelm_teleseismic_xmax(ispec2D)
-        i = NGLLX
-        do k = 1,NGLLZ
-          do j = 1,NGLLY
-            iglob = ibool_crust_mantle(i,j,k,ispec)
-            b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
-              + field_teleseismic_xmax(:,j,k,ispec2D)
+      call read_teleseismic(1,field_teleseismic_xmax,reclen_teleseismic_xmax,it_tmp)
+      if (.not. GPU_MODE) then ! on CPU
+        do ispec2D = 1,nspec2D_teleseismic_xmax
+          ispec = ibelm_teleseismic_xmax(ispec2D)
+          i = NGLLX
+          do k = 1,NGLLZ
+            do j = 1,NGLLY
+              iglob = ibool_crust_mantle(i,j,k,ispec)
+              b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
+                + field_teleseismic_xmax(:,j,k,ispec2D)
+            enddo
           enddo
         enddo
-      enddo
-    else ! on GPU
-      if (nspec2D_teleseismic_xmax > 0 ) then
+      else ! on GPU
         call compute_add_teleseismic_sources_backward_gpu(Mesh_pointer, field_teleseismic_xmax, 1)
       endif
     endif
@@ -351,72 +337,66 @@
 
   ! ymin
   if (nspec2D_teleseismic_ymin > 0) then
-    call read_teleseismic(0,field_teleseismic_ymin,reclen_teleseismic_ymin,it_tmp)
-  endif
-  if (.not. GPU_MODE) then
-    ! on CPU
-    do ispec2D = 1,nspec2D_teleseismic_ymin
-      ispec = ibelm_teleseismic_ymin(ispec2D)
-      j = 1
-      do k = 1,NGLLZ
-        do i = 1,NGLLX
-          iglob = ibool_crust_mantle(i,j,k,ispec)
-          b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
-            + field_teleseismic_ymin(:,j,k,ispec2D)
+    call read_teleseismic(2,field_teleseismic_ymin,reclen_teleseismic_ymin,it_tmp)
+    if (.not. GPU_MODE) then
+      ! on CPU
+      do ispec2D = 1,nspec2D_teleseismic_ymin
+        ispec = ibelm_teleseismic_ymin(ispec2D)
+        j = 1
+        do k = 1,NGLLZ
+          do i = 1,NGLLX
+            iglob = ibool_crust_mantle(i,j,k,ispec)
+            b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
+              + field_teleseismic_ymin(:,j,k,ispec2D)
+          enddo
         enddo
       enddo
-    enddo
-  else
-    ! on GPU
-    if (nspec2D_teleseismic_ymin > 0 ) then
+    else
+      ! on GPU
       call compute_add_teleseismic_sources_backward_gpu(Mesh_pointer, field_teleseismic_ymin, 2)
     endif
   endif
 
   ! ymax
   if (nspec2D_teleseismic_ymax > 0) then
-    call read_teleseismic(0,field_teleseismic_ymax,reclen_teleseismic_ymin,it_tmp)
-  endif
-  if (.not. GPU_MODE) then
-    ! on CPU
-    do ispec2D = 1,nspec2D_teleseismic_ymax
-      ispec = ibelm_teleseismic_ymax(ispec2D)
-      j = NGLLY
-      do k = 1,NGLLZ
-        do i = 1,NGLLX
-          iglob = ibool_crust_mantle(i,j,k,ispec)
-          b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
-            + field_teleseismic_ymax(:,j,k,ispec2D)
+    call read_teleseismic(3,field_teleseismic_ymax,reclen_teleseismic_ymax,it_tmp)
+    if (.not. GPU_MODE) then
+      ! on CPU
+      do ispec2D = 1,nspec2D_teleseismic_ymax
+        ispec = ibelm_teleseismic_ymax(ispec2D)
+        j = NGLLY
+        do k = 1,NGLLZ
+          do i = 1,NGLLX
+            iglob = ibool_crust_mantle(i,j,k,ispec)
+            b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
+              + field_teleseismic_ymax(:,j,k,ispec2D)
+          enddo
         enddo
       enddo
-    enddo
-  else
-    ! on GPU
-    if (nspec2D_teleseismic_ymax > 0 ) then
+    else
+      ! on GPU
       call compute_add_teleseismic_sources_backward_gpu(Mesh_pointer, field_teleseismic_ymax, 3)
     endif
   endif
 
   ! zmin
   if (nspec2D_teleseismic_zmin > 0) then
-    call read_teleseismic(0,field_teleseismic_zmin,reclen_teleseismic_ymin,it_tmp)
-  endif
-  if (.not. GPU_MODE) then
-    ! on CPU
-    do ispec2D = 1,nspec2D_teleseismic_zmin
-      ispec = ibelm_teleseismic_zmin(ispec2D)
-      k = 1
-      do j = 1,NGLLY
-        do i = 1,NGLLX
-          iglob = ibool_crust_mantle(i,j,k,ispec)
-          b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
-            + field_teleseismic_zmin(:,j,k,ispec2D)
+    call read_teleseismic(4,field_teleseismic_zmin,reclen_teleseismic_zmin,it_tmp)
+    if (.not. GPU_MODE) then
+      ! on CPU
+      do ispec2D = 1,nspec2D_teleseismic_zmin
+        ispec = ibelm_teleseismic_zmin(ispec2D)
+        k = 1
+        do j = 1,NGLLY
+          do i = 1,NGLLX
+            iglob = ibool_crust_mantle(i,j,k,ispec)
+            b_accel_crust_mantle(:,iglob) = b_accel_crust_mantle(:,iglob) &
+              + field_teleseismic_zmin(:,j,k,ispec2D)
+          enddo
         enddo
       enddo
-    enddo
-  else
-    ! on GPU
-    if (nspec2D_teleseismic_zmin > 0 ) then
+    else
+      ! on GPU
       call compute_add_teleseismic_sources_backward_gpu(Mesh_pointer, field_teleseismic_zmin, 4)
     endif
   endif

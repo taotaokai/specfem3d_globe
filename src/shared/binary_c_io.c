@@ -442,7 +442,7 @@ void read_abs_buffer_fbin(int *fid, char *buffer, int *length, int *index, int *
 static FILE * fp_teleseismic[TELESEISMIC_FILEID];
 static char * work_buffer_teleseismic[TELESEISMIC_FILEID];
 
-void open_file_teleseismic_r_fbin(int *fid, char *filename,int *length, long long *filesize) {
+void open_file_teleseismic_r_fbin(int *fid, char *filename,int *length, long long *filesize, int *myrank) {
 // opens file for read access
 
 //This sequence assigns the MAX_B array work_buffer_teleseismic to the file pointer
@@ -475,13 +475,16 @@ void open_file_teleseismic_r_fbin(int *fid, char *filename,int *length, long lon
 
   // sets mode for full buffering
   work_buffer_teleseismic[*fid] = (char *)malloc(MAX_B);
+
+  printf("DEBUG:open_r myrank=%d, *fid=%d, work_buffer_teleseismic[*fid]=%p\n",*myrank, *fid, work_buffer_teleseismic[*fid]);
+
   ret = setvbuf( ft, work_buffer_teleseismic[*fid], _IOFBF, (size_t)MAX_B );
   if (ret != 0 ) {
     perror("Error setting working buffer");
     exit(EXIT_FAILURE);
   }
 
-  // stores file index id fid: from 0 to 5
+  // stores file index id fid: from 0 to 4
   fp_teleseismic[*fid] = ft;
 
   free(fncopy);
@@ -533,12 +536,16 @@ void open_file_teleseismic_w_fbin(int *fid, char *filename, int *length, long lo
   free(fncopy);
 }
 
-void close_file_teleseismic_fbin(int * fid) {
+void close_file_teleseismic_fbin(int * fid, int * myrank) {
 // closes file
 
   fclose(fp_teleseismic[*fid]);
 
+  printf("DEBUG:myrank=%d, *fid=%d, fclosed, work_buffer_teleseismic[*fid]=%p\n",*myrank, *fid, work_buffer_teleseismic[*fid]);
+
   free(work_buffer_teleseismic[*fid]);
+
+  printf("DEBUG:myrank=%d, *fid=%d, freed\n",*myrank,*fid);
 }
 
 void write_teleseismic_fbin(int *fid, char *buffer, int *length, int *index) {
@@ -723,22 +730,22 @@ FC_FUNC_(open_file_teleseismic_w,OPEN_FILE_TELESEISMIC_W)(int *fid, char *filena
 }
 
 void
-FC_FUNC_(open_file_teleseismic_r,OPEN_FILE_TELESEISMIC_R)(int *fid, char *filename,int *length, long long *filesize)
+FC_FUNC_(open_file_teleseismic_r,OPEN_FILE_TELESEISMIC_R)(int *fid, char *filename,int *length, long long *filesize, int *myrank)
 {
 #ifdef USE_MAP_FUNCTION
   open_file_teleseismic_r_map(fid,filename,length,filesize);
 #else
-  open_file_teleseismic_r_fbin(fid,filename,length,filesize);
+  open_file_teleseismic_r_fbin(fid,filename,length,filesize,myrank);
 #endif
 }
 
 void
-FC_FUNC_(close_file_teleseismic,CLOSE_FILES_TELESEISMIC)(int *fid)
+FC_FUNC_(close_file_teleseismic,CLOSE_FILES_TELESEISMIC)(int *fid, int *myrank)
 {
 #ifdef USE_MAP_FUNCTION
   close_file_teleseismic_map(fid);
 #else
-  close_file_teleseismic_fbin(fid);
+  close_file_teleseismic_fbin(fid,myrank);
 #endif
 }
 

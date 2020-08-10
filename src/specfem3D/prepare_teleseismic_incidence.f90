@@ -76,7 +76,7 @@
     else
       call open_file_teleseismic_r(0, &
         trim(prname)//'field_teleseismic_xmin.bin', &
-        len_trim(trim(prname)//'field_teleseismic_xmin.bin'), filesize)
+        len_trim(trim(prname)//'field_teleseismic_xmin.bin'), filesize, myrank)
     endif
   endif
 
@@ -92,7 +92,7 @@
     else
       call open_file_teleseismic_r(1, &
         trim(prname)//'field_teleseismic_xmax.bin', &
-        len_trim(trim(prname)//'field_teleseismic_xmax.bin'), filesize)
+        len_trim(trim(prname)//'field_teleseismic_xmax.bin'), filesize, myrank)
     endif
   endif
 
@@ -108,7 +108,7 @@
     else
       call open_file_teleseismic_r(2, &
         trim(prname)//'field_teleseismic_ymin.bin', &
-        len_trim(trim(prname)//'field_teleseismic_ymin.bin'), filesize)
+        len_trim(trim(prname)//'field_teleseismic_ymin.bin'), filesize, myrank)
     endif
   endif
 
@@ -124,7 +124,7 @@
     else
       call open_file_teleseismic_r(3, &
         trim(prname)//'field_teleseismic_ymax.bin', &
-        len_trim(trim(prname)//'field_teleseismic_ymax.bin'), filesize)
+        len_trim(trim(prname)//'field_teleseismic_ymax.bin'), filesize, myrank)
     endif
   endif
 
@@ -140,7 +140,7 @@
     else
       call open_file_teleseismic_r(4, &
         trim(prname)//'field_teleseismic_zmin.bin', &
-        len_trim(trim(prname)//'field_teleseismic_zmin.bin'), filesize)
+        len_trim(trim(prname)//'field_teleseismic_zmin.bin'), filesize, myrank)
     endif
   endif
 

@@ -105,20 +105,33 @@
 
   !>>>KTAO: closes teleseismic boundary snapshots
   if (TELESEISMIC_INCIDENCE) then
+    print *, 'myrank=',myrank,'nspec2D_teleseismic_xmin|ymin|...=', &
+      nspec2D_teleseismic_xmin,nspec2D_teleseismic_xmax, &
+      nspec2D_teleseismic_ymin,nspec2D_teleseismic_ymax,nspec2D_teleseismic_zmin
     if (nspec2D_teleseismic_xmin > 0) then
-      call close_file_teleseismic(0)
+      print *, 'myrank=',myrank,' close 0'
+      call close_file_teleseismic(0, myrank)
+      print *, 'myrank=',myrank,' 0 closed'
     endif
     if (nspec2D_teleseismic_xmax > 0) then
-      call close_file_teleseismic(1)
+      print *, 'myrank=',myrank,' close 1'
+      call close_file_teleseismic(1, myrank)
+      print *, 'myrank=',myrank,' 1 closed'
     endif
     if (nspec2D_teleseismic_ymin > 0) then
-      call close_file_teleseismic(2)
+      print *, 'myrank=',myrank,' close 2'
+      call close_file_teleseismic(2, myrank)
+      print *, 'myrank=',myrank,' 2 closed'
     endif
     if (nspec2D_teleseismic_ymax > 0) then
-      call close_file_teleseismic(3)
+      print *, 'myrank=',myrank,' close 3'
+      call close_file_teleseismic(3, myrank)
+      print *, 'myrank=',myrank,' 3 closed'
     endif
     if (nspec2D_teleseismic_zmin > 0) then
-      call close_file_teleseismic(4)
+      print *, 'myrank=',myrank,' close 4'
+      call close_file_teleseismic(4, myrank)
+      print *, 'myrank=',myrank,' 4 closed'
     endif
 
     ! frees memory
