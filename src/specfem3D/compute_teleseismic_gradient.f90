@@ -139,6 +139,7 @@
 
   ! since adjoint simulation is in reversed time order, writing from back
   it_adj = NSTEP - it + 1
+  
   ! xmin
   if (nspec2D_teleseismic_xmin > 0) then
     call write_teleseismic(0,field_teleseismic_xmin,reclen_teleseismic_xmin,it_adj)

@@ -316,7 +316,6 @@
   if (.not. ATTENUATION) then
     ! turns off both PARTIAL_PHYS_DISPERSION_ONLY and UNDO_ATTENUATION when ATTENUATION is off in the Par_file
     PARTIAL_PHYS_DISPERSION_ONLY = .false.
-    UNDO_ATTENUATION = .false.
   endif
 
   ! re-sets ADIOS flags
