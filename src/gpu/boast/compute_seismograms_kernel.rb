@@ -1,20 +1,20 @@
 module BOAST
-  def BOAST::compute_seismograms_kernel( n_dim = 3, n_gllx = 5, n_gll2 = 25, n_gll3 = 125, n_gll3_padded = 128)
+  def BOAST::compute_seismograms_kernel( ref = true, n_dim = 3, n_gllx = 5, n_gll2 = 25, n_gll3 = 125, n_gll3_padded = 128)
     push_env( :array_start => 0 )
     kernel = CKernel::new
-    v = []
     function_name = "compute_seismograms_kernel"
-    v.push nrec_local             = Int("nrec_local",             :dir => :in)
-    v.push displ                  = Real("displ",                 :dir => :in,   :dim => [ Dim() ])
-    v.push d_ibool                = Int("d_ibool",                :dir => :in,   :dim => [ Dim() ])
-    v.push hxir                   = Real("hxir",                  :dir => :in,   :dim => [ Dim() ])
-    v.push hetar                  = Real("hetar",                 :dir => :in,   :dim => [ Dim() ])
-    v.push hgammar                = Real("hgammar",               :dir => :in,   :dim => [ Dim() ])
-    v.push seismograms            = Real("seismograms",           :dir => :inout,:dim => [ Dim() ])
-    v.push nu                     = Real("nu",                    :dir => :in,   :dim => [ Dim() ])
-    v.push ispec_selected_rec     = Int("ispec_selected_rec",     :dir => :in,   :dim => [ Dim() ])
-    v.push number_receiver_global = Int("number_receiver_global", :dir => :in,   :dim => [ Dim() ])
-    v.push scale_displ            = Real("scale_displ",           :dir => :in)
+
+    nrec_local             = Int("nrec_local",             :dir => :in)
+    displ                  = Real("displ",                 :dir => :in,   :dim => [ Dim() ])
+    d_ibool                = Int("d_ibool",                :dir => :in,   :dim => [ Dim() ])
+    hxir                   = Real("hxir",                  :dir => :in,   :dim => [ Dim() ])
+    hetar                  = Real("hetar",                 :dir => :in,   :dim => [ Dim() ])
+    hgammar                = Real("hgammar",               :dir => :in,   :dim => [ Dim() ])
+    seismograms            = Real("seismograms",           :dir => :inout,:dim => [ Dim() ])
+    nu                     = Real("nu",                    :dir => :in,   :dim => [ Dim() ])
+    ispec_selected_rec     = Int("ispec_selected_rec",     :dir => :in,   :dim => [ Dim() ])
+    number_receiver_global = Int("number_receiver_global", :dir => :in,   :dim => [ Dim() ])
+    scale_displ            = Real("scale_displ",           :dir => :in)
 
     ndim         = Int("NDIM",         :const => n_dim)
     ngllx        = Int("NGLLX",        :const => n_gllx)
@@ -22,8 +22,11 @@ module BOAST
     ngll3        = Int("NGLL3",        :const => n_gll3)
     ngll3_padded = Int("NGLL3_PADDED", :const => n_gll3_padded)
 
-    p = Procedure(function_name, v )
-    if(get_lang == CL or get_lang == CUDA) then
+    p = Procedure(function_name, [nrec_local,displ,d_ibool,hxir,hetar,hgammar,seismograms,nu,ispec_selected_rec,number_receiver_global,scale_displ])
+
+    if (get_lang == CUDA and ref) then
+      get_output.print File::read("references/#{function_name}.cu")
+    elsif(get_lang == CL or get_lang == CUDA) then
       make_specfem3d_header( :ndim => n_dim, :ngllx => n_gllx, :ngll2 => n_gll2, :ngll3 => n_gll3, :ngll3_padded => n_gll3_padded )
       open p
       ispec =      Int("ispec")
@@ -98,15 +101,20 @@ module BOAST
           print l ===  l*2
         }
 
-        print If (tx == 0) {
-          print seismograms[INDEX2(3,0,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,0,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,0,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,0,2,irec_local)]*sh_dzd[0] )
+        (0..2).each { |indx|
+          print If (tx == indx) {
+            print seismograms[INDEX2(ndim,indx,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,indx,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,indx,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,indx,2,irec_local)]*sh_dzd[0] )
+          }
         }
-        print If (tx == 1) {
-          print seismograms[INDEX2(3,1,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,1,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,1,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,1,2,irec_local)]*sh_dzd[0] )
-        }
-        print If (tx == 2) {
-          print seismograms[INDEX2(3,2,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,2,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,2,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,2,2,irec_local)]*sh_dzd[0] )
-        }
+        #print If (tx == 0) {
+        #  print seismograms[INDEX2(ndim,0,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,0,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,0,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,0,2,irec_local)]*sh_dzd[0] )
+        #}
+        #print If (tx == 1) {
+        #  print seismograms[INDEX2(ndim,1,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,1,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,1,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,1,2,irec_local)]*sh_dzd[0] )
+        #}
+        #print If (tx == 2) {
+        #  print seismograms[INDEX2(ndim,2,irec_local)] === scale_displ * ( nu[INDEX3(ndim,ndim,2,0,irec_local)]*sh_dxd[0] + nu[INDEX3(ndim,ndim,2,1,irec_local)]*sh_dyd[0] + nu[INDEX3(ndim,ndim,2,2,irec_local)]*sh_dzd[0] )
+        #}
       }
       close p
     else

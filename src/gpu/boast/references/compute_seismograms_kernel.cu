@@ -178,10 +178,10 @@ __global__ void compute_seismograms_kernel(const int nrec_local, const float * d
     if (tx == 0) {
       seismograms[INDEX2(NDIM, 0, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 0, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 2, irec_local)]) * (sh_dzd[0]));
     }
-    if (tx == 1) {
+    if (tx == 0) {
       seismograms[INDEX2(NDIM, 1, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 1, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 2, irec_local)]) * (sh_dzd[0]));
     }
-    if (tx == 2) {
+    if (tx == 0) {
       seismograms[INDEX2(NDIM, 2, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 2, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 2, irec_local)]) * (sh_dzd[0]));
     }
   }

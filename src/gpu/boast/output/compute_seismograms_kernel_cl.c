@@ -187,13 +187,13 @@ __kernel void compute_seismograms_kernel(const int nrec_local, const __global fl
     barrier(CLK_LOCAL_MEM_FENCE);\n\
     l = (l) * (2);\n\
     if (tx == 0) {\n\
-      seismograms[INDEX2(3, 0, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 0, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 2, irec_local)]) * (sh_dzd[0]));\n\
+      seismograms[INDEX2(NDIM, 0, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 0, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 0, 2, irec_local)]) * (sh_dzd[0]));\n\
     }\n\
     if (tx == 1) {\n\
-      seismograms[INDEX2(3, 1, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 1, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 2, irec_local)]) * (sh_dzd[0]));\n\
+      seismograms[INDEX2(NDIM, 1, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 1, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 1, 2, irec_local)]) * (sh_dzd[0]));\n\
     }\n\
     if (tx == 2) {\n\
-      seismograms[INDEX2(3, 2, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 2, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 2, irec_local)]) * (sh_dzd[0]));\n\
+      seismograms[INDEX2(NDIM, 2, irec_local)] = (scale_displ) * ((nu[INDEX3(NDIM, NDIM, 2, 0, irec_local)]) * (sh_dxd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 1, irec_local)]) * (sh_dyd[0]) + (nu[INDEX3(NDIM, NDIM, 2, 2, irec_local)]) * (sh_dzd[0]));\n\
     }\n\
   }\n\
 }\n\
