@@ -77,14 +77,14 @@
       do k = 1,NGLLZ,iNIT
         do j = 1,NGLLY,iNIT
           do i = 1,NGLLX,iNIT
-            iglob    = ibool_crust_mantle(i,j,k,ispec)
+            iglob = ibool_crust_mantle(i,j,k,ispec)
 
             if (.not. mask_ibool(iglob)) then
               ipoints_3dmovie = ipoints_3dmovie + 1
 
-              mask_ibool(iglob)=.true.
-              mask_3dmovie(i,j,k,ispec)=.true.
-              num_ibool_3dmovie(iglob)= ipoints_3dmovie
+              mask_ibool(iglob) = .true.
+              mask_3dmovie(i,j,k,ispec) = .true.
+              num_ibool_3dmovie(iglob) = ipoints_3dmovie
             endif
 
           enddo !i

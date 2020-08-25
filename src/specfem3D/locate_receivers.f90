@@ -400,7 +400,7 @@
       n(3) = sin(thetan)*sin(phin)
 
       !     get the Cartesian components of n in the model: nu
-      !KTAO: N-E-Up dot X-Y-Z, e.g. nu(1,1:3,irec) = N dot X-Y-Z for irec
+      !KTAO: N-E-Up dot X-Y-Z, e.g. nu(1,1:3,irec) = North dot X-Y-Z for irec
       nu(iorientation,1,irec) = n(1)*sint*cosp + n(2)*cost*cosp - n(3)*sinp
       nu(iorientation,2,irec) = n(1)*sint*sinp + n(2)*cost*sinp + n(3)*cosp
       nu(iorientation,3,irec) = n(1)*cost - n(2)*sint
