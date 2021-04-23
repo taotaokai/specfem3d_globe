@@ -2,6 +2,28 @@
 
 # User defined control parameters
 
+#==== Structure of work directories 
+#
+#{base_dir}/
+#  |- {stage_dir}/
+#    |- {iter_dir}/
+#      |- {event_dir}/
+#        |- DATA/
+#          |- CMTSOLUTION.init
+#        |- green/
+#        |- misfit/
+#        |- srcfrechet/
+#        |- dgreen/
+#        |- search/
+#
+#==== Base workflow:
+#
+# 1. forward modelling with hdur set to zero to get approximated green's function (so hdur can be updated through line search later)
+# 2. measure waveform misfit and get adjoint source (green's function convolved with the hdur in the initial CMTSOLUTION)
+# 3. adjoint simulation and get misfit gradient of source parameters (location and moment tensor)
+# 4. perturb source parameters (but set hdur=0) to get CMTSOLUTION.perturb based on the gradients and do forward modelling 
+# 5. calculate the finite difference between original and perturbed green's functions and iteratively update hdur and location&moment tensor based on the linear approximation dU = dG * source 
+
 # project root directory
 base_dir=$(readlink -f ~/NEChina_teleseis)
 
