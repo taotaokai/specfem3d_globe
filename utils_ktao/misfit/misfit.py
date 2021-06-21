@@ -24,9 +24,14 @@ from lanczos_interp1 import lanczos_interp1
 import matplotlib
 matplotlib.use("pdf")
 from matplotlib import colors, ticker, cm
-from matplotlib.backends.backend_pdf import PdfPages 
+from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
+import matplotlib.ticker as mticker
+#from mpl_toolkits.basemap import Basemap
+
+import cartopy
+import cartopy.crs as ccrs
+from cartopy.mpl.gridliner import LONGITUDE_FORMATTER, LATITUDE_FORMATTER
 
 #NOTE
 # 1. spectrum relation between DFT and FT
@@ -37,8 +42,8 @@ def is_equal(lst):
   return not lst or [lst[0]]*len(lst) == lst
 
 def stf_gauss_spectrum(f, tau):
-  """ 
-  spectrum of the Gaussian STF of unit area: 
+  """
+  spectrum of the Gaussian STF of unit area:
     stf(t;t0,tau) = 1/sqrt(PI)/tau * exp(-((t-t0)/tau)^2)
     here, we take t0 = 0, then
     F_stf = exp(- pi^2 * f^2 * tau^2)
@@ -50,7 +55,7 @@ def stf_gauss_spectrum(f, tau):
   return F_src
 
 def stf_gauss_spectrum_der(f, tau):
-  """ 
+  """
   spectrum of the derivatives of Gaussian STF
   """
   F_ds_dt0 = -2.0j * np.pi * f * F_src
@@ -98,7 +103,7 @@ def optimal_fft_size(n, d):
 #  t = idx * dt / tau
 #  stf = np.exp(-t**2)/tau/np.pi**0.5
 #  ds_dt0 = 2.0/tau * t * stf
-#  ds_dtau = 2.0/tau * (t**2 - 0.5) * stf 
+#  ds_dtau = 2.0/tau * (t**2 - 0.5) * stf
 #  return stf, ds_dt0, ds_dtau
 
 
@@ -138,7 +143,7 @@ def cosine_taper(x, xc):
 
             idx = (xc[0] < x) & (x < xc[1])
             y[idx] = 0.5 - 0.5*np.cos(np.pi*(x[idx] - xc[0])/(xc[1]-xc[0]))
-            
+
             idx = (xc[1] <= x) & (x <= xc[2]); y[idx] = 1.0
 
             idx = (xc[2] < x) & (x < xc[3])
@@ -169,7 +174,7 @@ class Misfit(object):
         'stat':{'code':, 'msg':},
         'id':, # event ID
         'header':, # have centroid time in it
-        'lattidue':, 'longitude':, 'depth':, 
+        'lattidue':, 'longitude':, 'depth':,
         't0':[utcdatetime], # centroid time
         'tau':, # gaussian width exp(-(t-t0)^2/tau^2)/tau/pi^0.5
         'xs': [x, y, z], # source location in ECEF coordinate
@@ -209,14 +214,14 @@ class Misfit(object):
 
             'window': {
                 <window_id>: {
-                    'stat': {code:, msg:}, 
+                    'stat': {code:, msg:},
                     #bad:<0, ok:0, measured adj:1, and hessian_src:2
 
                     'filter': {'type':,'order':,'freqlim':,'a':,'b':},
 
                     'taper': {
                         'starttime':, 'endtime':,
-                        'type':, 'ratio':, 'win':array(nt) }, 
+                        'type':, 'ratio':, 'win':array(nt) },
 
                     'polarity': {
                         'component':, 'azimuth':, 'dip':,
@@ -225,7 +230,7 @@ class Misfit(object):
                     'quality': {
                         'Amax_obs':, 'Amax_noise':, 'Amax_syn':, 'SNR':, },
 
-                    'cc': {'time':, 'cc':, 'cc_tshift': 
+                    'cc': {'time':, 'cc':, 'cc_tshift':
                         'CC0':, 'CCmax':, 'AR0':, 'ARmax':},
                     'weight':,
 
@@ -293,7 +298,7 @@ class Misfit(object):
   def save(self, filename):
     """Save data
     """
-    # use highest protocol available 
+    # use highest protocol available
     with open(filename, 'wb') as f:
       pickle.dump(self.data, f)
 
@@ -354,7 +359,7 @@ class Misfit(object):
     isotime = '{:s}-{:s}-{:s}T{:s}:{:s}:{:s}Z'.format(
         year, month, day, hour, minute, second)
     t0 = UTCDateTime(isotime) + time_shift
-    # modify origin time in header line to have centroid time 
+    # modify origin time in header line to have centroid time
     header[1] = "{:04d}".format(t0.year)
     header[2] = "{:02d}".format(t0.month)
     header[3] = "{:02d}".format(t0.day)
@@ -372,8 +377,8 @@ class Misfit(object):
     m13 = float(lines[11][1])
     m23 = float(lines[12][1])
     mt = np.array([
-      [m11, m12, m13], 
-      [m12, m22, m23], 
+      [m11, m12, m13],
+      [m12, m22, m23],
       [m13, m23, m33]])
     # transform from spherical to cartesian coordinate
     r = (x**2 + y**2 + z**2)**0.5
@@ -417,10 +422,10 @@ class Misfit(object):
 #
 
   def write_cmtsolution(self, out_file, ECEF=True):
-    """ 
-    Write out CMTSOLUTION file 
     """
-    # modify origin time in header line to have centroid time 
+    Write out CMTSOLUTION file
+    """
+    # modify origin time in header line to have centroid time
     event = self.data['event']
     event_id = event['id']
     header = event['header']
@@ -474,7 +479,7 @@ class Misfit(object):
 
       channel_file (str):
         FDSN-station text format file at channel level
-      event_id_list (list): 
+      event_id_list (list):
         list of event ID's to which stations are added [default: None]
         default to all events.
       band_code (str):
@@ -484,8 +489,8 @@ class Misfit(object):
       GPS_ELLPS (str):
         GPS ellipsoid: like WGS84, sphere [default: WGS84]
 
-      Note: 
-      1) only use stations which have the same lat/lon/ele/depth 
+      Note:
+      1) only use stations which have the same lat/lon/ele/depth
         in all the available channels.
       2) gcmt info must be set first.
     """
@@ -499,7 +504,7 @@ class Misfit(object):
     with open(channel_file, 'r') as f:
       lines = [x.replace('\n','').split('|')  \
           for x in f.readlines() if not(x.startswith('#'))]
-    
+
     # get all station metadata
     metadata = {}
     for x in lines:
@@ -524,7 +529,7 @@ class Misfit(object):
         metadata[net_sta_loc] = []
       metadata[net_sta_loc].append(channel)
 
-    # check if event info is set 
+    # check if event info is set
     data = self.data
     if ('event' not in data) or (data['event']['stat']['code'] < 0):
       raise Exception('Event info not set.')
@@ -546,8 +551,8 @@ class Misfit(object):
       if (station_id in station) and (not update):
         raise Exception('station %s already exist' % (station_id))
 
-      # select channels which are active at the specified time 
-      channel = [ x for x in metadata[net_sta_loc] 
+      # select channels which are active at the specified time
+      channel = [ x for x in metadata[net_sta_loc]
           if x['starttime'] < active_time and x['endtime'] > active_time ]
 
       if not channel:
@@ -585,7 +590,7 @@ class Misfit(object):
         # check channel orientations
         Z_comp = [ (x['code'], x['azimuth'], x['dip'])
             for x in channel if x['code'][2] == 'Z']
-        if len(Z_comp) != 1 or abs(Z_comp[0][2]) != 90.0: 
+        if len(Z_comp) != 1 or abs(Z_comp[0][2]) != 90.0:
           print('[WARNING] %s: problematic Z channel, SKIP' \
               % (station_id))
           print('      channel: ', Z_comp)
@@ -596,7 +601,7 @@ class Misfit(object):
             abs(H_comp[0][2]) != 0.0 or \
             abs(H_comp[1][2]) != 0.0 or \
             abs(np.cos(np.deg2rad(
-              H_comp[0][1] - H_comp[1][1]))) > 0.1: 
+              H_comp[0][1] - H_comp[1][1]))) > 0.1:
           print('[WARNING] %s: problematic horizontal channels, SKIP'\
               % (station_id))
           print('      channel: ', H_comp)
@@ -606,7 +611,7 @@ class Misfit(object):
       #dist, az, baz = gps2dist_azimuth(
       #    event['latitude'], event['longitude'],
       #    channel[0]['latitude'], channel[0]['longitude'])
-      az, baz, dist = geod.inv(event['longitude'], event['latitude'], 
+      az, baz, dist = geod.inv(event['longitude'], event['latitude'],
                                channel[0]['longitude'], channel[0]['latitude'])
       #dist_degree = kilometer2degrees(dist/1000.0)
       dist_degree = np.rad2deg(dist/6371000.0)
@@ -620,9 +625,9 @@ class Misfit(object):
           phase_list=['ttp'],
           )
 
-      # make station metadata 
+      # make station metadata
       meta = { #TODO remove dumplicated info in channels?
-          'latitude': channel[0]['latitude'], 
+          'latitude': channel[0]['latitude'],
           'longitude': channel[0]['longitude'],
           'elevation': channel[0]['elevation'],
           'depth': channel[0]['depth'],
@@ -640,7 +645,7 @@ class Misfit(object):
           'waveform_der':{},
           'stat': {
             'code': 0,
-            'msg': "created on "+UTCDateTime.now().isoformat()} 
+            'msg': "created on "+UTCDateTime.now().isoformat()}
           }
 
     #endfor net_sta_loc in stations_all:
@@ -649,8 +654,8 @@ class Misfit(object):
 #
 #======================================================
 #
-  def radiation_pattern(self, 
-      outfig="radiation.pdf", 
+  def radiation_pattern(self,
+      outfig="radiation.pdf",
       phase_list=['P','S','pP','sS'],
       dist=[25, 180],
       ):
@@ -659,7 +664,7 @@ class Misfit(object):
 
     Note:
     """
-    #------ event location and focal mechanism 
+    #------ event location and focal mechanism
     event = self.data['event']
     evla = event['latitude']
     evlo = event['longitude']
@@ -681,7 +686,7 @@ class Misfit(object):
     mt_enu[2,1] = mt_enu[1,2]
     mt_enu[2,2] = mt_rtp[0,0] # uu = rr
 
-    #------ stations 
+    #------ stations
     # initialize taup
     taup_model = TauPyModel(model="ak135")
 
@@ -700,25 +705,25 @@ class Misfit(object):
             )
         meta['ttime'] = arrivals
 
-    #------ calculate radiation pattern for up-going rays 
-    #-- outgoing rays 
+    #------ calculate radiation pattern for up-going rays
+    #-- outgoing rays
     # cmpinc: incline angle measured from Up/Down direction for up/down-going rays
     # cmpaz: azimuth measured on EN plane clockwise from North
     dtheta = 0.5
-    cmpinc = np.arange(0.0, 90.0+dtheta/2, dtheta) 
-    cmpaz = np.arange(0.0, 360.0+dtheta/2, dtheta) 
+    cmpinc = np.arange(0.0, 90.0+dtheta/2, dtheta)
+    cmpaz = np.arange(0.0, 360.0+dtheta/2, dtheta)
     tt, pp = np.meshgrid(cmpinc, cmpaz)
     nn = tt.size
-    sin_inc = np.sin(np.deg2rad(tt.flatten())) 
-    cos_inc = np.cos(np.deg2rad(tt.flatten())) 
-    sin_az = np.sin(np.deg2rad(pp.flatten())) 
-    cos_az = np.cos(np.deg2rad(pp.flatten())) 
-    #-- unit vectors of up-going rays 
+    sin_inc = np.sin(np.deg2rad(tt.flatten()))
+    cos_inc = np.cos(np.deg2rad(tt.flatten()))
+    sin_az = np.sin(np.deg2rad(pp.flatten()))
+    cos_az = np.cos(np.deg2rad(pp.flatten()))
+    #-- unit vectors of up-going rays
     vu = np.zeros((3, nn))
     vu[0,:] = sin_inc * sin_az
     vu[1,:] = sin_inc * cos_az
     vu[2,:] = cos_inc
-    #-- unit vectors of down-going rays 
+    #-- unit vectors of down-going rays
     # inc is measured from Down
     vd = np.zeros((3, nn))
     vd[0,:] = sin_inc * sin_az
@@ -850,7 +855,7 @@ class Misfit(object):
 
       #-- plot SH radiation pattern
       Ash_max = max(np.max(np.abs(Ashu)), np.max(np.abs(Ashd)))
-      
+
       # up-going SH
       fig = plt.figure()
       # contour
@@ -1011,15 +1016,15 @@ class Misfit(object):
       obs_dir='obs',
       syn_dir='syn', syn_band_code='MX', syn_suffix='.sem.sac', syn_is_grn=False,
       left_pad=100, right_pad=0, obs_preevent=100):
-    """ 
+    """
     Read in observed and synthetic seismograms.
 
     Parameters
     ----------
-    left_pad: 
-      time length to pad before synthetics 
+    left_pad:
+      time length to pad before synthetics
 
-    obs_pretime: 
+    obs_pretime:
       pre-event time length of obs (for noise assessment)
 
     syn_is_grn:
@@ -1052,7 +1057,7 @@ class Misfit(object):
       station = station_dict[station_id]
       meta = station['meta']
       channel = meta['channel']
- 
+
       #------ get file paths of obs, syn seismograms
       obs_files = [ '{:s}/{:s}.{:s}'.format(
         obs_dir, station_id, x['code']) for x in channel ]
@@ -1095,14 +1100,14 @@ class Misfit(object):
       nt = optimal_fft_size(syn_npts+nl+nr, 10)
       nr = nt - (syn_npts + nl)
       # ENZ_syn
-      # check if the origin time in sac files are consistent with event['t0']
-      syn_origin_time = tr.stats.starttime + \
-          (tr.stats.sac['o'] - tr.stats.sac['b'])
-
-      if abs(syn_origin_time - event['t0']) > 1.0e-6:
-        err = "Inconsistent origin time between sac headers (%s) and event['t0'] (%s)" \
-            % (syn_origin_time, event['t0'])
-        raise Exception(err)
+      ## check if the origin time in sac files are consistent with event['t0']
+      ## [2021-06-21] KTAO: this is to ensure that specfem3d sets the origin time in the sac header correctly to sub-milliseconds.
+      #syn_origin_time = tr.stats.starttime + \
+      #    (tr.stats.sac['o'] - tr.stats.sac['b'])
+      #if abs(syn_origin_time - event['t0']) > 1.0e-6:
+      #  err = "Inconsistent origin time between sac headers (%s) and event['t0'] (%s)" \
+      #      % (syn_origin_time, event['t0'])
+      #  raise Exception(err)
 
       ## used only for NKNT
       #shift_syn = 0.0
@@ -1188,7 +1193,7 @@ class Misfit(object):
         cos_az = np.cos(np.deg2rad(chan['azimuth']))
         sin_dip = np.sin(np.deg2rad(chan['dip']))
         cos_dip = np.cos(np.deg2rad(chan['dip']))
-        # column vector = obs channel polarization 
+        # column vector = obs channel polarization
         proj_matrix[i,0] = cos_dip*sin_az # proj to E
         proj_matrix[i,1] = cos_dip*cos_az # proj to N
         proj_matrix[i,2] = -sin_dip     # proj to Z
@@ -1196,7 +1201,7 @@ class Misfit(object):
       inv_proj = np.linalg.inv(proj_matrix)
       obs_ENZ = np.dot(inv_proj, obs_ENZ)
 
-      #------ record data 
+      #------ record data
       if 'waveform' not in station:
         station['waveform'] = {}
       waveform = station['waveform']
@@ -1224,9 +1229,9 @@ class Misfit(object):
 #
 
   def delete_window(self, ):
-    """ 
+    """
     Delete all misfit windows
-    
+
     Parameters
     ----------
 
@@ -1266,23 +1271,23 @@ class Misfit(object):
       max_dist=180.0,
       pre_weight=1.0,
       ):
-    """ 
+    """
     Add misfit window for all stations
-    
+
     Parameters
     ----------
 
     Notes
     -----
       taper_type only supports cosine window now.
-      
+
       all phases in phase_list are contained in one time window.
 
     """
     # filter/taper parameters
     filter_dict = {
-        'type': filter_type, 
-        'order': filter_order, 
+        'type': filter_type,
+        'order': filter_order,
         'freqlim': np.array([min_frequency, max_frequency])}
 
     # half maximum period used to limit time window
@@ -1388,7 +1393,7 @@ class Misfit(object):
       taper_dict = { 'type':'cosine', 'ratio':taper_percentage,
           'starttime':win_starttime, 'endtime':win_endtime}
 
-      # window component 
+      # window component
       if component == 'Z': # vertcal component
         cmpaz = 0.0
         cmpdip = -90.0
@@ -1398,10 +1403,10 @@ class Misfit(object):
       elif component == 'T': # tangential component (TRZ: right-hand convention)
         cmpaz = (baz - 90.0)%360.0
         cmpdip = 0.0
-      elif component == 'H': # horizontal particle motion 
+      elif component == 'H': # horizontal particle motion
         cmpaz = float('nan')
         cmpdip = 0.0
-      elif component == 'F': # 3-d particle motion 
+      elif component == 'F': # 3-d particle motion
         cmpaz = float('nan')
         cmpdip = float('nan')
       else:
@@ -1441,9 +1446,9 @@ class Misfit(object):
       max_frequency=0.05,
       pre_weight=1.0,
       ):
-    """ 
+    """
     Add misfit window for all stations
-    
+
     Parameters
     ----------
     phase: surface wave name
@@ -1454,12 +1459,12 @@ class Misfit(object):
     Notes
     -----
       taper_type only supports cosine window now.
-      
+
     """
     # filter/taper parameters
     filter_dict = {
-        'type': filter_type, 
-        'order': filter_order, 
+        'type': filter_type,
+        'order': filter_order,
         'freqlim': np.array([min_frequency, max_frequency])}
 
     # half maximum period used to limit time window
@@ -1535,7 +1540,7 @@ class Misfit(object):
       taper_dict = { 'type':'cosine', 'ratio':taper_percentage,
           'starttime':win_starttime, 'endtime':win_endtime}
 
-      # window component 
+      # window component
       if component == 'Z': # vertcal component
         cmpaz = 0.0
         cmpdip = -90.0
@@ -1545,10 +1550,10 @@ class Misfit(object):
       elif component == 'T': # tangential component (TRZ: right-hand convention)
         cmpaz = (baz - 90.0)%360.0
         cmpdip = 0.0
-      elif component == 'H': # horizontal particle motion 
+      elif component == 'H': # horizontal particle motion
         cmpaz = float('nan')
         cmpdip = 0.0
-      elif component == 'F': # 3-d particle motion 
+      elif component == 'F': # 3-d particle motion
         cmpaz = float('nan')
         cmpdip = float('nan')
       else:
@@ -1578,32 +1583,32 @@ class Misfit(object):
 #      window_list=[('F','p,P',[-30,50]), ('F','s,S',[-40,70])],
 #      filter_param=('butter', 2, [0.01, 0.10]),
 #      taper_param=('cosine', 0.1)):
-#    """ 
+#    """
 #    Setup data windows based on ray arrivals in 1D earth model.
-#    
+#
 #    Parameters
 #    ----------
 #    window_list : [ (component, phases, [begin, end], [min_slowneww, max_slowness]), ...]
 #                  define data window
 #
 #    filter_param : (type, order, freqlims)
-#                   define filter parameters 
+#                   define filter parameters
 #
 #    Notes
 #    -----
 #    window specs:
-#    
+#
 #    component: Z, R, T, H, F (vertical, radial, transverse, horizontal, all 3-comp)
 #    phases: any body-wave phases that can be handled by TauP
 #            for surface waves, only R and L (Rayleigh, Love) are allowed
-#    time_range: 
+#    time_range:
 #        for body-wave phases [begin, end] is specified;
-#        for surface waves specify additional [min_slowness, max_slowness] 
+#        for surface waves specify additional [min_slowness, max_slowness]
 #        in unit s/deg (say, [25, 30]s/deg for [4, 3]km/s)
 #
 #    """
 #    # filter/taper parameters
-#    filter_dict = {'type': filter_param[0], 
+#    filter_dict = {'type': filter_param[0],
 #        'order': filter_param[1], 'freqlim': filter_param[2]}
 #    # half maximum period used to limit time window
 #    half_period = 0.5/np.min(np.array(filter_param[2]))
@@ -1667,7 +1672,7 @@ class Misfit(object):
 #        signal_end = float(win[2][1])
 #
 #        # surface waves
-#        if phase in ['R', 'L']: 
+#        if phase in ['R', 'L']:
 #          min_slowness = float(win[3][0])
 #          max_slowness = float(win[3][1])
 #
@@ -1688,7 +1693,7 @@ class Misfit(object):
 #            if arr.name in phase_names:
 #              ttime.append(arr.time)
 #          if ttime:
-#            # if more than one phase specified, 
+#            # if more than one phase specified,
 #            # use a time window extended from the first to last arrivals
 #            # with addition to begin and end length
 #            min_ttime = min(ttime)
@@ -1722,7 +1727,7 @@ class Misfit(object):
 #        taper_dict = {'type':taper_param[0], 'ratio':taper_param[1],
 #            'starttime':starttime, 'endtime':endtime}
 #
-#        # window polarity 
+#        # window polarity
 #        if comp == 'Z': # vertcal component
 #          cmpaz = 0.0
 #          cmpdip = -90.0
@@ -1732,10 +1737,10 @@ class Misfit(object):
 #        elif comp == 'T': # tangential component (TRZ: right-hand convention)
 #          cmpaz = (baz - 90.0)%360.0
 #          cmpdip = 0.0
-#        elif comp == 'H': # horizontal particle motion 
+#        elif comp == 'H': # horizontal particle motion
 #          cmpaz = float('nan')
 #          cmpdip = 0.0
-#        elif comp == 'F': # 3-d particle motion 
+#        elif comp == 'F': # 3-d particle motion
 #          cmpaz = float('nan')
 #          cmpdip = float('nan')
 #        else:
@@ -1746,7 +1751,7 @@ class Misfit(object):
 #        # add window
 #        window[window_id] = {
 #          'stat': {
-#            'code': 0, 
+#            'code': 0,
 #            'msg': "created on "+UTCDateTime.now().isoformat() },
 #          'filter': filter_dict,
 #          'taper': taper_dict,
@@ -1767,12 +1772,12 @@ class Misfit(object):
       misfit_type='cc0',
       weight_param={
         'cc_tshift':[-10,-8, 8,10],
-        'SNR':[10,15], 
+        'SNR':[10,15],
         'CC0':[0.5,0.7],
         'CCmax':None,
         'dist':None}
       ):
-    """ 
+    """
     calculate adjoint sources (dchi_du)
 
     Parameters
@@ -1846,7 +1851,7 @@ class Misfit(object):
         filter_type = filter_dict['type']
         filter_order = filter_dict['order']
         filter_freqlim = filter_dict['freqlim']
-        # filter design 
+        # filter design
         if filter_type == 'butter':
           filter_b, filter_a = signal.butter(filter_order,
             np.array(filter_freqlim)/syn_nyq, btype='band')
@@ -1875,7 +1880,7 @@ class Misfit(object):
           raise Exception("taper_type not recognized.")
         taper['win'] = win_func
 
-        #------ polarity 
+        #------ polarity
         polarity = window['polarity']
         comp = polarity['component']
         cmpaz = polarity['azimuth']
@@ -1902,10 +1907,10 @@ class Misfit(object):
 
         #------ filter obs, syn
         #NOTE: use lfilter (causal filter) to avoid contamination from the right
-        # end of the signal, but with asymmetric response and 
+        # end of the signal, but with asymmetric response and
         # peak shift ~ 1/4 min. period (e.g. 0.01-0.1Hz -> 2.5s peak shift)
         # , however the duration of the filter response is determined by the
-        # max. period (e.g. 0.01-0.1Hz -> ~50s). So the time window chosen 
+        # max. period (e.g. 0.01-0.1Hz -> ~50s). So the time window chosen
         # should not be affected by the relatively small peak shift.
         #-- F * d
         obs_filt = signal.filtfilt(filter_b, filter_a, obs)
@@ -1919,7 +1924,7 @@ class Misfit(object):
         #plt.show()
         #-- noise: use signals 30s before first arrival time on obs
         first_arrtime = event['t0'] + meta['ttime'][0].time
-        #FIXME: better choice of the time length before first arrival? 
+        #FIXME: better choice of the time length before first arrival?
         tnoise = (first_arrtime - 30.0) - syn_starttime
         noise_idx = syn_times < tnoise
         #t = syn_times[noise_idx]
@@ -1933,9 +1938,9 @@ class Misfit(object):
 
         #------ apply window taper and polarity projection
         # obs = w * F * d
-        obs_filt_win = np.dot(proj_matrix, obs_filt) * win_func 
+        obs_filt_win = np.dot(proj_matrix, obs_filt) * win_func
         # syn = w * F * u (u = S*g)
-        syn_filt_win = np.dot(proj_matrix, syn_filt) * win_func 
+        syn_filt_win = np.dot(proj_matrix, syn_filt) * win_func
         # noise (only projection)
         noise_filt_win = np.dot(proj_matrix, noise_filt)
         #DEBUG
@@ -1964,13 +1969,13 @@ class Misfit(object):
           window['stat']['msg'] = "Amax_noise=0"
           continue
         snr = 20.0 * np.log10(Amax_obs/Amax_noise)
- 
+
         #------ measure CC time shift (between w*F*d and w*F*u)
         obs_norm = np.sqrt(np.sum(obs_filt_win**2))
         syn_norm = np.sqrt(np.sum(syn_filt_win**2))
         # window normalization factor (without dt)
         Nw = obs_norm * syn_norm
-        # NOTE the order (obs,syn) is important. The positive time on 
+        # NOTE the order (obs,syn) is important. The positive time on
         # CC means shifting syn in the positive time direction to match
         # the observed obs, and vice verser.
         # [-(nt-1), nt) * dt
@@ -1987,8 +1992,8 @@ class Misfit(object):
         #print(cc[syn_nt+1] - np.sum(obs_ENZ_win * syn_ENZ_win)
         #print(cc[syn_nt+2] - np.sum(obs_ENZ_win * syn_ENZ_win)
         #-- zero-lag cc coeff.
-        CC0 = cc[syn_nt-1] #the n-th point corresponds to zero lag time 
-        AR0 = CC0 * syn_norm / obs_norm # amplitude ratio syn/obs 
+        CC0 = cc[syn_nt-1] #the n-th point corresponds to zero lag time
+        AR0 = CC0 * syn_norm / obs_norm # amplitude ratio syn/obs
         #DEBUG
         #print(CC0 - np.sum(obs_ENZ_win * syn_ENZ_win)/obs_norm/syn_norm
         #-- interpolate cc to finer time samples
@@ -2014,17 +2019,17 @@ class Misfit(object):
 
         #------ window weighting based on SNR and misfit
         weight = window['pre_weight']
-        if 'SNR' in weight_param:
+        if 'SNR' in weight_param and weight_param['SNR'] is not None:
           weight *= cosine_taper(snr, weight_param['SNR'])
-        if 'CCmax' in weight_param:
+        if 'CCmax' in weight_param and weight_param['CCmax'] is not None:
           weight *= cosine_taper(CCmax, weight_param['CCmax'])
-        if 'CC0' in weight_param:
+        if 'CC0' in weight_param and weight_param['CC0'] is not None:
           weight *= cosine_taper(CC0, weight_param['CC0'])
-        if 'dist' in weight_param:
+        if 'dist' in weight_param and weight_param['dist'] is not None:
           dist = meta['dist_degree']
           dist_range = np.array(weight_param['dist'])
           weight *= cosine_taper(dist, dist_range)
-        if 'cc_tshift' in weight_param:
+        if 'cc_tshift' in weight_param and weight_param['cc_tshift'] is not None:
           weight *= cosine_taper(CC_time_shift, weight_param['cc_tshift'])
 
         #------ measure adjoint source
@@ -2032,7 +2037,7 @@ class Misfit(object):
         if misfit_type == 'cc0':
           # misfit: zero-lag cross-correlation
           # adjoint source: dchiw_du (misfit functional: zero-lag cc coef.)
-          # dchiw_du = conj(F * [S]) * w * [ w * F * d - A * w * F * S * g] / N, 
+          # dchiw_du = conj(F * [S]) * w * [ w * F * d - A * w * F * S * g] / N,
           # , where A = CC0(un-normalized) / norm(u)**2, N = norm(d)*norm(u)
           #-- dchiw_du
           #NOTE: *dt is put back to Nw
@@ -2053,7 +2058,7 @@ class Misfit(object):
           # apply conj(F), for two-pass filter (zero phase) conj(F) = F
           conjF_w_dwFu_dt = signal.filtfilt(filter_b, filter_a, w_dwFu_dt[:,::-1])
           conjF_w_dwFu_dt = conjF_w_dwFu_dt[:,::-1]
-          # 
+          #
           dchiw_du = -1*CC_time_shift*conjF_w_dwFu_dt/np.sum(dwFu_dt**2)
           #DEBUG
           #print(CC_time_shift)
@@ -2081,7 +2086,7 @@ class Misfit(object):
         #-- dchiw_dg = conj(S) * dchiw_du
         #dchiw_dg = np.fft.irfft(np.conjugate(F_src) * np.fft.rfft(dchiw_du), syn_nt)
         # add into total dchi_dg
-        #dchi_dg += weight * dchiw_dg 
+        #dchi_dg += weight * dchiw_dg
         #DEBUG
         #for i in range(3):
         #  plt.subplot(311+i)
@@ -2091,7 +2096,7 @@ class Misfit(object):
 
         #------ record results
         quality_dict = {
-            'Amax_obs': Amax_obs, 'Amax_syn': Amax_syn, 
+            'Amax_obs': Amax_obs, 'Amax_syn': Amax_syn,
             'Amax_noise': Amax_noise, 'SNR': snr}
         cc_dict = {
             #'time': cc_times, 'cc': cci,
@@ -2103,10 +2108,10 @@ class Misfit(object):
         window['cc'] = cc_dict
         window['weight'] = weight
         window['misfit_type'] = misfit_type
-        window['stat'] = {'code': 1, 
+        window['stat'] = {'code': 1,
             'msg': "measure adj on "+UTCDateTime.now().isoformat()}
 
-        #------ plot measure window and results 
+        #------ plot measure window and results
         if plot:
           syn_npts = syn_nt - syn_nl - syn_nr
           syn_orientation_codes = ['E', 'N', 'Z']
@@ -2118,7 +2123,7 @@ class Misfit(object):
             if i == 0:
               plt.title('%s dt %.2f CCmax %.3f ARmax %.3f CC0 %.3f '
                   'AR0 %.3f \nAobs %g Anoise %g SNR %.1f weight %.3f'
-                  % (station_id, CC_time_shift, CCmax, ARmax, 
+                  % (station_id, CC_time_shift, CCmax, ARmax,
                     CC0, AR0, Amax_obs, Amax_noise, snr, weight) )
             idx_plt = range(syn_nl,(syn_nl+syn_npts))
             plt.plot(t[idx_plt], obs_filt[i,idx_plt]/Amax_obs, 'k', linewidth=0.2)
@@ -2177,11 +2182,11 @@ class Misfit(object):
       window_dict = station['window']
       for window_id in window_dict:
         window = window_dict[window_id]
-        # skip rejected/un-measured windows 
+        # skip rejected/un-measured windows
         if window['stat']['code'] < 1:
           continue
 
-        # skip bad windows 
+        # skip bad windows
         #if window['weight'] < 1.0e-3:
         #  continue
 
@@ -2199,7 +2204,7 @@ class Misfit(object):
 #======================================================
 #
 
-  def plot_histogram(self, 
+  def plot_histogram(self,
       max_dt=10,
       nbins=100,
       outfig='cc_tshift_histogram.pdf',
@@ -2228,7 +2233,7 @@ class Misfit(object):
       # loop all windows
       for window_id in window_dict:
         window = window_dict[window_id]
-        # skip rejected/un-measured windows 
+        # skip rejected/un-measured windows
         if window['stat']['code'] < 1:
           continue
         # skip bad windows
@@ -2267,7 +2272,7 @@ class Misfit(object):
       plt.ylabel("Window number")
       pdf.savefig()
       plt.close()
-      # surface_RZ 
+      # surface_RZ
       dt_cc = []
       for window_id in data:
         if ('surface_R' in window_id) or ('surface_Z' in window_id):
@@ -2319,7 +2324,7 @@ class Misfit(object):
       # loop all windows
       for window_id in window_dict:
         window = window_dict[window_id]
-        # skip rejected/un-measured windows 
+        # skip rejected/un-measured windows
         if window['stat']['code'] < 1:
           continue
         # check window type
@@ -2346,7 +2351,7 @@ class Misfit(object):
     dt_cc = np.array(dt_cc)
 
     idx = np.abs(dt_cc)<=max_dt
-    
+
     dt_mean = np.mean(dt_cc)
     dt_std = np.std(dt_cc)
 
@@ -2362,7 +2367,7 @@ class Misfit(object):
 #======================================================
 #
 
-  def output_adj(self, 
+  def output_adj(self,
       out_dir='adj',
       syn_band_code='MX'):
     """
@@ -2465,7 +2470,7 @@ class Misfit(object):
     event = data['event']
     #...
 
-    # record 
+    # record
     src_frechet = {
         't0':dchi_dt0,
         'tau':dchi_dtau,
@@ -2481,7 +2486,7 @@ class Misfit(object):
 
   def make_cmt_perturb(self,
       srcfrechet_file,
-      max_dxs_ratio=0.001, 
+      max_dxs_ratio=0.001,
       out_cmt_file="CMTSOLUTION",
       out_perturb_file="CMTSOLUTION.perturb"
       ):
@@ -2498,35 +2503,35 @@ class Misfit(object):
     #====== read source gradient
     with open(srcfrechet_file, 'r') as f:
       lines = [ x for x in f.readlines() if not(x.startswith('#')) ]
-    
+
     lines = [x.split() for x in lines]
-    
+
     t0  = float(lines[0][0]);  dchi_dt0  = float(lines[0][1])
     tau = float(lines[1][0]);  dchi_dtau = float(lines[1][1])
-    
+
     xs = np.zeros(3); dchi_dxs = np.zeros(3)
     xs[0] = float(lines[2][0]);  dchi_dxs[0] = float(lines[2][1])
     xs[1] = float(lines[3][0]);  dchi_dxs[1] = float(lines[3][1])
     xs[2] = float(lines[4][0]);  dchi_dxs[2] = float(lines[4][1])
-    
+
     mt = np.zeros((3,3)); dchi_dmt = np.zeros((3,3));
     mt[0,0] = float(lines[5][0]);  dchi_dmt[0,0] = float(lines[5][1])
     mt[1,1] = float(lines[6][0]);  dchi_dmt[1,1] = float(lines[6][1])
     mt[2,2] = float(lines[7][0]);  dchi_dmt[2,2] = float(lines[7][1])
-    
+
     mt[0,1] = float(lines[8][0]);  dchi_dmt[0,1] = float(lines[8][1])
     mt[1,0] = mt[0,1]; dchi_dmt[1,0] = dchi_dmt[0,1]
-    
+
     mt[0,2] = float(lines[9][0]);  dchi_dmt[0,2] = float(lines[9][1])
     mt[2,0] = mt[0,2]; dchi_dmt[2,0] = dchi_dmt[0,2]
-    
+
     mt[1,2] = float(lines[10][0]); dchi_dmt[1,2] = float(lines[10][1])
     mt[2,1] = mt[1,2]; dchi_dmt[2,1] = dchi_dmt[1,2]
-    
+
     # correlation between mt and dchi_dmt
     cc = np.sum(dchi_dmt*mt)/np.sum(mt**2)**0.5/np.sum(dchi_dmt**2)**0.5
     print("cc = ", cc)
-    
+
     #====== get gradient for xs_ratio and mt_ratio
     # xs = R_earth * xs_ratio
     dchi_dxs_ratio = R_earth * dchi_dxs
@@ -2534,24 +2539,24 @@ class Misfit(object):
     # mt = m0 * mt_ratio
     m0 = (0.5*np.sum(mt**2))**0.5
     dchi_dmt_ratio = m0 * dchi_dmt
-    
+
     # make dchi_dmt orthogonal to mt, i.e. keep scalar moment unchanged
     dchi_dmt_ratio_ortho = dchi_dmt_ratio - mt*np.sum(dchi_dmt_ratio*mt)/np.sum(mt**2)
     print(dchi_dmt_ratio_ortho)
-    
+
     #====== make perturbed CMTSOLUTION
     scale_factor = max_dxs_ratio/(np.sum(dchi_dxs_ratio**2))**0.5
-    
+
     dxs_ratio = scale_factor * dchi_dxs_ratio
     dmt_ratio = scale_factor * dchi_dmt_ratio_ortho
-    
+
     #====== write out new CMTSOLUTION
     xs_perturb = xs + R_earth*dxs_ratio
 
     mt_perturb = mt + m0*dmt_ratio
     # force mt_perturb to have the same scalar moment as mt
     mt_perturb = m0 * mt_perturb/(0.5*np.sum(mt_perturb**2))**0.5
-    
+
     # write out new CMTSOLUTION file
     with open(out_cmtfile, 'w') as fp:
       fp.write('%s\n' % event['header'])
@@ -2567,7 +2572,7 @@ class Misfit(object):
       fp.write('%-18s %+15.8E\n' % ('Mxy(N*m):', mt_perturb[0,1]))
       fp.write('%-18s %+15.8E\n' % ('Mxz(N*m):', mt_perturb[0,2]))
       fp.write('%-18s %+15.8E\n' % ('Myz(N*m):', mt_perturb[1,2]))
-    
+
     # write out parameter changes
     with open(out_file, 'w') as fp:
       fp.write('%s\n' % event['header'])
@@ -2678,7 +2683,7 @@ class Misfit(object):
     dxs = src_frechet['xs']
     # normalize dxs
     dxs = dxs/(np.sum(dxs**2))**0.5
-    # apply given norm 
+    # apply given norm
     dxs *= norm
     # get new src location
     xs1 = xs + dxs
@@ -2718,7 +2723,7 @@ class Misfit(object):
       syn_suffix='.sem.sac',
       model_name='xs_mt',
       sac_dir=None):
-    """ 
+    """
     Calculate waveform derivative for source parameters
 
     Notes
@@ -2744,7 +2749,7 @@ class Misfit(object):
       nt = time_sample['nt']
       nl = time_sample['nl'] # npts of left padding
       nr = time_sample['nr'] # npts of right padding
-      sem_nt = nt-nl-nr # number of time sample number in SEM simulation 
+      sem_nt = nt-nl-nr # number of time sample number in SEM simulation
       #DEBUG
       #t = np.arange(nt) * dt + (starttime - t0) #referred to t0
 
@@ -2781,7 +2786,7 @@ class Misfit(object):
       for i in range(3):
         syn_ENZ[i,nl:(nl+sem_nt)] = syn_st[i].data
 
-      # waveform partial derivatives 
+      # waveform partial derivatives
       g0 = waveform['grn']
       dg = syn_ENZ - g0
 
@@ -2826,7 +2831,7 @@ class Misfit(object):
     tau = event['tau']
     xs = event['xs']
     mt = event['mt']
-    
+
     # check parameters
     if ratio_M0 <= 0.0:
       error_str = "ratio_M0(%f) must > 0" % ratio_M0
@@ -2978,16 +2983,16 @@ class Misfit(object):
       syn_suffix='.sem.sac',
       model_name='vsv',
       sac_dir=None):
-    """ 
-    Get partial derivative seismograms from synthetics of perturbed model 
+    """
+    Get partial derivative seismograms from synthetics of perturbed model
     along the model update direction
-    
+
     Notes
     -----
     use finite difference to get waveform derivative
 
-    must keep all source parameter the same as used in the forward simulation. 
-    
+    must keep all source parameter the same as used in the forward simulation.
+
     """
     syn_orientation_codes = ['E', 'N', 'Z']
 
@@ -3009,7 +3014,7 @@ class Misfit(object):
       nt = time_sample['nt']
       nl = time_sample['nl'] # npts of left padding
       nr = time_sample['nr'] # npts of right padding
-      sem_nt = nt-nl-nr # number of time sample number in SEM simulation 
+      sem_nt = nt-nl-nr # number of time sample number in SEM simulation
       t = np.arange(nt) * dt + (starttime - t0) #referred to t0
 
       #------ get file paths of syn seismograms
@@ -3044,7 +3049,7 @@ class Misfit(object):
       for i in range(3):
         syn_ENZ[i,nl:(nl+sem_nt)] = syn_st[i].data
 
-      # waveform partial derivatives 
+      # waveform partial derivatives
       if 'syn' not in waveform:
         raise Exception("%s: initial syn is not stored in waveform!" % (station_id))
       u0 = waveform['syn']
@@ -3078,12 +3083,12 @@ class Misfit(object):
 #======================================================
 #
 
-  def measure_hessian_src(self, 
+  def measure_hessian_src(self,
       src_param={'t0':0, 'tau':0, 'xs':0, 'mt':0},
       update=True,
       ):
-    """ 
-    Approximate Hessian matrix of source parameters based 
+    """
+    Approximate Hessian matrix of source parameters based
     partial derivative waveforms
 
     Note
@@ -3111,7 +3116,7 @@ class Misfit(object):
       syn_nl = time_sample['nl']
       syn_nr = time_sample['nr']
       syn_times = syn_delta * np.arange(syn_nt)
-      # seismograms 
+      # seismograms
       obs = waveform['obs']
       syn = waveform['syn']
 
@@ -3128,7 +3133,7 @@ class Misfit(object):
         idx = t < -5.0*tau
         du_dt0[:,idx] = 0.0
         du_dtau[:,idx] = 0.0
- 
+
       # waveform derivatives
       waveform_der = station['waveform_der']
 
@@ -3142,14 +3147,14 @@ class Misfit(object):
           warnings.warn("Window %s not measured for adj, SKIP" % window_id)
           continue
 
-        #------ window parameters 
+        #------ window parameters
         # filter
         filter_dict = window['filter']
         filter_a = filter_dict['a']
         filter_b = filter_dict['b']
         # taper
         win_func = window['taper']['win']
-        # polarity projection 
+        # polarity projection
         proj_matrix = window['polarity']['proj_matrix']
 
         #------ filter obs, syn
@@ -3160,9 +3165,9 @@ class Misfit(object):
         syn_filt = np.fft.irfft(F_src*np.fft.rfft(syn_filt), syn_nt)
         # apply window taper and polarity projection
         # obs = w * F * d
-        wFd = np.dot(proj_matrix, obs_filt) * win_func 
+        wFd = np.dot(proj_matrix, obs_filt) * win_func
         # syn = w * F * u (u = S*grn)
-        wFu = np.dot(proj_matrix, syn_filt) * win_func 
+        wFu = np.dot(proj_matrix, syn_filt) * win_func
         # norm
         norm_wFd = np.sqrt(np.sum(wFd**2))
         norm_wFu = np.sqrt(np.sum(wFu**2))
@@ -3180,14 +3185,14 @@ class Misfit(object):
         for par in src_param:
           if par == 't0':
             Fdu = signal.filtfilt(filter_b, filter_a, du_dt0)
-            wFdu[par] = np.dot(proj_matrix, Fdu) * win_func 
+            wFdu[par] = np.dot(proj_matrix, Fdu) * win_func
           elif par == 'tau':
             Fdu = signal.filtfilt(filter_b, filter_a, du_dtau)
-            wFdu[par] = np.dot(proj_matrix, Fdu) * win_func 
+            wFdu[par] = np.dot(proj_matrix, Fdu) * win_func
           else:
             du = waveform_der[param]['du']
             Fdu = signal.filtfilt(filter_b, filter_a, du)
-            wFdu[param] = np.dot(proj_matrix, Fdu) * win_func 
+            wFdu[param] = np.dot(proj_matrix, Fdu) * win_func
 
         #------ hessian src
         # chi: zero-lag correlation coef. between wFu and wFd
@@ -3210,7 +3215,7 @@ class Misfit(object):
                 + ( 3.0 * Aw * wFu_wFdu1 * wFu_wFdu2 \
                              - wFu_wFdu1 * wFd_wFdu2 \
                              - wFu_wFdu2 * wFd_wFdu1 \
-                  ) / norm_wFu**2 
+                  ) / norm_wFu**2
                 ) / Nw
 
         #------ record results
@@ -3242,7 +3247,7 @@ class Misfit(object):
 #   dchi_dm = np.zeros(n_srcparam)
 #   hessian = np.zeros([n_srcparam,n_srcparam])
 
-#   #------ get dchi_dm and Hessian 
+#   #------ get dchi_dm and Hessian
 #   #-- loop each station
 #   station_dict = self.data['station']
 #   for station_id in station_dict:
@@ -3265,7 +3270,7 @@ class Misfit(object):
 #       if window['stat']['code'] < 1:
 #         warnings.warn("Window %s not measured for adj, SKIP" % window_id)
 #         continue
-#       # 
+#       #
 #       weight = window['weight']
 #       hessian_win = window['hessian_src']
 #       for i in range(n_srcparam):
@@ -3283,7 +3288,7 @@ class Misfit(object):
 #         hessian[j,i] = hessian[i,j]
 
 #   print("dchi_dm:"
-#   print(dchi_dm 
+#   print(dchi_dm
 
 #   print("hessian:"
 #   print(hessian
@@ -3296,8 +3301,8 @@ class Misfit(object):
 #   print(" inv(hessian)*(-1.0 * dchi_dm): \n", x
 #   print("dt0: \n", x[0]
 #   print("dtau:\n", x[1]
-#   print("dxs: \n", x[2]*self.data['src_perturb']['xs'] 
-#   print("dmt: \n", x[3]*self.data['src_perturb']['mt'] 
+#   print("dxs: \n", x[2]*self.data['src_perturb']['xs']
+#   print("dmt: \n", x[3]*self.data['src_perturb']['mt']
 
 #   print("====== only 0:3"
 #   h3 = hessian[0:3,0:3]
@@ -3309,8 +3314,8 @@ class Misfit(object):
 #   print("inv(hessian)*(-1.0 * dchi_dm): \n", x
 #   print("dt0: \n", x[0]
 #   print("dtau:\n", x[1]
-#   print("dxs: \n", x[2]*self.data['src_perturb']['xs'] 
-#   #print("dmt: \n", x[3]*self.data['src_perturb']['dmt'] 
+#   print("dxs: \n", x[2]*self.data['src_perturb']['xs']
+#   #print("dmt: \n", x[3]*self.data['src_perturb']['dmt']
 
 #   print("====== only 0:2"
 #   h3 = hessian[0:2,0:2]
@@ -3346,8 +3351,8 @@ class Misfit(object):
       dm={'t0':None, 'xs_mt':None},
       plot=False,
       ):
-    """ 
-    calculate normalized zero-lag cc for perturbed seismograms 
+    """
+    calculate normalized zero-lag cc for perturbed seismograms
     by linear combination of waveform derivatives of source parameters (t0,tau,xs,M)
 
     dm={<model_name>:<model_step_sizes>, ...}
@@ -3404,7 +3409,7 @@ class Misfit(object):
           error_str = "%s not in waveform_der of %s" % (model_name, station_id)
           raise Exception(error_str)
 
-      #---- get seismograms: obs,grn 
+      #---- get seismograms: obs,grn
       waveform = station['waveform']
       obs = waveform['obs']
       grn = waveform['grn']
@@ -3444,15 +3449,15 @@ class Misfit(object):
           plt.plot(syn_times, win_func)
           plt.show()
           plt.title("wind_func")
-        # polarity projection 
+        # polarity projection
         proj_matrix = window['polarity']['proj_matrix']
         #-- filter,project,taper obs
         # F * d
         obs_filt = signal.filtfilt(filter_b, filter_a, obs)
         # w * p * F * d (window,project,filter)
-        wpFd = np.dot(proj_matrix, obs_filt) * win_func 
+        wpFd = np.dot(proj_matrix, obs_filt) * win_func
         norm_wpFd = np.sqrt(np.sum(wpFd**2))
-        #-- filter,project grn 
+        #-- filter,project grn
         # F * g
         grn_filt = signal.filtfilt(filter_b, filter_a, grn)
         # p * F * g
@@ -3522,7 +3527,7 @@ class Misfit(object):
 
           #    idx_plt = range(syn_nl,(syn_nl+syn_npts))
           #    # whole trace, projected
-          #    plt.plot(syn_times[idx_plt], obs_filt_proj[i,idx_plt]/Amax_obs, 
+          #    plt.plot(syn_times[idx_plt], obs_filt_proj[i,idx_plt]/Amax_obs,
           #        'k', linewidth=0.2)
           #    plt.plot(syn_times[idx_plt], syn_filt_proj[i,idx_plt]/Amax_syn,
           #        'b', linewidth=0.2)
@@ -3551,7 +3556,7 @@ class Misfit(object):
 
 #  def search1d_cc_perturbed_seismogram(self,
 #      dm_range = {
-#        't0': [-5,5], 
+#        't0': [-5,5],
 #        'tau': [-5,5],
 #        'xs': [-5,5],
 #        'mt': [-5,5],
@@ -3565,8 +3570,8 @@ class Misfit(object):
 #      log_file="search1d_cc.log",
 #      cmt_file="CMTSOLUTION.search1d",
 #      ):
-#    """ 
-#    calculate misfit over 2D model grids based on perturbed seismograms 
+#    """
+#    calculate misfit over 2D model grids based on perturbed seismograms
 #
 #    Parameters
 #    ----------
@@ -3631,8 +3636,8 @@ class Misfit(object):
 #            if par_fix != par:
 #              dm_grid[par_fix] = np.ones(ngrid) * dm_opt[par_fix]
 #          cc, weight = self.cc_perturbed_seismogram(
-#              dm=dm_grid, 
-##             dist_min=dist_min, 
+#              dm=dm_grid,
+##             dist_min=dist_min,
 ##             dist_max=dist_max,
 #              plot=plot_seism)
 #          cc /= weight # weighted average of normalized zero-lag CC
@@ -3676,7 +3681,7 @@ class Misfit(object):
 #      dm = src_perturb[par]
 #      alpha = dm_opt[par]
 #      model[par] = {
-#          'm0':m0, 
+#          'm0':m0,
 #          'dm':dm,
 #          'alpha':alpha,
 #          'm1':m0+alpha*dm
@@ -3685,7 +3690,7 @@ class Misfit(object):
 #    # write out new CMTSOLUTION file
 #    t0 = event['t0']
 #    if 't0' in model: t0 = model['t0']['m1']
-#    # modify origin time in header line to have centroid time 
+#    # modify origin time in header line to have centroid time
 #    header = event['header'].split()
 #    header[1] = "{:04d}".format(t0.year)
 #    header[2] = "{:02d}".format(t0.month)
@@ -3693,7 +3698,7 @@ class Misfit(object):
 #    header[4] = "{:02d}".format(t0.hour)
 #    header[5] = "{:02d}".format(t0.minute)
 #    header[6] = "{:07.4f}".format(t0.second + 1.0e-6*t0.microsecond)
-#    
+#
 #    tau = event['tau']
 #    if 'tau' in model: tau = model['tau']['m1']
 #    xs = event['xs']
@@ -3706,7 +3711,7 @@ class Misfit(object):
 #    # scale to orignal moment
 #    mt = mt/(0.5*np.sum(mt**2))**0.5
 #    mt *= m0
-#    
+#
 #    with open(cmt_file, 'w') as fp:
 #      fp.write('%s \n' % (' '.join(header)))
 #      fp.write('%-18s %s\n' % ('event name:', event['id']))
@@ -3728,7 +3733,7 @@ class Misfit(object):
 
 #  def grid_cc_perturbed_seismogram(self,
 #      dm = {
-#        't0': np.linspace(-10,0,11), 
+#        't0': np.linspace(-10,0,11),
 #        'xs': np.linspace(-5,5,11),
 #        },
 #      axes=[ ('t0','xs'), ('t0',), ('xs',) ],
@@ -3736,13 +3741,13 @@ class Misfit(object):
 #      plot_seism=False,
 #      cmt_file="CMTSOLUTION.grid_cc"
 #      ):
-#    """ calculate misfit over 2D model grids based on perturbed seismograms 
+#    """ calculate misfit over 2D model grids based on perturbed seismograms
 #    """
 #    # grid parameters
 #    model_num = len(dm)
 #    model_name = [x for x in dm]
 #
-#    # check parameters 
+#    # check parameters
 #    for xy in axes:
 #      if len(xy) < 1 or len(xy) > 2:
 #        error_str = "axes should have one or two elements"
@@ -3757,7 +3762,7 @@ class Misfit(object):
 #    xx = np.meshgrid(*x, indexing='ij')
 #    nn = xx[0].size
 #
-#    # calculate cc values over all grid points 
+#    # calculate cc values over all grid points
 #    dm_grid = {}
 #    for i in range(model_num):
 #      par = model_name[i]
@@ -3767,7 +3772,7 @@ class Misfit(object):
 #    zz /= weight # weighted average of normalized zero-lag CC
 #    zz = zz.reshape(xx[0].shape)
 #
-#    # get maximum cc value 
+#    # get maximum cc value
 #    imax = np.argmax(zz)
 #    idx_max = np.unravel_index(imax, xx[0].shape)
 #    zz_max = zz[idx_max]
@@ -3878,7 +3883,7 @@ class Misfit(object):
 #    # get best model
 #    event = self.data['event']
 #    src_perturb = self.data['src_perturb']
-#    
+#
 #    model = {}
 #    for par in dm:
 #      m0 = event[par]
@@ -3886,7 +3891,7 @@ class Misfit(object):
 #      ix = model_name.index(par)
 #      alpha = xx[ix][idx_max]
 #      model[par] = {
-#          'm0':m0, 
+#          'm0':m0,
 #          'dm':dm,
 #          'alpha':alpha,
 #          'm1':m0+alpha*dm
@@ -3895,7 +3900,7 @@ class Misfit(object):
 #    #------ write out new CMTSOLUTION file
 #    t0 = event['t0']
 #    if 't0' in model: t0 = model['t0']['m1']
-#    # modify origin time in header line to have centroid time 
+#    # modify origin time in header line to have centroid time
 #    header = event['header'].split()
 #    header[1] = str(t0.year)
 #    header[2] = str(t0.month)
@@ -3933,9 +3938,9 @@ class Misfit(object):
 #======================================================
 #
 
-#  def relocate_1d(self, 
+#  def relocate_1d(self,
 #      event_id,
-#      window_id_list=['F.p,P', 'F.s,S'], 
+#      window_id_list=['F.p,P', 'F.s,S'],
 #      fix_depth=False,
 #      out_cmt_file=None):
 #    """relocate event using ray path in reference earth model
@@ -3963,7 +3968,7 @@ class Misfit(object):
 #
 #        window = windows[window_id]
 #        if window['stat']['code'] != 1:
-#          continue 
+#          continue
 #
 #        misfit = window['misfit']
 #        #if window['quality']['SNR'] < min_SNR or \
@@ -3992,7 +3997,7 @@ class Misfit(object):
 #      sta_win_id = sta_win_id_list[i]
 #      station_id = sta_win_id[0]
 #      window_id = sta_win_id[1]
-#  
+#
 #      station = stations[station_id]
 #      meta = station['meta']
 #      window = station['windows'][window_id]
@@ -4009,12 +4014,12 @@ class Misfit(object):
 #      pd = np.cos(takeoff) * slowness
 #      pn = np.cos(azimuth) * np.sin(takeoff) * slowness
 #      pe = np.sin(azimuth) * np.sin(takeoff) * slowness
-#      # create sensitivity matrix 
+#      # create sensitivity matrix
 #      G[i,:] = weight * np.array([-pn, -pe, -pd, 1.0]) # -p: from receiver to source
 #      dt_cc[i] = weight * misfit['CC_time_shift']
 #
 #    #linearized inversion (can be extended to second order using dynamic ray-tracing)
-#    if fix_depth: 
+#    if fix_depth:
 #      G[:, 2] = 0.0
 #    dm, residual, rank, sigval = np.linalg.lstsq(G, dt_cc)
 #
@@ -4052,7 +4057,7 @@ class Misfit(object):
 #    evlo1, evla1, evalt1 = pyproj.transform(ecef, lla, evx1, evy1, evz1)
 #    evdp1 = -evalt1/1000.0
 #
-#    # residuals 
+#    # residuals
 #    # linearized modelling
 #    dt_syn = G.dot(dm)
 #    dt_res = dt_cc - dt_syn
@@ -4062,10 +4067,10 @@ class Misfit(object):
 #    reloc_dict = {
 #        'window_id_list': window_id_list,
 #        'singular_value': sigval.tolist(),
-#        'dm': {'dNorth':dm[0], 'dEast':dm[1], 'dDepth':dm[2], 
+#        'dm': {'dNorth':dm[0], 'dEast':dm[1], 'dDepth':dm[2],
 #          'dT':dm[3]},
-#        'latitude':evla1, 
-#        'longitude':evlo1, 
+#        'latitude':evla1,
+#        'longitude':evlo1,
 #        'depth':evdp1,
 #        'centroid_time': str(new_centroid_time),
 #        'data': {'num':n, 'mean':np.mean(dt_cc), 'std':np.std(dt_cc)},
@@ -4077,14 +4082,14 @@ class Misfit(object):
 #    if out_cmt_file:
 #      M = gcmt['moment_tensor']
 #      with open(out_cmt_file, 'w') as fp:
-#        # header line: 
+#        # header line:
 #        #PDE 2003 09 25 19 50 08.93  41.78  144.08  18.0 7.9 8.0 Hokkaido, Japan
 #        # which is: event_id, date,origin time,latitude,longitude,depth, mb, MS, region
 #        fp.write(new_centroid_time.strftime(
 #          'RELOC %Y %m %d %H %M %S.%f ') + \
 #          '%.4f %.4f %.1f 0.0 0.0 END\n' % (evla1,evlo1,evdp1) )
 #        fp.write('event name:    %s\n'   % (event_id))
-#        fp.write('time shift:    0.0\n'        ) 
+#        fp.write('time shift:    0.0\n'        )
 #        fp.write('tau:   %.1f\n'   % (gcmt['tau']))
 #        #fp.write('half duration:   0.0\n'  % (gcmt['tau']))
 #        fp.write('latitude:    %.4f\n'   % (evla1)   )
@@ -4105,13 +4110,13 @@ class Misfit(object):
       dm={'vsv':None, 'vsh':None},
       plot=False
       ):
-    """ 
+    """
     Calculate normalized zero-lag cc between observed and linearized seismograms with waveform_der_dmodel
     for different step size.
 
     return weighted_cc_sum[:], weight_sum
     """
-    #------ validate inputs 
+    #------ validate inputs
     # check step length arrays in dm have the same length
     if (not dm) or len(dm) == 0:
       error_str = "dm must not be empty"
@@ -4151,7 +4156,7 @@ class Misfit(object):
               station_id, model_name)
           raise Exception(error_str)
 
-      #---- get seismograms: obs,grn 
+      #---- get seismograms: obs,grn
       waveform = station['waveform']
       obs = waveform['obs']
       syn = waveform['syn']
@@ -4191,19 +4196,19 @@ class Misfit(object):
           plt.plot(syn_times, win_func)
           plt.show()
           plt.title("wind_func")
-        # polarity projection 
+        # polarity projection
         proj_matrix = window['polarity']['proj_matrix']
         #-- filter,project,taper obs
         # F * d
         obs_filt = signal.filtfilt(filter_b, filter_a, obs)
         # w * p * F * d (window,project,filter)
-        wpFd = np.dot(proj_matrix, obs_filt) * win_func 
+        wpFd = np.dot(proj_matrix, obs_filt) * win_func
         norm_wpFd = np.sqrt(np.sum(wpFd**2))
         #-- filter,project,taper syn
         # F * u
         syn_filt = signal.filtfilt(filter_b, filter_a, syn)
         # w * p * F * u
-        wpFu = np.dot(proj_matrix, syn_filt) * win_func 
+        wpFu = np.dot(proj_matrix, syn_filt) * win_func
         #-- filter,project,taper du: wpFdu
         wpFdu = {}
         for model_name in dm:
@@ -4245,7 +4250,7 @@ class Misfit(object):
 
               idx_plt = range(syn_nl,(syn_nl+syn_npts))
               # whole trace, projected
-              plt.plot(syn_times[idx_plt], obs_filt_proj[i,idx_plt]/Amax_obs, 
+              plt.plot(syn_times[idx_plt], obs_filt_proj[i,idx_plt]/Amax_obs,
                   'k', linewidth=0.2)
               plt.plot(syn_times[idx_plt], syn_filt_proj[i,idx_plt]/Amax_syn,
                   'b', linewidth=0.2)
@@ -4273,11 +4278,11 @@ class Misfit(object):
 
 
   def plot_misfit(self, event_id, window_id, out_file=None):
-    """Plot misfit for a certain event and window_id  
+    """Plot misfit for a certain event and window_id
     """
     # CC0 map  | CC0 v.s. SNR (size ~ weight)
     #------------|-----------------
-    # DTcc map   | avg. CC0      
+    # DTcc map   | avg. CC0
 
     # check inputs
     events = self.data['events']
@@ -4301,7 +4306,7 @@ class Misfit(object):
       station = stations[station_id]
       windows = station['windows']
 
-      # skip bad station 
+      # skip bad station
       if station['stat']['code'] < 1:
         continue
 
@@ -4353,93 +4358,93 @@ class Misfit(object):
     #lat_true_scale = np.mean(stla_list)
     lat_0 = np.mean(stla_list)
     lon_0 = np.mean(stlo_list)
-    # 
+    #
     parallels = np.arange(0.,81,10.)
     meridians = np.arange(0.,351,10.)
 
     # figure size
     fig = plt.figure(figsize=(11, 8.5))
     str_title = '%s %s' % (event_id, window_id)
-    fig.text(0.5, 0.95, str_title, size='x-large', 
+    fig.text(0.5, 0.95, str_title, size='x-large',
         horizontalalignment='center')
 
-    #------ color map CC_time_shift, symbol size ~ SNR 
+    #------ color map CC_time_shift, symbol size ~ SNR
     ax = fig.add_axes([0.05, 0.5, 0.4, 0.35])
     ax.set_title("DT_cc (symbol_size ~ SNR)")
 
     m = Basemap(projection='merc', resolution='l',
-        llcrnrlat=min_lat, llcrnrlon=min_lon, 
+        llcrnrlat=min_lat, llcrnrlon=min_lon,
         urcrnrlat=max_lat, urcrnrlon=max_lon,
         lat_0=lat_0, lon_0=lon_0 )
     m.drawcoastlines(linewidth=0.1)
     m.drawcountries(linewidth=0.1)
     m.drawparallels(parallels, linewidth=0.1, labels=[1,0,0,1])
     m.drawmeridians(meridians, linewidth=0.1, labels=[1,0,0,1])
-    
+
     # CC_time_shift, SNR
     sx, sy = m(stlo_list, stla_list)
     size_list = [ 0.1 if x<0.1 else x for x in snr_list ]
     im = m.scatter(sx, sy, s=size_list, marker='o',
-        c=cc_dt_list, cmap='seismic', 
+        c=cc_dt_list, cmap='seismic',
         edgecolor='grey', linewidth=0.05)
     mean_amp = np.mean(cc_dt_list)
     std_amp = np.std(cc_dt_list)
     #plot_amp = abs(mean_amp)+std_amp
-    plot_amp = 5.0 
+    plot_amp = 5.0
     im.set_clim(-plot_amp, plot_amp)
-    
+
     # focal mechanism
     sx, sy = m(evlo, evla)
-    b = beach(focmec, xy=(sx, sy), width=200000, linewidth=0.2, 
+    b = beach(focmec, xy=(sx, sy), width=200000, linewidth=0.2,
         facecolor='k')
     ax.add_collection(b)
-    
+
     # colorbar
     cbar_ax = fig.add_axes([0.46, 0.575, 0.005, 0.2])
     fig.colorbar(im, cax=cbar_ax, orientation="vertical")
     cbar_ax.tick_params(labelsize=9)
     cbar_ax.set_xlabel('DT_cc(s)', fontsize=9)
     cbar_ax.xaxis.set_label_position('top')
-   
+
     #------ color map CC0, symbol size ~ SNR
     ax = fig.add_axes([0.05, 0.05, 0.4, 0.35])
     ax.set_title("CC0 (symbol_size ~ SNR)")
 
     m = Basemap(projection='merc', resolution='l',
-        llcrnrlat=min_lat, llcrnrlon=min_lon, 
+        llcrnrlat=min_lat, llcrnrlon=min_lon,
         urcrnrlat=max_lat, urcrnrlon=max_lon,
         lat_0=lat_0, lon_0=lon_0 )
     m.drawcoastlines(linewidth=0.1)
     m.drawcountries(linewidth=0.1)
     m.drawparallels(parallels, linewidth=0.1, labels=[1,0,0,1])
     m.drawmeridians(meridians, linewidth=0.1, labels=[1,0,0,1])
-    
-    # CC0, SNR 
+
+    # CC0, SNR
     sx, sy = m(stlo_list, stla_list)
     #size_list = [ 20**x for x in CCmax_list ]
     size_list = [ 0.1 if x<0.1 else x for x in snr_list ]
     im = m.scatter(sx, sy, s=size_list, marker='o',
-        c=CC0_list, cmap='jet', 
+        c=CC0_list, cmap='jet',
         edgecolor='grey', linewidth=0.05)
     im.set_clim(0.5, 1.0)
-    
+
     # focal mechanism
     sx, sy = m(evlo, evla)
-    b = Beach(focmec, xy=(sx, sy), width=200000, linewidth=0.2, 
+    b = Beach(focmec, xy=(sx, sy), width=200000, linewidth=0.2,
         facecolor='k')
     ax.add_collection(b)
- 
+
     #add colorbar
     cbar_ax = fig.add_axes([0.46, 0.125, 0.005, 0.2])
     fig.colorbar(im, cax=cbar_ax, orientation="vertical")
-    cbar_ax.tick_params(labelsize=9) 
+    cbar_ax.tick_params(labelsize=9)
     cbar_ax.set_xlabel('CC0', fontsize=9)
     cbar_ax.xaxis.set_label_position('top')
 
     #------ SNR v.s. CC0, colored by cc_dt, size ~ weight
     ax = fig.add_axes([0.58, 0.65, 0.35, 0.2])
-    im = ax.scatter(snr_list, CC0_list, marker='o', 
-        s=10.*np.array(weight_list), 
+    im = ax.scatter(snr_list, CC0_list, marker='o',
+        s=10.*np.array(weight_list),
         c=cc_dt_list, cmap='seismic',
         edgecolor='grey', linewidth=0.05)
     mean_amp = np.mean(cc_dt_list)
@@ -4482,7 +4487,7 @@ class Misfit(object):
 
     ##------ cc_dt v.s. CCmax, colored by SNR
     #ax = fig.add_axes([0.58, 0.1, 0.35, 0.2])
-    #im = ax.scatter(cc_dt_list, CCmax_list, marker='o', s=10, 
+    #im = ax.scatter(cc_dt_list, CCmax_list, marker='o', s=10,
     #    c=snr_list, cmap='seismic',
     #    edgecolor='grey', linewidth=0.05)
     #im.set_clim(min(snr_list), max(snr_list))
@@ -4503,7 +4508,7 @@ class Misfit(object):
     #amp = max(abs(dt_cc))
     #ax1.set_xlim([-amp, amp])
     #ax1.set_title('dt_cc: mean=%.2f std=%.2f' % (np.mean(dt_cc), np.std(dt_cc)))
-    #ax1.tick_params(labelsize=10) 
+    #ax1.tick_params(labelsize=10)
     #
     #ax2 = fig.add_axes([0.5,0.07,0.4,0.15])
     #n, bins, patches = ax2.hist(dt_res, 50, facecolor='green', alpha=0.75)
@@ -4524,7 +4529,7 @@ class Misfit(object):
 #
 
   def plot_seismogram_3comp(self,
-      savefig=False, 
+      savefig=False,
       out_dir='plot',
       plot_param={
         'time':[0,100], 'rayp':10., 'azbin':10, 'window_id':'F.p,P',
@@ -4532,7 +4537,7 @@ class Misfit(object):
       ):
     """ Plot seismograms for one event
       azbin: azimuthal bin size
-      win: 
+      win:
     """
     comp_name = ['R', 'T', 'Z']
     #------ selection parameters
@@ -4571,7 +4576,7 @@ class Misfit(object):
       station = station_dict[station_id]
       meta = station['meta']
       window_dict = station['window']
-      # select data 
+      # select data
       if station['stat']['code'] < 1:
         continue
       if plot_window_id not in window_dict:
@@ -4589,8 +4594,8 @@ class Misfit(object):
     ttcurve_S = []
     for dist in dist_ttcurve:
       arrivals = model.get_travel_times(
-          source_depth_in_km=evdp, 
-          distance_in_degree=dist, 
+          source_depth_in_km=evdp,
+          distance_in_degree=dist,
           phase_list=['p','P','s','S'])
       for arr in arrivals:
         if arr.name == 'p':
@@ -4607,7 +4612,7 @@ class Misfit(object):
     ttcurve_s = sorted(ttcurve_s, key=lambda x: x[2])
     ttcurve_S = sorted(ttcurve_S, key=lambda x: x[2])
 
-    #------ map configuration 
+    #------ map configuration
     min_lat = min(min(stla_all), evla)
     max_lat = max(max(stla_all), evla)
     lat_range = max_lat - min_lat
@@ -4620,7 +4625,7 @@ class Misfit(object):
     max_lon += 0.1*lon_range
     lat_0 = np.mean(stla_all)
     lon_0 = np.mean(stlo_all)
-    # 
+    #
     parallels = np.arange(0.,81,10.)
     meridians = np.arange(0.,351,10.)
 
@@ -4634,7 +4639,7 @@ class Misfit(object):
 
       print(azmin, azmax)
 
-      #---- gather data for the current azbin 
+      #---- gather data for the current azbin
       data_azbin = {}
       for station_id in station_dict:
         # skip bad station
@@ -4642,7 +4647,7 @@ class Misfit(object):
         if station['stat']['code'] < 1:
           continue
 
-        # skip un-selected station 
+        # skip un-selected station
         meta = station['meta']
         azimuth = meta['azimuth']
         dist_degree = meta['dist_degree']
@@ -4683,7 +4688,7 @@ class Misfit(object):
         filter_param = window['filter']
         filter_a = filter_param['a']
         filter_b = filter_param['b']
-        # filter seismograms 
+        # filter seismograms
         obs = signal.filtfilt(filter_b, filter_a, obs)
         grn = signal.filtfilt(filter_b, filter_a, grn)
         # convolve stf on grn
@@ -4698,8 +4703,8 @@ class Misfit(object):
         Raz = (meta['back_azimuth'] + 180.0) % 360.0
         sin_Raz = np.sin(np.deg2rad(Raz))
         cos_Raz = np.cos(np.deg2rad(Raz))
-        proj_matrix = [ 
-            [sin_Raz,  cos_Raz], 
+        proj_matrix = [
+            [sin_Raz,  cos_Raz],
             [cos_Raz, -sin_Raz] ]
         obs[0:2,:] = np.dot(proj_matrix, obs[0:2,:])
         syn[0:2,:] = np.dot(proj_matrix, syn[0:2,:])
@@ -4712,7 +4717,7 @@ class Misfit(object):
             }
         data_azbin[station_id] = data_dict
       #endfor station_id in station_dict:
-  
+
       #---- skip empty azbin
       if not data_azbin:
         warn_str = "No station in the azbin [%f %f]." %(azmin, azmax)
@@ -4728,28 +4733,45 @@ class Misfit(object):
       ax_origin = [0.3, 0.74]
       ax_size = [0.4, 0.2]
       ax_map = fig.add_axes(ax_origin + ax_size)
-      ax_bm = Basemap(projection='merc', resolution='l',
-          llcrnrlat=min_lat, llcrnrlon=min_lon, 
-          urcrnrlat=max_lat, urcrnrlon=max_lon,
-          lat_0=lat_0, lon_0=lon_0 )
-      ax_bm.drawcoastlines(linewidth=0.1)
-      ax_bm.drawcountries(linewidth=0.1)
-      ax_bm.drawparallels(parallels, linewidth=0.1, labels=[1,0,0,1], 
-          fontsize=10, fmt='%3.0f')
-      ax_bm.drawmeridians(meridians, linewidth=0.1, labels=[1,0,0,1], 
-          fontsize=10, fmt='%3.0f')
-      sx, sy = ax_bm(stlo_all, stla_all)
-      ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='blue', edgecolor='')
+      #ax_bm = Basemap(projection='merc', resolution='l',
+      #    llcrnrlat=min_lat, llcrnrlon=min_lon,
+      #    urcrnrlat=max_lat, urcrnrlon=max_lon,
+      #    lat_0=lat_0, lon_0=lon_0 )
+      proj = ccrs.Mercator()
+      ax_bm = plt.axes(projection=proj)
+      ax_bm.set_xlim(min_lon, max_lon)
+      ax_bm.set_ylim(min_lat, max_lat)
+      ax_bm.coastlines(resolution='110m')
+      ax_bm.stock_img()
+      gl = ax_bm.gridlines(crs=proj,
+                           draw_labels=True,
+                           linewidth=2,
+                           )
+      gl.xlabels_top = gl.ylabels_right = False
+      gl.xlocator = mticker.FixedLocator(np.arange(0,180,20))
+      gl.ylocator = mticker.FixedLocator(np.arange(0,80,20))
+      gl.xformatter = LONGITUDE_FORMATTER
+      gl.yformatter = LATITUDE_FORMATTER
+      #ax_bm.drawcoastlines(linewidth=0.1)
+      #ax_bm.drawcountries(linewidth=0.1)
+      #ax_bm.drawparallels(parallels, linewidth=0.1, labels=[1,0,0,1],
+      #    fontsize=10, fmt='%3.0f')
+      #ax_bm.drawmeridians(meridians, linewidth=0.1, labels=[1,0,0,1],
+      #    fontsize=10, fmt='%3.0f')
+      #sx, sy = ax_bm(stlo_all, stla_all)
+      #ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='blue', edgecolor='')
+      ax_bm.scatter(stlo_all, stla_all, s=10, marker='^', facecolor='blue', edgecolor='')
       # plot focal mechanism
-      sx, sy = ax_bm(evlo, evla)
+      #sx, sy = ax_bm(evlo, evla)
       bb_width = 110000.0 * np.abs(max(stlo_all)-min(stlo_all)) * 0.1
-      b = Beach(focmec, xy=(sx, sy), width=bb_width, linewidth=0.2, facecolor='r')
-      ax_map.add_collection(b)
+      bball = Beach(focmec, xy=(evlo, evla), width=bb_width, linewidth=0.2, facecolor='r')
+      ax_bm.add_collection(bball)
       #-- plot the station location
       stla = [ x['meta']['latitude'] for x in data_azbin.itervalues() ]
       stlo = [ x['meta']['longitude'] for x in data_azbin.itervalues() ]
-      sx, sy = ax_bm(stlo, stla)
-      ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='red', edgecolor='')
+      #sx, sy = ax_bm(stlo, stla)
+      #ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='red', edgecolor='')
+      ax_bm.scatter(stlo_all, stla_all, s=10, marker='^', facecolor='red', edgecolor='')
 
       #-- create axis for seismograms
       ax_RTZ = []
@@ -4789,10 +4811,10 @@ class Misfit(object):
         syn = station['syn']
         obs = station['obs']
 
-        # get plot time 
+        # get plot time
         dist_degree = meta['dist_degree']
         reduced_time = dist_degree * plot_rayp
-        # time of first sample referred to centroid time 
+        # time of first sample referred to centroid time
         t0 = syn_starttime - event['t0']
         # time of samples referred to centroid time
         syn_times = syn_delta*np.arange(syn_npts) + t0
@@ -4824,13 +4846,13 @@ class Misfit(object):
           ax.plot(win_t1, dist_degree, 'k|', markersize=8)
           # annotate amplitude
           if i == 0:
-            ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_obs), 
-                verticalalignment='bottom', 
-                horizontalalignment='right', 
+            ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_obs),
+                verticalalignment='bottom',
+                horizontalalignment='right',
                 fontsize=7, color='black')
-            ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_syn), 
-                verticalalignment='top', 
-                horizontalalignment='right', 
+            ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_syn),
+                verticalalignment='top',
+                horizontalalignment='right',
                 fontsize=7, color='red')
           # annotate CC0
           if i == 0:
@@ -4840,7 +4862,7 @@ class Misfit(object):
           if i == 1:
             ax.text(max(plot_time), dist_degree, ' %.1f' % (window['weight']),
                 verticalalignment='center', fontsize=7)
-          #annotate station names 
+          #annotate station names
           if i == 2:
             #str_annot = '%.3f,%.1f,%s' % (
             #    misfit['CC0'], window['weight'], station_id)
@@ -4856,27 +4878,27 @@ class Misfit(object):
         ax.set_title(comp_name[i])
         ax.set_xlabel('t - {:.1f}*dist (s)'.format(plot_rayp))
         ax.tick_params(axis='both',labelsize=10)
-        # ylabel 
+        # ylabel
         if i == 0:
           ax.set_ylabel('dist (deg)')
         else:
           ax.set_yticklabels([])
 
       #-- save figures
-      if savefig: 
+      if savefig:
         out_file = '%s/%s_az_%03d_%03d_%s.pdf' \
             % (out_dir, event['id'], azmin, azmax, plot_window_id)
         plt.savefig(out_file, format='pdf')
       else:
         plt.show()
       plt.close(fig)
-    
+
 #
 #======================================================
 #
 
   def plot_seismogram_1comp(self,
-      savefig=False, 
+      savefig=False,
       out_dir='plot',
       window_id='p,P_Z',
       azbin=10,
@@ -4891,7 +4913,7 @@ class Misfit(object):
       plot_adj=False, # whether plot adjoint source
       align_time=False, # whether align the phase according to cc time shift
       ):
-    """ 
+    """
     Plot record section in azimuthal bins
 
     Parameters
@@ -4901,7 +4923,7 @@ class Misfit(object):
     begin/end_time: time range that is added to the automatically determined
       plot time range. See below.
 
-    clip: do not plot waveform with amplitudes larger than 
+    clip: do not plot waveform with amplitudes larger than
       <clip>*max_amplitude_in_select_time_window
 
     Notes
@@ -4965,7 +4987,7 @@ class Misfit(object):
       station = station_dict[station_id]
       meta = station['meta']
       window_dict = station['window']
-      # select data 
+      # select data
       if station['stat']['code'] < 1:
         continue
       if plot_window_id not in window_dict:
@@ -4976,12 +4998,12 @@ class Misfit(object):
       taper = window_dict[plot_window_id]['taper']
       winb_all.append(taper['starttime'] - event['t0'])
       wine_all.append(taper['endtime'] - event['t0'])
-    
+
     if not dist_all:
       warnings.warn("No data to plot!")
       return
 
-    # get average moveout of the window center 
+    # get average moveout of the window center
     dist_all = np.array(dist_all)
     winb_all = np.array(winb_all)
     wine_all = np.array(wine_all)
@@ -5011,8 +5033,8 @@ class Misfit(object):
         ttcurve[phase_name] = []
       for dist in dist_ttcurve:
         arrivals = model.get_travel_times(
-            source_depth_in_km=evdp, 
-            distance_in_degree=dist, 
+            source_depth_in_km=evdp,
+            distance_in_degree=dist,
             phase_list=phase_list)
         for arr in arrivals:
           for phase_name in phase_list:
@@ -5022,7 +5044,7 @@ class Misfit(object):
       for phase_name in phase_list:
         ttcurve[phase_name] = sorted(ttcurve[phase_name], key=lambda x: x[2])
 
-    #------ map configuration 
+    #------ map configuration
     min_lat = min(min(stla_all), evla)
     max_lat = max(max(stla_all), evla)
     lat_range = max_lat - min_lat
@@ -5053,14 +5075,14 @@ class Misfit(object):
 
       print("Azimuthal range: ", azmin, azmax)
 
-      #---- gather data for the current azbin 
+      #---- gather data for the current azbin
       data_azbin = {}
       for station_id in station_dict:
         station = station_dict[station_id]
         # skip bad station
         if station['stat']['code'] < 1:
           continue
-        # skip station not in the selection criteria 
+        # skip station not in the selection criteria
         meta = station['meta']
         azimuth = meta['azimuth']
         dist_degree = meta['dist_degree']
@@ -5100,7 +5122,7 @@ class Misfit(object):
         filter_param = window['filter']
         filter_a = filter_param['a']
         filter_b = filter_param['b']
-        # filter seismograms 
+        # filter seismograms
         obs = signal.filtfilt(filter_b, filter_a, waveform['obs'])
         if 'syn' in waveform:
           syn = signal.filtfilt(filter_b, filter_a, waveform['syn'])
@@ -5123,7 +5145,7 @@ class Misfit(object):
           cos_az = np.cos(np.deg2rad(cmpaz))
           sin_dip = np.sin(np.deg2rad(cmpdip))
           cos_dip = np.cos(np.deg2rad(cmpdip))
-          cmp_vec = np.array([ 
+          cmp_vec = np.array([
             cos_dip*sin_az, # cos(E, comp)
             cos_dip*cos_az, # N, comp
             -sin_dip] )     # Z, comp
@@ -5151,7 +5173,7 @@ class Misfit(object):
               }
         data_azbin[station_id] = data_dict
       #endfor station_id in station_dict:
-  
+
       #---- skip empty azbin
       if not data_azbin:
         warn_str = "No station in the azbin [%f %f]." %(azmin, azmax)
@@ -5163,36 +5185,58 @@ class Misfit(object):
       str_title = '{:s} ({:s} az:{:04.1f}~{:04.1f} dep:{:.1f})'.format(
           event['id'], plot_window_id, azmin, azmax, event['depth'])
       fig.text(0.5, 0.965, str_title, size='x-large', horizontalalignment='center')
-
       #---- plot station/event map
       ax_origin = [0.05, 0.60]
       ax_size = [0.3, 0.3]
-      ax_map = fig.add_axes(ax_origin + ax_size)
-      ax_bm = Basemap(projection='merc', resolution='l',
-          llcrnrlat=min_lat, llcrnrlon=min_lon, 
-          urcrnrlat=max_lat, urcrnrlon=max_lon,
-          lat_0=lat_0, lon_0=lon_0 )
-      ax_bm.drawcoastlines(linewidth=0.1)
-      ax_bm.drawcountries(linewidth=0.1)
-      ax_bm.drawparallels(parallels, linewidth=0.1, labels=[1,0,0,1], 
-          fontsize=10, fmt='%3.0f')
-      ax_bm.drawmeridians(meridians, linewidth=0.1, labels=[1,0,0,1], 
-          fontsize=10, fmt='%3.0f')
-      sx, sy = ax_bm(stlo_all, stla_all)
-      ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='blue', edgecolor='')
+      proj = ccrs.PlateCarree()
+      ax_map = fig.add_axes(ax_origin+ax_size, projection=proj)
+      #ax_bm = Basemap(projection='merc', resolution='l',
+      #    llcrnrlat=min_lat, llcrnrlon=min_lon,
+      #    urcrnrlat=max_lat, urcrnrlon=max_lon,
+      #    lat_0=lat_0, lon_0=lon_0 )
+      #ax_bm.drawcoastlines(linewidth=0.1)
+      #ax_bm.drawcountries(linewidth=0.1)
+      #ax_bm.drawparallels(parallels, linewidth=0.1, labels=[1,0,0,1],
+      #    fontsize=10, fmt='%3.0f')
+      #ax_bm.drawmeridians(meridians, linewidth=0.1, labels=[1,0,0,1],
+      #    fontsize=10, fmt='%3.0f')
+      #sx, sy = ax_bm(stlo_all, stla_all)
+      #ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='blue', edgecolor='')
+      ## plot focal mechanism
+      #sx, sy = ax_bm(evlo, evla)
+      #bb_width = 110000.0 * np.abs(max(stlo_all)-min(stlo_all)) * 0.1
+      ## in case all focmec are zero (when use forcesolution, I use a cmtsolution with all Mij=0)
+      #if np.max(np.abs(focmec)) < 1.e-5:
+      #  focmec[0:3] = 1
+      #b = beach(focmec, xy=(sx, sy), width=bb_width, linewidth=0.2, facecolor='r')
+      #ax_map.add_collection(b)
+      ax_map.set_xlim(min_lon, max_lon)
+      ax_map.set_ylim(min_lat-10, max_lat+10)
+      ax_map.coastlines(resolution='110m')
+      ax_map.stock_img()
+      gl = ax_map.gridlines(crs=proj,
+                           draw_labels=True,
+                           linewidth=1, linestyle='--',
+                           )
+      gl.top_labels = gl.right_labels = False
+      gl.xlocator = mticker.FixedLocator(np.arange(0,180,20))
+      gl.ylocator = mticker.FixedLocator(np.arange(0,80,20))
+      gl.xformatter = LONGITUDE_FORMATTER
+      gl.yformatter = LATITUDE_FORMATTER
+      # plot all stations
+      ax_map.scatter(stlo_all, stla_all, s=10, marker='^', facecolor='blue', edgecolor='', zorder=10)
       # plot focal mechanism
-      sx, sy = ax_bm(evlo, evla)
-      bb_width = 110000.0 * np.abs(max(stlo_all)-min(stlo_all)) * 0.1
+      bb_width = 0.1 * np.abs(max(stlo_all)-min(stlo_all))
       # in case all focmec are zero (when use forcesolution, I use a cmtsolution with all Mij=0)
-      if np.max(np.abs(focmec)) < 1.e-5:
-        focmec[0:3] = 1
-      b = beach(focmec, xy=(sx, sy), width=bb_width, linewidth=0.2, facecolor='r')
-      ax_map.add_collection(b)
-      #-- plot the station location
+      if np.max(np.abs(focmec)) < 1.e-5: focmec[0:3] = 1
+      bball = beach(focmec, xy=(evlo, evla), width=bb_width, linewidth=0.2, facecolor='r')
+      ax_map.add_collection(bball)
+      #-- plot the station location within this azimuthal bin
       stla = [ data_azbin[key]['meta']['latitude'] for key in data_azbin ]
       stlo = [ data_azbin[key]['meta']['longitude'] for key in data_azbin ]
-      sx, sy = ax_bm(stlo, stla)
-      ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='red', edgecolor='')
+      #sx, sy = ax_bm(stlo, stla)
+      #ax_bm.scatter(sx, sy, s=10, marker='^', facecolor='red', edgecolor='')
+      ax_map.scatter(stlo, stla, s=10, marker='^', facecolor='red', edgecolor='', zorder=10)
 
       #-- create axis for seismograms
       ax_origin = [0.42, 0.05]
@@ -5243,15 +5287,15 @@ class Misfit(object):
       #-- plot each station
       if plot_adj: # use a constant scaling factor for adj_src
         Amax_adj = -1.0
-        for station_id in data_azbin: 
+        for station_id in data_azbin:
           station = data_azbin[station_id]
           meta = station['meta']
           window = station['window']
           adj = station['adj']
-          # get plot time 
+          # get plot time
           dist_degree = meta['dist_degree']
           reduced_time = dist_degree * plot_rayp
-          # time of first sample referred to centroid time 
+          # time of first sample referred to centroid time
           t0 = syn_starttime - event['t0']
           # time of samples referred to centroid time
           syn_times = syn_delta*np.arange(syn_npts) + t0
@@ -5281,10 +5325,10 @@ class Misfit(object):
         if align_time:
           cc_tshift = window['cc']['cc_tshift']
 
-        # get plot time 
+        # get plot time
         dist_degree = meta['dist_degree']
         reduced_time = dist_degree * plot_rayp
-        # time of first sample referred to centroid time 
+        # time of first sample referred to centroid time
         t0 = syn_starttime - event['t0']
         # time of samples referred to centroid time
         syn_times = syn_delta*np.arange(syn_npts) + t0
@@ -5306,7 +5350,7 @@ class Misfit(object):
         # plot seismograms
         Amax_obs = np.sqrt(np.max(obs[win_idx]**2))
         Amax_syn = np.sqrt(np.max(syn[win_idx]**2))
-        
+
         # clip large amplitudes
         if plot_adj:
           adj = station['adj']
@@ -5336,13 +5380,13 @@ class Misfit(object):
         ax_1comp.plot(win_t0, dist_degree, 'k|', markersize=8)
         ax_1comp.plot(win_t1, dist_degree, 'k|', markersize=8)
         ## annotate amplitude
-        #  ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_obs), 
-        #      verticalalignment='bottom', 
-        #      horizontalalignment='right', 
+        #  ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_obs),
+        #      verticalalignment='bottom',
+        #      horizontalalignment='right',
         #      fontsize=7, color='black')
-        #  ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_syn), 
-        #      verticalalignment='top', 
-        #      horizontalalignment='right', 
+        #  ax.text(max(plot_time), dist_degree, '%.1e ' % (Amax_syn),
+        #      verticalalignment='top',
+        #      horizontalalignment='right',
         #      fontsize=7, color='red')
         ## annotate CC0
         #  ax.text(max(plot_time), dist_degree, ' %.3f'%(window['cc']['CC0']),
@@ -5351,12 +5395,12 @@ class Misfit(object):
         #if i == 1:
         #  ax.text(max(plot_time), dist_degree, ' %.1f' % (window['weight']),
         #      verticalalignment='center', fontsize=7)
-        ##annotate station names 
+        ##annotate station names
         str_annot = ' %s (%.3f,%.3f,%.1f)' % (station_id,
             window['cc']['CC0'], window['cc']['cc_tshift'], window['weight'])
-        ax_1comp.text(max(plot_time), dist_degree, str_annot, 
+        ax_1comp.text(max(plot_time), dist_degree, str_annot,
             verticalalignment='center', fontsize=7)
-        #ax_1comp.text(160, dist_degree, str_annot, 
+        #ax_1comp.text(160, dist_degree, str_annot,
         #    verticalalignment='center', fontsize=7)
 
       #endfor data in data_azbin:
@@ -5367,12 +5411,12 @@ class Misfit(object):
       ax_1comp.set_ylim(plot_ymin, plot_ymax)
       ax_1comp.set_xlabel('t - {:.1f}*dist (s)'.format(plot_rayp))
       ax_1comp.tick_params(axis='both',labelsize=10)
-      # ylabel 
+      # ylabel
       ax_1comp.set_ylabel('dist (deg)')
       #ax_1comp.invert_yaxis()
 
       #-- save figures
-      if savefig: 
+      if savefig:
         out_file = '%s/%s_az_%03d_%03d_%s.pdf' \
             % (out_dir, event['id'], azmin, azmax, plot_window_id)
         plt.savefig(out_file, format='pdf')
@@ -5390,9 +5434,9 @@ class Misfit(object):
       syn_suffix='.sem.sac',
       model_name='perturb',
       sac_dir=None):
-    """ 
+    """
     read in perturbed seismograms
-    
+
     """
     syn_orientation_codes = ['E', 'N', 'Z']
 
@@ -5418,7 +5462,7 @@ class Misfit(object):
       nt = time_sample['nt']
       nl = time_sample['nl'] # npts of left padding
       nr = time_sample['nr'] # npts of right padding
-      sem_nt = nt-nl-nr # number of time sample number in SEM simulation 
+      sem_nt = nt-nl-nr # number of time sample number in SEM simulation
       t = np.arange(nt) * dt + (starttime - t0) #referred to t0
 
       #------ get file paths of syn seismograms
@@ -5482,7 +5526,7 @@ class Misfit(object):
       model_name='perturb',
       syn_band_code='MX',
       ):
-    """ 
+    """
     calculate adjoint sources (dchi_du) for perturbed waveform
 
     Notes
@@ -5544,14 +5588,14 @@ class Misfit(object):
         if window['stat']['code'] != 1:
           continue
 
-        #------ window parameters 
+        #------ window parameters
         # filter
         filter_dict = window['filter']
         filter_a = filter_dict['a']
         filter_b = filter_dict['b']
         # taper
         win_func = window['taper']['win']
-        # polarity projection 
+        # polarity projection
         proj_matrix = window['polarity']['proj_matrix']
         # window weight
         weight = window['weight']
@@ -5560,10 +5604,10 @@ class Misfit(object):
 
         #------ filter obs, syn
         #NOTE: use lfilter (causal filter) to avoid contamination from the right
-        # end of the signal, but with asymmetric response and 
+        # end of the signal, but with asymmetric response and
         # peak shift ~ 1/4 min. period (e.g. 0.01-0.1Hz -> 2.5s peak shift)
         # , however the duration of the filter response is determined by the
-        # max. period (e.g. 0.01-0.1Hz -> ~50s). So the time window chosen 
+        # max. period (e.g. 0.01-0.1Hz -> ~50s). So the time window chosen
         # should not be affected by the relatively small peak shift.
         #-- F * d
         obs_filt = signal.filtfilt(filter_b, filter_a, obs)
@@ -5572,9 +5616,9 @@ class Misfit(object):
 
         #------ apply window taper and polarity projection
         # obs = w * F * d
-        obs_filt_win = np.dot(proj_matrix, obs_filt) * win_func 
+        obs_filt_win = np.dot(proj_matrix, obs_filt) * win_func
         # syn = w * F * u (u = S*g)
-        syn_filt_win = np.dot(proj_matrix, syn_filt) * win_func 
+        syn_filt_win = np.dot(proj_matrix, syn_filt) * win_func
 
         #------ measure CC time shift (between w*F*d and w*F*u)
         obs_norm = np.sqrt(np.sum(obs_filt_win**2))
@@ -5590,7 +5634,7 @@ class Misfit(object):
         if misfit_type == 'cc0':
           # misfit: zero-lag cross-correlation
           # adjoint source: dchiw_du (misfit functional: zero-lag cc coef.)
-          # dchiw_du = conj(F * [S]) * w * [ w * F * d - A * w * F * S * g] / N, 
+          # dchiw_du = conj(F * [S]) * w * [ w * F * d - A * w * F * S * g] / N,
           # , where A = CC0(un-normalized) / norm(u)**2, N = norm(d)*norm(u)
           #-- dchiw_du
           #NOTE: *dt is put back to Nw
@@ -5651,7 +5695,7 @@ class Misfit(object):
 #
 #    Notes
 #    -----
-#    For the objective function as the normalized zero-lag correlation ceofficient, 
+#    For the objective function as the normalized zero-lag correlation ceofficient,
 #    the approximated Hessian can be seperated into two parts:
 #
 #    Part 1:
@@ -5660,7 +5704,7 @@ class Misfit(object):
 #        , where CC0 > 0 is the zero-lag correlation coefficient of (wFd, wFu)
 #        and the corresponding adjoint source is
 #
-#        adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r) 
+#        adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r)
 #        , where r is a radome time series such that E(r*transpose(r)) = i.d.
 #        , for example, standard normal distribution N(0,1)
 #
@@ -5712,20 +5756,20 @@ class Misfit(object):
 #        if window['weight'] < 1.0e-3:
 #          continue
 #
-#        #------ window parameters 
+#        #------ window parameters
 #        # filter
 #        filter_dict = window['filter']
 #        filter_a = filter_dict['a']
 #        filter_b = filter_dict['b']
 #        # taper
 #        win_func = window['taper']['win']
-#        # polarity projection 
+#        # polarity projection
 #        proj_matrix = window['polarity']['proj_matrix']
 #        # CC0
 #        cc0 = window['cc']['CC0']
 #
 #        #------ Part 1: random adjoint source
-#        # adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r) 
+#        # adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r)
 #        wr = np.dot(np.transpose(proj_matrix), rand) * win_func
 #        Fwr = signal.filtfilt(filter_b, filter_a, wr[:,::-1])
 #        Fwr = Fwr[:,::-1]
@@ -5735,7 +5779,7 @@ class Misfit(object):
 #        Fu = signal.filtfilt(filter_b, filter_a, syn)
 #        wFu = np.dot(proj_matrix, Fu) * win_func
 #        norm_wFu = np.sqrt(np.sum(wFu**2))
-#        #wwFu = np.dot(np.transpose(proj_matrix), wFu) * win_func 
+#        #wwFu = np.dot(np.transpose(proj_matrix), wFu) * win_func
 #        #FwwFu = signal.filtfilt(filter_b, filter_a, wwFu[:,::-1])
 #        #FwwFu = FwwFu[:,::-1]
 #
@@ -5800,7 +5844,7 @@ class Misfit(object):
 #
 #    Notes
 #    -----
-#    For the objective function as the normalized zero-lag correlation ceofficient, 
+#    For the objective function as the normalized zero-lag correlation ceofficient,
 #    the approximated Hessian can be seperated into two parts:
 #
 #    Part 1:
@@ -5809,7 +5853,7 @@ class Misfit(object):
 #        , where CC0 > 0 is the zero-lag correlation coefficient of (wFd, wFu)
 #        and the corresponding adjoint source is
 #
-#        adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r) 
+#        adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r)
 #        , where r is a radome time series such that E(r*transpose(r)) = i.d.
 #        , for example, standard normal distribution N(0,1)
 #
@@ -5861,20 +5905,20 @@ class Misfit(object):
 #        if window['weight'] < 1.0e-3:
 #          continue
 #
-#        #------ window parameters 
+#        #------ window parameters
 #        # filter
 #        filter_dict = window['filter']
 #        filter_a = filter_dict['a']
 #        filter_b = filter_dict['b']
 #        # taper
 #        win_func = window['taper']['win']
-#        # polarity projection 
+#        # polarity projection
 #        proj_matrix = window['polarity']['proj_matrix']
 #        # CC0
 #        cc0 = window['cc']['CC0']
 #
 #        #------ Part 1: random adjoint source
-#        # adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r) 
+#        # adj = sqrt(CC0) * norm(wFu)^(-1) * conj(F)(transpose(w)r)
 #        #wr = np.dot(np.transpose(proj_matrix), rand) * win_func
 #        #Fwr = signal.filtfilt(filter_b, filter_a, wr[:,::-1])
 #        #Fwr = Fwr[:,::-1]
@@ -5885,7 +5929,7 @@ class Misfit(object):
 #        Fu = signal.filtfilt(filter_b, filter_a, syn)
 #        wFu = np.dot(proj_matrix, Fu) * win_func
 #        norm_wFu = np.sqrt(np.sum(wFu**2))
-#        wwFu = np.dot(np.transpose(proj_matrix), wFu) * win_func 
+#        wwFu = np.dot(np.transpose(proj_matrix), wFu) * win_func
 #        FwwFu = signal.filtfilt(filter_b, filter_a, wwFu[:,::-1])
 #        FwwFu = FwwFu[:,::-1]
 #        adj_w = np.sqrt(cc0) * norm_wFu**(-2) * FwwFu
@@ -5943,7 +5987,7 @@ class Misfit(object):
 #
 #    Notes
 #    -----
-#    For the objective function as the normalized zero-lag correlation ceofficient, 
+#    For the objective function as the normalized zero-lag correlation ceofficient,
 #    the approximated Hessian can be seperated into two parts:
 #
 #    Part 1:
@@ -5975,7 +6019,7 @@ class Misfit(object):
 #      syn_nr = time_sample['nr']
 #      syn = waveform['syn']
 #
-#      # perturbed waveform  
+#      # perturbed waveform
 #      waveform_der = station['waveform_der']
 #      du = waveform_der[model_name]['du']
 #
@@ -5989,14 +6033,14 @@ class Misfit(object):
 #          warnings.warn("Window %s not measured for adj, SKIP" % window_id)
 #          continue
 #
-#        #------ window parameters 
+#        #------ window parameters
 #        # filter
 #        filter_dict = window['filter']
 #        filter_a = filter_dict['a']
 #        filter_b = filter_dict['b']
 #        # taper
 #        win_func = window['taper']['win']
-#        # polarity projection 
+#        # polarity projection
 #        proj_matrix = window['polarity']['proj_matrix']
 #        # CC0
 #        cc0 = window['cc']['CC0']
@@ -6058,7 +6102,7 @@ class Misfit(object):
 #          station_id, window_id, hess_diag))
 #
 #    f.close()
-#  #enddef 
+#  #enddef
 #
 ##
 ##======================================================
@@ -6073,7 +6117,7 @@ class Misfit(object):
 #
 #    Notes
 #    -----
-#    For the objective function as the normalized zero-lag correlation ceofficient, 
+#    For the objective function as the normalized zero-lag correlation ceofficient,
 #    the approximate Hessian for one data window is (ignore second order derivative in u)
 #
 #    Hw = - Nw^-1 * Aw * (wFdu1, wFdu2)
@@ -6085,7 +6129,7 @@ class Misfit(object):
 #    and norm(.) = sqrt((., .)), (.,.) is inner product. Notice Aw/Nw = cc0/norm(wFu)^2
 #
 #    If the recorded and modelled waveforms are close enough (cc0 close to 1), then
-#    the last three terms in Hw can be simplified to one term (wFd ~ Aw * wFu):  
+#    the last three terms in Hw can be simplified to one term (wFd ~ Aw * wFu):
 #
 #        + Nw^-1 * Aw * norm(wFu)^-2 * (wFu, wFdu1) * (wFu, wFdu2)
 #
@@ -6137,14 +6181,14 @@ class Misfit(object):
 #        if window['weight'] < 1.0e-3:
 #          continue
 #
-#        #------ window parameters 
+#        #------ window parameters
 #        # filter
 #        filter_dict = window['filter']
 #        filter_a = filter_dict['a']
 #        filter_b = filter_dict['b']
 #        # taper
 #        win_func = window['taper']['win']
-#        # polarity projection 
+#        # polarity projection
 #        proj_matrix = window['polarity']['proj_matrix']
 #        # CC0
 #        cc0 = window['cc']['CC0']
