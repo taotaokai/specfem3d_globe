@@ -62,8 +62,8 @@ cp -L $par_dir/STATIONS .
 cp -a $run_dir/DATA/Par_file $run_dir/OUTPUT_FILES/
 
 # generate sbatch job file
-nproc_xi=$(grep NPROC_XI $par_dir/Par_file | awk '{print $NF}')
-nproc_eta=$(grep NPROC_ETA $par_dir/Par_file | awk '{print $NF}')
+nproc_xi=$(grep NPROC_XI $par_dir/Par_file | sed 's/[^=]*=[ ]*\([0-9]*\).*/\1/')
+nproc_eta=$(grep NPROC_ETA $par_dir/Par_file | sed 's/[^=]*=[ ]*\([0-9]*\).*/\1/')
 nproc=$(echo $nproc_xi $nproc_eta | awk '{print $1*$2}')
 nnode=$(echo "$nproc $proc_per_node" | awk '{a=$1/$2}END{print (a==int(a))?a:int(a)+1}')
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Make jobs files for slurm 
+# Make jobs files for slurm
 # structure inversion
 
 control_file=${1:?[arg]need control_file}
@@ -20,11 +20,11 @@ slurm_dir=$event_dir/slurm
 mkdir -p $slurm_dir
 syn_job=$slurm_dir/syn.job
 misfit_job=$slurm_dir/misfit.job
-#kernel_job=$slurm_dir/kernel.job
-##hess_job=$slurm_dir/hess.job
-##precond_job=$slurm_dir/precond.job
-#perturb_job=$slurm_dir/perturb.job
-#search_job=$slurm_dir/search.job
+kernel_job=$slurm_dir/kernel.job
+#hess_job=$slurm_dir/hess.job
+#precond_job=$slurm_dir/precond.job
+perturb_job=$slurm_dir/perturb.job
+search_job=$slurm_dir/search.job
 ##hess_diag_job=$slurm_dir/hess_diag.job
 ##hess_model_product_job=$slurm_dir/hess_model_product.job
 ##hess_kernel_job=$slurm_dir/hess_kernel.job
@@ -177,8 +177,6 @@ echo
 
 EOF
 
-exit -1
-
 #====== kernel simulation
 cat <<EOF > $kernel_job
 #!/bin/bash
@@ -260,30 +258,30 @@ echo
 cd $event_dir/DATA
 sed -i "/^SIMULATION_TYPE/s/=.*/= 1/" Par_file
 sed -i "/^SAVE_FORWARD/s/=.*/= .false./" Par_file
- 
+
 #for dmodel in dvp dvsv dvsh
 for dmodel in perturb
 do
 
   out_dir=output_\${dmodel}
- 
+
   rm -rf $event_dir/DATABASES_MPI
   mkdir $event_dir/DATABASES_MPI
   ln -s $iter_dir/mesh_\${dmodel}/DATABASES_MPI/*.bin $event_dir/DATABASES_MPI
-  
+
   cd $event_dir
 
   rm -rf \$out_dir OUTPUT_FILES
   mkdir \$out_dir
   ln -sf \$out_dir OUTPUT_FILES
-  
+
   cp $iter_dir/mesh_\${dmodel}/OUTPUT_FILES/addressing.txt OUTPUT_FILES
   cp -L DATA/Par_file OUTPUT_FILES
   cp -L DATA/STATIONS OUTPUT_FILES
   cp -L DATA/CMTSOLUTION OUTPUT_FILES
-  
+
   ${slurm_mpiexec} $sem_build_dir/bin/xspecfem3D
-  
+
   mkdir $event_dir/\$out_dir/sac
   mv $event_dir/\$out_dir/*.sac $event_dir/\$out_dir/sac
 
@@ -321,6 +319,8 @@ echo
 
 EOF
 
+exit -1
+
 #///////////////////////// Hessian simulation
 
 #====== hess_syn: forward simulation of randomly perturbed model
@@ -348,26 +348,26 @@ for tag in ${hess_model_names}
 do
 
   echo ====== \$tag
- 
+
   out_dir=output_syn_\${tag}
-  
+
   rm -rf $event_dir/DATABASES_MPI
   mkdir $event_dir/DATABASES_MPI
   ln -s $iter_dir/mesh_\${tag}/DATABASES_MPI/*.bin $event_dir/DATABASES_MPI
-  
+
   cd $event_dir
-  
+
   rm -rf \$out_dir OUTPUT_FILES
   mkdir \$out_dir
   ln -sf \$out_dir OUTPUT_FILES
-  
+
   cp $iter_dir/mesh_\${tag}/OUTPUT_FILES/addressing.txt OUTPUT_FILES
   cp -L DATA/Par_file OUTPUT_FILES
   cp -L DATA/STATIONS OUTPUT_FILES
   cp -L DATA/CMTSOLUTION OUTPUT_FILES
-  
+
   ${slurm_mpiexec} $sem_build_dir/bin/xspecfem3D
-  
+
   mkdir $event_dir/\$out_dir/sac
   mv $event_dir/\$out_dir/*.sac $event_dir/\$out_dir/sac
 
@@ -405,13 +405,13 @@ do
   # make adjoint source
   rm -rf $event_dir/adj_kernel_\${tag}
   mkdir -p $event_dir/adj_kernel_\${tag}
-  
+
   $utils_dir/output_adj_for_perturbed_waveform.py \
     $misfit_par \
     $db_file \
     $event_dir/output_syn_\${tag}/sac \
     $event_dir/adj_kernel_\${tag}
-  
+
   # make STATIONS_ADJOINT
   cd $event_dir/adj_kernel_\${tag}
   ls *Z.adj | sed 's/..Z\.adj$//' |\
@@ -450,7 +450,7 @@ do
   echo ====== \${tag}
 
   out_dir=output_kernel_\${tag}
-  
+
   cd $event_dir/DATA
   chmod u+w Par_file
   sed -i "/^SIMULATION_TYPE/s/=.*/= 3/" Par_file
@@ -458,28 +458,28 @@ do
   sed -i "/^ANISOTROPIC_KL/s/=.*/= .true./" Par_file
   sed -i "/^SAVE_TRANSVERSE_KL_ONLY/s/=.*/= .false./" Par_file
   sed -i "/^APPROXIMATE_HESS_KL/s/=.*/= .false./" Par_file
-  
+
   cp -f $event_dir/adj_kernel_\${tag}/STATIONS_ADJOINT $event_dir/DATA/
   rm -rf $event_dir/SEM
   ln -s $event_dir/adj_kernel_\${tag} $event_dir/SEM
-  
+
   cd $event_dir
-  
+
   rm -rf \$out_dir OUTPUT_FILES
   mkdir \$out_dir
   ln -sf \$out_dir OUTPUT_FILES
-  
+
   cp $mesh_dir/OUTPUT_FILES/addressing.txt OUTPUT_FILES
   cp -L DATA/Par_file OUTPUT_FILES
   cp -L DATA/STATIONS_ADJOINT OUTPUT_FILES
   cp -L DATA/CMTSOLUTION OUTPUT_FILES
-  
+
   cd $event_dir
   ${slurm_mpiexec} $sem_build_dir/bin/xspecfem3D
-  
+
   mkdir $event_dir/\$out_dir/sac
   mv $event_dir/\$out_dir/*.sac $event_dir/\$out_dir/sac
-  
+
   mkdir $event_dir/\$out_dir/kernel
   mv $event_dir/DATABASES_MPI/*reg1_cijkl_kernel.bin $event_dir/\$out_dir/kernel/
   mv $event_dir/DATABASES_MPI/*reg1_rho_kernel.bin $event_dir/\$out_dir/kernel/

@@ -91,7 +91,8 @@ cd $sem_build_dir
 #--stampede2
 #NOTE: use -xCORE-AVX2 -axCORE-AVX512,MIC-AVX512 will cause 'double free' error. The code works with '-xCORE-AVX2'.
 #./configure FC=ifort MPIFC=mpiifort CC=icc MPI_INC="${TACC_IMPI_INC}" FCFLAGS="-xCORE-AVX2" CFLAGS="-xCORE-AVX2"
-./configure FC=ifort MPIFC=mpiifort CC=icc MPI_INC="${TACC_IMPI_INC}" FCFLAGS="-xCORE-AVX2 -traceback" CFLAGS="-xCORE-AVX2 -traceback"
+#./configure FC=ifort MPIFC=mpiifort CC=icc MPI_INC="${TACC_IMPI_INC}" FCFLAGS="-xCORE-AVX2 -traceback" CFLAGS="-xCORE-AVX2 -traceback"
+./configure FC=ifort MPIFC=mpiifort CC=icc #MPI_INC="${TACC_IMPI_INC}" FCFLAGS="-xCORE-AVX2 -traceback" CFLAGS="-xCORE-AVX2 -traceback"
 
 make clean
 make all  > >(tee make.out) 2> >(tee make.err >&2)

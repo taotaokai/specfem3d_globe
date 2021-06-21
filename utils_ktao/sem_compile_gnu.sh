@@ -40,6 +40,11 @@ then
   echo "[ERROR] sem_data_dir/DATA/CMTSOLUTION does not exits!"
   exit 1
 fi
+if [ ! -f "$sem_data_dir/STATIONS" ]
+then
+  echo "[ERROR] sem_data_dir/DATA/STATIONS does not exits!"
+  exit 1
+fi
 
 #====== prepare sem_build_dir
 if [ -d "$sem_build_dir" ]
@@ -70,10 +75,10 @@ chmod u+w -R setup
 
 #====== use sem_config_dir
 cd $sem_build_dir/DATA
-#rm -f Par_file CMTSOLUTION
+rm -f Par_file CMTSOLUTION STATIONS
 cp $sem_data_dir/Par_file .
 cp $sem_data_dir/CMTSOLUTION .
-#cp $sem_data_dir/FORCESOLUTION .
+cp $sem_data_dir/FORCESOLUTION .
 cp $sem_data_dir/STATIONS .
 
 cd $sem_build_dir/setup
