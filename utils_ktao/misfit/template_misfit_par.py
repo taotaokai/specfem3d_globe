@@ -4,7 +4,7 @@
 syn_band_code = "BX"
 syn_suffix = ".sem.sac"
 obs_band_code = "BH"
-left_pad = -50
+left_pad = 100
 right_pad = 0
 obs_preevent = 50
 syn_is_grn = False
@@ -42,20 +42,21 @@ def make_window_list_surface_wave(evdp_km):
     windows = []
     if evdp_km < 100:
         windows = [
-            {'phase':'surface', 'component':'Z', 'time':[-50,50], 'slowness':[25, 40]; 'filter':[0.01, 0.02, 2], 'pre_weight':1.0},
-            {'phase':'surface', 'component':'R', 'time':[-50,50], 'slowness':[25, 40]; 'filter':[0.01, 0.02, 2], 'pre_weight':1.0},
-            {'phase':'surface', 'component':'T', 'time':[-50,50], 'slowness':[25, 40]; 'filter':[0.01, 0.02, 2], 'pre_weight':1.0},
+            {'phase':'surface', 'component':'Z', 'time':[-50,50], 'slowness':[25, 40], 'filter':[0.01, 0.02, 2], 'pre_weight':1.0},
+            {'phase':'surface', 'component':'R', 'time':[-50,50], 'slowness':[25, 40], 'filter':[0.01, 0.02, 2], 'pre_weight':1.0},
+            {'phase':'surface', 'component':'T', 'time':[-50,50], 'slowness':[25, 40], 'filter':[0.01, 0.02, 2], 'pre_weight':1.0},
         ]
     return windows
 
 #misfit.py:measure_adj()
-misfit_type = cc
+misfit_type = "cc0" # normalized zero-lag xcorrelation ceofficient: cc0, xcorr time shift: ccdt
 weight_param = {
     'cc_tshift':[-10,-8, 8,10],
     'SNR':[10,15],
     'CC0':[0.5,0.7],
-    'CCmax':None,
-    'dist':None,
+    #'CCmax':[0.8, 0.9],
+    #'dist':[0.5, 1.0], #[unit: degree] exclude short range records (<0.5 deg)
+    #'cc_tshift':[-10,-5,5,10],
 }
 
 #=== plot_misfit.py
@@ -66,6 +67,6 @@ plot_clip_ratio = 1.5
 plot_min_CC0 = None
 plot_min_CCmax = None
 plot_min_SNR = 5
-plot_dist_lim = [0, 180]
+plot_dist_lim = None #[0, 180]
 plot_az0 = 0
 plot_align_time = False
