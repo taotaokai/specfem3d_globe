@@ -238,11 +238,13 @@
     eps_loc(3,1) = dxz
     eps_loc(3,2) = dyz
 
-    ! un-rotated
-    !eps_loc_new(:,:) = eps_loc(:,:)
-    !
-    ! rotate to the local Cartesian coordinates (n-e-z):  eps_new = P*eps*P'
-    eps_loc_new(:,:) = matmul(matmul(nu_source(:,:,irec),eps_loc(:,:)), transpose(nu_source(:,:,irec)))
+    if (USE_ECEF_COORDINATE) then !KTAO: handle USE_ECEF_COORDINATE
+        ! un-rotated
+        eps_loc_new(:,:) = eps_loc(:,:)
+    else
+        ! rotate to the local Cartesian coordinates (n-e-z):  eps_new = P*eps*P'
+        eps_loc_new(:,:) = matmul(matmul(nu_source(:,:,irec),eps_loc(:,:)), transpose(nu_source(:,:,irec)))
+    endif
 
     ! distinguish between single and double precision for reals
     seismograms(1,irec_local,seismo_current) = real(eps_loc_new(1,1), kind=CUSTOM_REAL)
@@ -252,10 +254,16 @@
     seismograms(5,irec_local,seismo_current) = real(eps_loc_new(1,3), kind=CUSTOM_REAL)
     seismograms(6,irec_local,seismo_current) = real(eps_loc_new(2,3), kind=CUSTOM_REAL)
 
-    seismograms(7:9,irec_local,seismo_current) = real(scale_displ*(nu_source(:,1,irec)*uxd + &
-                                                                      nu_source(:,2,irec)*uyd + &
-                                                                      nu_source(:,3,irec)*uzd), &
-                                                                      kind=CUSTOM_REAL)
+    if (USE_ECEF_COORDINATE) then
+        seismograms(7,irec_local,seismo_current) = real(scale_displ*uxd, kind=CUSTOM_REAL)
+        seismograms(8,irec_local,seismo_current) = real(scale_displ*uyd, kind=CUSTOM_REAL)
+        seismograms(9,irec_local,seismo_current) = real(scale_displ*uzd, kind=CUSTOM_REAL)
+    else
+        seismograms(7:9,irec_local,seismo_current) = real(scale_displ*(nu_source(:,1,irec)*uxd + &
+                                                                          nu_source(:,2,irec)*uyd + &
+                                                                          nu_source(:,3,irec)*uzd), &
+                                                                          kind=CUSTOM_REAL)
+    endif
 
     ! interpolators
     ! note: we explicitly copy the store arrays to local temporary arrays here
@@ -288,6 +296,7 @@
     !       therefore, when reading in an external STF, the index would be `NSTEP-it+1` rather than `it`
     stf = get_stf_viscoelastic(timeval,irec,NSTEP-it+1)
 
+    !KTAO: [20240707] TODO check if we need multiply NTSTEP_BETWEEN_OUTPUT_SAMPLE here
     stf_deltat = real(stf * deltat * NTSTEP_BETWEEN_OUTPUT_SAMPLE,kind=CUSTOM_REAL)
 
     ! moment derivatives

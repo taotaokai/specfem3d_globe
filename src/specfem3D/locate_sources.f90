@@ -51,7 +51,8 @@
   ! forces
   use specfem_par, only: &
     USE_FORCE_POINT_SOURCE, USE_MONOCHROMATIC_CMT_SOURCE,force_stf,factor_force_source, &
-    comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
+    ! comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP, & !KTAO: not used
+    comp_dir_vect_source !KTAO: add 
 
   use specfem_par, only: &
     nspec => NSPEC_CRUST_MANTLE
@@ -221,59 +222,107 @@
     xi_all(:,:) = 0.d0; eta_all(:,:) = 0.d0; gamma_all(:,:) = 0.d0
     xyz_found_all(:,:,:) = 0.d0; final_distance_all(:,:) = HUGEVAL
 
+    ! ! make sure we clean the subset array before the gather
+    ! ispec_selected_subset(:) = 0
+    ! final_distance_subset(:) = HUGEVAL
+    ! final_distance_all(:,:) = HUGEVAL
+
     ! loop over sources within this subset
     do isource_in_this_subset = 1,NSOURCES_SUBSET_current_size
 
       ! mapping from source number in current subset to real source number in all the subsets
       isource = isource_in_this_subset + isources_already_done
 
-      ! source lat/lon in degrees
-      lat = srclat(isource)
-      lon = srclon(isource)
+      !KTAO: >>>>> 1. get source location in X-Y-Z
 
-      ! limits longitude to [0.0,360.0]
-      if (lon < 0.d0 ) lon = lon + 360.d0
-      if (lon > 360.d0 ) lon = lon - 360.d0
+      !KTAO: handle USE_ECEF_COORDINATE 
+      if (USE_ECEF_COORDINATE) then
 
-      ! convert geographic latitude lat (degrees) to geocentric colatitude theta (radians)
-      call lat_2_geocentric_colat_dble(lat,theta)
+        ! non-dimensionalization
+        x_target = srclat(isource)/R_PLANET ! lat->x
+        y_target = srclon(isource)/R_PLANET ! lon->y
+        z_target = srcdepth(isource)/R_PLANET ! depth->z
+        r_target = sqrt(x_target**2 + y_target**2 + z_target**2)
 
-      phi = lon*DEGREES_TO_RADIANS
-      call reduce(theta,phi)
+        call xyz_2_rlatlon_dble(x_target, y_target, z_target, radius, lat, lon) 
+
+        theta = asin(z_target/r_target)
+        phi = atan2(y_target, x_target)
+        call reduce(theta,phi)
+
+      else ! geographic lat/lon
+
+        ! source lat/lon in degrees
+        lat = srclat(isource)
+        lon = srclon(isource)
+        ! point depth (km in CMTSOLUTION, convert to m)
+        depth = srcdepth(isource)*1000.0d0
+
+        ! limits longitude to [0.0,360.0]
+        if (lon < 0.d0 ) lon = lon + 360.d0
+        if (lon > 360.d0 ) lon = lon - 360.d0
+
+        ! convert geographic latitude lat (degrees) to geocentric colatitude theta (radians)
+        call lat_2_geocentric_colat_dble(lat,theta)
+
+        phi = lon*DEGREES_TO_RADIANS
+        call reduce(theta,phi)
+
+        ! normalized source radius
+        r0 = R_UNIT_SPHERE
+
+        ! finds elevation of position
+        if (TOPOGRAPHY) then
+          call get_topo_bathy(lat,lon,elevation,ibathy_topo)
+          r0 = r0 + elevation/R_PLANET
+        endif
+
+        ! ellipticity
+        if (ELLIPTICITY_VAL) then
+          ! this is the Legendre polynomial of degree two, P2(cos(theta)),
+          ! see the discussion above eq (14.4) in Dahlen and Tromp (1998)
+          p20 = 0.5d0*(3.0d0*cost*cost-1.0d0)
+
+          ! todo: check if we need radius or r0 for evaluation below...
+          !       (receiver location routine takes r0)
+          radius = r0 - depth/R_PLANET
+
+          ! get ellipticity using spline evaluation
+          call spline_evaluation(rspl,ellipicity_spline,ellipicity_spline2,nspl,radius,ell)
+
+          ! this is eq (14.4) in Dahlen and Tromp (1998)
+          r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20) !KTAO: r0->radius?
+        endif
+
+        ! stores surface radius for info output
+        r0_source(isource) = r0
+
+        ! subtracts source depth (given in m)
+        r_target = r0 - depth/R_PLANET  !KTAO: to check
+
+        ! compute the Cartesian position of the source
+        x_target = r_target*sint*cosp
+        y_target = r_target*sint*sinp
+        z_target = r_target*cost
+      endif ! USE_ECEF_COORDINATE
+
+      ! stores Cartesian positions
+      xyz_target(1,isource_in_this_subset) = x_target
+      xyz_target(2,isource_in_this_subset) = y_target
+      xyz_target(3,isource_in_this_subset) = z_target
+
+      !KTAO: <<<<< 1. get source location in X-Y-Z coordinate
+
+
+      !KTAO: >>>>> 2. get force direction/moment tensor in X-Y-Z coordinate
 
       sint = sin(theta)
       cost = cos(theta)
       sinp = sin(phi)
       cosp = cos(phi)
 
-      ! get the moment tensor
-      Mrr = moment_tensor(1,isource)
-      Mtt = moment_tensor(2,isource)
-      Mpp = moment_tensor(3,isource)
-      Mrt = moment_tensor(4,isource)
-      Mrp = moment_tensor(5,isource)
-      Mtp = moment_tensor(6,isource)
-
-      ! convert from a spherical to a Cartesian representation of the moment tensor
-      Mxx(isource) = sint*sint*cosp*cosp*Mrr + cost*cost*cosp*cosp*Mtt + sinp*sinp*Mpp &
-          + 2.0d0*sint*cost*cosp*cosp*Mrt - 2.0d0*sint*sinp*cosp*Mrp - 2.0d0*cost*sinp*cosp*Mtp
-
-      Myy(isource) = sint*sint*sinp*sinp*Mrr + cost*cost*sinp*sinp*Mtt + cosp*cosp*Mpp &
-          + 2.0d0*sint*cost*sinp*sinp*Mrt + 2.0d0*sint*sinp*cosp*Mrp + 2.0d0*cost*sinp*cosp*Mtp
-
-      Mzz(isource) = cost*cost*Mrr + sint*sint*Mtt - 2.0d0*sint*cost*Mrt
-
-      Mxy(isource) = sint*sint*sinp*cosp*Mrr + cost*cost*sinp*cosp*Mtt - sinp*cosp*Mpp &
-          + 2.0d0*sint*cost*sinp*cosp*Mrt + sint*(cosp*cosp-sinp*sinp)*Mrp + cost*(cosp*cosp-sinp*sinp)*Mtp
-
-      Mxz(isource) = sint*cost*cosp*Mrr - sint*cost*cosp*Mtt &
-          + (cost*cost-sint*sint)*cosp*Mrt - cost*sinp*Mrp + sint*sinp*Mtp
-
-      Myz(isource) = sint*cost*sinp*Mrr - sint*cost*sinp*Mtt &
-          + (cost*cost-sint*sint)*sinp*Mrt + cost*cosp*Mrp - sint*cosp*Mtp
-
-      ! record three components for each station
-      do iorientation = 1,3
+      !KTAO: get (n,e,up) in (x,y,z) coordinate
+      do iorientation = 1,3 !KTAO: 1,2,3 -> N,E,Z_UP
         !   North
         if (iorientation == 1) then
           stazi = 0.d0
@@ -290,90 +339,85 @@
           call exit_MPI(myrank,'incorrect orientation')
         endif
 
-        !   get the orientation of the seismometer
+        ! get the orientation of the seismometer
         thetan = (90.0d0+stdip)*DEGREES_TO_RADIANS
         phin = stazi*DEGREES_TO_RADIANS
 
         ! we use the same convention as in Harvard normal modes for the orientation
 
-        !   vertical component
-        n(1) = cos(thetan)
-        !   N-S component
-        n(2) = - sin(thetan)*cos(phin)
-        !   E-W component
-        n(3) = sin(thetan)*sin(phin)
+        n(1) = cos(thetan) !KTAO: iorientation .dot. r^
+        n(2) = - sin(thetan)*cos(phin) !KTAO: iorientation .dot. theta^
+        n(3) = sin(thetan)*sin(phin) !KTAO: iorientation .dot. phi^
 
+        !KTAO: (n,e,u) -> (r,t,p) -> (x,y,z)
         !   get the Cartesian components of n in the model: nu
-        nu_source(iorientation,1,isource) = n(1)*sint*cosp + n(2)*cost*cosp - n(3)*sinp
-        nu_source(iorientation,2,isource) = n(1)*sint*sinp + n(2)*cost*sinp + n(3)*cosp
-        nu_source(iorientation,3,isource) = n(1)*cost - n(2)*sint
+        nu_source(iorientation,1,isource) = n(1)*sint*cosp + n(2)*cost*cosp - n(3)*sinp !KTAO: iorientation .dot. x^
+        nu_source(iorientation,2,isource) = n(1)*sint*sinp + n(2)*cost*sinp + n(3)*cosp !KTAO: iorientation .dot. y^
+        nu_source(iorientation,3,isource) = n(1)*cost - n(2)*sint !KTAO: iorientation .dot. z^
       enddo
 
-      ! point depth (in m)
-      depth = srcdepth(isource)*1000.0d0
+      ! rotate comp_dir_vect_source or moment_tensor when necessary
+      ! ktao: handle USE_ECEF_COORDINATE
+      if (USE_ECEF_COORDINATE) then
 
-      ! normalized source radius
-      r0 = R_UNIT_SPHERE
+        if (USE_FORCE_POINT_SOURCE) then
+          ! comp_dir_vect_source is already in ECEF X/Y/Z
+          ! do nothing
+          comp_dir_vect_source(:,isource) = comp_dir_vect_source(:,isource) ! just for clarification 
+        else
+          ! get the moment tensor
+          Mxx(isource) = moment_tensor(1,isource)
+          Myy(isource) = moment_tensor(2,isource)
+          Mzz(isource) = moment_tensor(3,isource)
+          Mxy(isource) = moment_tensor(4,isource)
+          Mxz(isource) = moment_tensor(5,isource)
+          Myz(isource) = moment_tensor(6,isource)
+        endif
 
-      ! finds elevation of position
-      if (TOPOGRAPHY) then
-        call get_topo_bathy(lat,lon,elevation,ibathy_topo)
-        r0 = r0 + elevation/R_PLANET
-      endif
+      else
+        if (USE_FORCE_POINT_SOURCE) then
+          !KTAO: first index of nu_source is the orientation 
+          !      which is in the order of N-E-Z, while first index of 
+          !      comp_dir_vect_source is in the order of E-N-Z 
+          !      see get_force.f90
+          comp_dir_vect_source(:,isource) = &
+            nu_source(1,:,isource) * comp_dir_vect_source(2,isource) + &
+            nu_source(2,:,isource) * comp_dir_vect_source(1,isource) + &
+            nu_source(3,:,isource) * comp_dir_vect_source(3,isource)
+        else
+            ! get the moment tensor
+            Mrr = moment_tensor(1,isource)
+            Mtt = moment_tensor(2,isource)
+            Mpp = moment_tensor(3,isource)
+            Mrt = moment_tensor(4,isource)
+            Mrp = moment_tensor(5,isource)
+            Mtp = moment_tensor(6,isource)
 
-      ! ellipticity
-      if (ELLIPTICITY_VAL) then
-        ! this is the Legendre polynomial of degree two, P2(cos(theta)),
-        ! see the discussion above eq (14.4) in Dahlen and Tromp (1998)
-        p20 = 0.5d0*(3.0d0*cost*cost-1.0d0)
+            ! convert from a spherical to a Cartesian representation of the moment tensor
+            Mxx(isource) = sint*sint*cosp*cosp*Mrr + cost*cost*cosp*cosp*Mtt + sinp*sinp*Mpp &
+                + 2.0d0*sint*cost*cosp*cosp*Mrt - 2.0d0*sint*sinp*cosp*Mrp - 2.0d0*cost*sinp*cosp*Mtp
 
-        ! todo: check if we need radius or r0 for evaluation below...
-        !       (receiver location routine takes r0)
-        radius = r0 - depth/R_PLANET
+            Myy(isource) = sint*sint*sinp*sinp*Mrr + cost*cost*sinp*sinp*Mtt + cosp*cosp*Mpp &
+                + 2.0d0*sint*cost*sinp*sinp*Mrt + 2.0d0*sint*sinp*cosp*Mrp + 2.0d0*cost*sinp*cosp*Mtp
 
-        ! get ellipticity using spline evaluation
-        call spline_evaluation(rspl,ellipicity_spline,ellipicity_spline2,nspl,radius,ell)
+            Mzz(isource) = cost*cost*Mrr + sint*sint*Mtt - 2.0d0*sint*cost*Mrt
 
-        ! this is eq (14.4) in Dahlen and Tromp (1998)
-        r0 = r0*(1.0d0-(2.0d0/3.0d0)*ell*p20)
-      endif
+            Mxy(isource) = sint*sint*sinp*cosp*Mrr + cost*cost*sinp*cosp*Mtt - sinp*cosp*Mpp &
+                + 2.0d0*sint*cost*sinp*cosp*Mrt + sint*(cosp*cosp-sinp*sinp)*Mrp + cost*(cosp*cosp-sinp*sinp)*Mtp
 
-      ! stores surface radius for info output
-      r0_source(isource) = r0
+            Mxz(isource) = sint*cost*cosp*Mrr - sint*cost*cosp*Mtt &
+                + (cost*cost-sint*sint)*cosp*Mrt - cost*sinp*Mrp + sint*sinp*Mtp
 
-      ! subtracts source depth (given in m)
-      r_target = r0 - depth/R_PLANET
+            Myz(isource) = sint*cost*sinp*Mrr - sint*cost*sinp*Mtt &
+                + (cost*cost-sint*sint)*sinp*Mrt + cost*cosp*Mrp - sint*cosp*Mtp
+        endif
 
-      ! compute the Cartesian position of the source
-      x_target = r_target*sint*cosp
-      y_target = r_target*sint*sinp
-      z_target = r_target*cost
+      endif !if (USE_ECEF_COORDINATE) then
 
-      ! stores Cartesian positions
-      xyz_target(1,isource_in_this_subset) = x_target
-      xyz_target(2,isource_in_this_subset) = y_target
-      xyz_target(3,isource_in_this_subset) = z_target
-    enddo
+      !KTAO: <<<<< 2. get force direction/moment tensor in X-Y-Z coordinate
 
-    ! make sure we clean the subset array before the gather
-    ispec_selected_subset(:) = 0
-    final_distance_subset(:) = HUGEVAL
-    final_distance_all(:,:) = HUGEVAL
 
-    ! find point locations
-    do isource_in_this_subset = 1,NSOURCES_SUBSET_current_size
-
-      ! mapping from source number in current subset to real source number in all the subsets
-      isource = isource_in_this_subset + isources_already_done
-
-      ! source lat/lon in degrees
-      lat = srclat(isource)
-      lon = srclon(isource)
-
-      ! gets target position
-      x_target = xyz_target(1,isource_in_this_subset)
-      y_target = xyz_target(2,isource_in_this_subset)
-      z_target = xyz_target(3,isource_in_this_subset)
+      !KTAO: >>>>> 3. locate source in mesh 
 
       ! locates best element and xi/eta/gamma interpolation values
       call locate_point(x_target,y_target,z_target,lat,lon,ispec_selected,xi,eta,gamma, &
@@ -390,6 +434,8 @@
 
       final_distance_subset(isource_in_this_subset) = distmin_not_squared
       ispec_selected_subset(isource_in_this_subset) = ispec_selected
+
+      !KTAO: <<<<< 3. locate source in mesh 
 
       ! calculates a Gaussian mask around this source point
       if (SAVE_SOURCE_MASK .and. SIMULATION_TYPE == 3) then
@@ -455,6 +501,10 @@
           endif
         enddo
         final_distance(isource) = distmin_not_squared
+        !KTAO: record source location actually used, in case the input location 
+        !      is outside the mesh and gets projectd back to the mesh surface 
+        !KTAO: used in save_kernel.F90 to output real source locations 
+        xyz_used_source(:,isource) = xyz_found_subset(:,isource_in_this_subset)
       enddo
     endif ! end of section executed by main process only
 
@@ -468,41 +518,40 @@
 
         ! source info
         write(IMAIN,*)
+        write(IMAIN,*) 'USE_ECEF_COORDINATE = ', USE_ECEF_COORDINATE
+        write(IMAIN,*)
         write(IMAIN,*) 'source # ',isource
         write(IMAIN,*)
         write(IMAIN,*) '  source located in slice ',islice_selected_source(isource_in_this_subset)
         write(IMAIN,*) '                 in element ',ispec_selected_source(isource_in_this_subset)
         write(IMAIN,*)
+        write(IMAIN,*) '  at (x,y,z) coordinates = ',xyz_found_subset(1,isource_in_this_subset)*R_PLANET, &
+                                                     xyz_found_subset(2,isource_in_this_subset)*R_PLANET, &
+                                                     xyz_found_subset(3,isource_in_this_subset)*R_PLANET
+        write(IMAIN,*)
+        write(IMAIN,*) '  xi coordinate of source in that element: ',xi_source(isource)
+        write(IMAIN,*) '  eta coordinate of source in that element: ',eta_source(isource)
+        write(IMAIN,*) '  gamma coordinate of source in that element: ',gamma_source(isource)
+        write(IMAIN,*)
+        write(IMAIN,*) '  NEUp-to-ECEF rotation matrix: N/E/Up .dot. X/Y/Z '
+        write(IMAIN,*) '    nu(1,:) = ',nu_source(1,:,isource),'North'
+        write(IMAIN,*) '    nu(2,:) = ',nu_source(2,:,isource),'East'
+        write(IMAIN,*) '    nu(3,:) = ',nu_source(3,:,isource),'Vertical'
+
         ! different output for force point sources
         if (USE_FORCE_POINT_SOURCE) then
           write(IMAIN,*) '  using force point source: '
-          write(IMAIN,*) '    xi coordinate of source in that element: ',xi_source(isource)
-          write(IMAIN,*) '    eta coordinate of source in that element: ',eta_source(isource)
-          write(IMAIN,*) '    gamma coordinate of source in that element: ',gamma_source(isource)
-
-          write(IMAIN,*)
-          write(IMAIN,*) '    component of direction vector in East direction: ',comp_dir_vect_source_E(isource)
-          write(IMAIN,*) '    component of direction vector in North direction: ',comp_dir_vect_source_N(isource)
-          write(IMAIN,*) '    component of direction vector in Vertical direction: ',comp_dir_vect_source_Z_UP(isource)
-
-          !write(IMAIN,*) '  i index of source in that element: ',nint(xi_source(isource))
-          !write(IMAIN,*) '  j index of source in that element: ',nint(eta_source(isource))
-          !write(IMAIN,*) '  k index of source in that element: ',nint(gamma_source(isource))
-          !write(IMAIN,*)
-          !write(IMAIN,*) '  component direction: ',COMPONENT_FORCE_SOURCE
-          write(IMAIN,*)
-          write(IMAIN,*) '    nu1 = ',nu_source(1,:,isource),'North'
-          write(IMAIN,*) '    nu2 = ',nu_source(2,:,isource),'East'
-          write(IMAIN,*) '    nu3 = ',nu_source(3,:,isource),'Vertical'
-          write(IMAIN,*)
-          write(IMAIN,*) '    at (x,y,z) coordinates = ',xyz_found_subset(1,isource_in_this_subset), &
-            xyz_found_subset(2,isource_in_this_subset),xyz_found_subset(3,isource_in_this_subset)
+          !>>KTAO: modify
+          ! write(IMAIN,*) '    component of direction vector in East direction: ',comp_dir_vect_source_E(isource)
+          ! write(IMAIN,*) '    component of direction vector in North direction: ',comp_dir_vect_source_N(isource)
+          ! write(IMAIN,*) '    component of direction vector in Vertical direction: ',comp_dir_vect_source_Z_UP(isource)
+          write(IMAIN,*) '    component of direction vector(in ECEF): ',comp_dir_vect_source(:,isource) 
+          !<<KTAO
         else
           ! moment tensor
           write(IMAIN,*) '  using moment tensor source: '
-          write(IMAIN,*) '    xi coordinate of source in that element: ',xi_source(isource)
-          write(IMAIN,*) '    eta coordinate of source in that element: ',eta_source(isource)
-          write(IMAIN,*) '    gamma coordinate of source in that element: ',gamma_source(isource)
+          write(IMAIN,*) '    Mxx,Myy,Mzz,Mxy,Mxz,Myz: ',Mxx(isource),Myy(isource),Mzz(isource), &
+              Mxy(isource),Mxz(isource),Myz(isource)
         endif
         write(IMAIN,*)
 
@@ -627,17 +676,31 @@
         write(IMAIN,*)
         write(IMAIN,*) '  original (requested) position of the source:'
         write(IMAIN,*)
-        write(IMAIN,*) '        latitude: ',srclat(isource)
-        write(IMAIN,*) '       longitude: ',srclon(isource)
-        write(IMAIN,*) '           depth: ',srcdepth(isource),' km'
+        !KTAO: modifies
+        if (USE_ECEF_COORDINATE) then
+          write(IMAIN,*) '             x(m): ',srclat(isource)
+          write(IMAIN,*) '             y(m): ',srclon(isource)
+          write(IMAIN,*) '             z(m): ',srcdepth(isource)
+        else
+          write(IMAIN,*) '        latitude: ',srclat(isource)
+          write(IMAIN,*) '       longitude: ',srclon(isource)
+          write(IMAIN,*) '           depth: ',srcdepth(isource),' km'
+        endif
         write(IMAIN,*)
 
         ! compute real position of the source
         write(IMAIN,*) '  position of the source that will be used:'
         write(IMAIN,*)
-        write(IMAIN,*) '        latitude: ',(PI_OVER_TWO-colat_source)*RADIANS_TO_DEGREES
-        write(IMAIN,*) '       longitude: ',phi_source(isource)*RADIANS_TO_DEGREES
-        write(IMAIN,*) '           depth: ',(r0_source(isource)-r_found)*R_PLANET/1000.0d0,' km'
+        !KTAO: modifies
+        if (USE_ECEF_COORDINATE) then
+          write(IMAIN,*) '             x(m): ',xyz_used_source(1,isource)*R_PLANET
+          write(IMAIN,*) '             y(m): ',xyz_used_source(2,isource)*R_PLANET
+          write(IMAIN,*) '             z(m): ',xyz_used_source(3,isource)*R_PLANET
+        else
+          write(IMAIN,*) '        latitude: ',(PI_OVER_TWO-colat_source)*RADIANS_TO_DEGREES
+          write(IMAIN,*) '       longitude: ',phi_source(isource)*RADIANS_TO_DEGREES
+          write(IMAIN,*) '           depth: ',(r0_source(isource)-r_found)*R_PLANET/1000.0d0,' km'
+        endif
         write(IMAIN,*)
 
         ! display error in location estimate
@@ -717,6 +780,7 @@
   call bcast_all_i(islice_selected_source,NSOURCES)
   call bcast_all_i(ispec_selected_source,NSOURCES)
 
+  call bcast_all_dp(xyz_used_source,NDIM*NSOURCES)
   call bcast_all_dp(xi_source,NSOURCES)
   call bcast_all_dp(eta_source,NSOURCES)
   call bcast_all_dp(gamma_source,NSOURCES)
@@ -764,7 +828,8 @@
   ! forces
   use specfem_par, only: &
     USE_FORCE_POINT_SOURCE,force_stf,factor_force_source, &
-    comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP
+    ! comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP, & !KTAO: not used 
+    comp_dir_vect_source !KTAO: add
 
   implicit none
 
@@ -795,14 +860,18 @@
       call get_force(tshift_src,hdur, &
                      srclat,srclon,srcdepth,DT,NSOURCES, &
                      min_tshift_src_original,force_stf,factor_force_source, &
-                     comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP)
+                     ! comp_dir_vect_source_E,comp_dir_vect_source_N,comp_dir_vect_source_Z_UP) !KTAO: not used
+                     comp_dir_vect_source) !KTAO: add
     endif
     ! broadcasts specific point force infos
     call bcast_all_i(force_stf,NSOURCES)
     call bcast_all_dp(factor_force_source,NSOURCES)
-    call bcast_all_dp(comp_dir_vect_source_E,NSOURCES)
-    call bcast_all_dp(comp_dir_vect_source_N,NSOURCES)
-    call bcast_all_dp(comp_dir_vect_source_Z_UP,NSOURCES)
+    !>>KTAO: modify
+    ! call bcast_all_dp(comp_dir_vect_source_E,NSOURCES)
+    ! call bcast_all_dp(comp_dir_vect_source_N,NSOURCES)
+    ! call bcast_all_dp(comp_dir_vect_source_Z_UP,NSOURCES)
+    call bcast_all_dp(comp_dir_vect_source,3*NSOURCES) 
+    !<<KTAO
   else
     ! CMT moment tensors
     if (myrank == 0) then

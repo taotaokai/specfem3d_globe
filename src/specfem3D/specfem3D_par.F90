@@ -286,6 +286,7 @@ module specfem_par
   double precision, dimension(:,:,:) ,allocatable:: nu_source
 
   double precision, dimension(:), allocatable :: Mxx,Myy,Mzz,Mxy,Mxz,Myz
+  double precision, dimension(:,:), allocatable :: xyz_used_source !KTAO: added for USE_ECEF_COORDINATE
   double precision, dimension(:), allocatable :: xi_source,eta_source,gamma_source
   double precision, dimension(:), allocatable :: tshift_src,hdur,hdur_Gaussian
   double precision, dimension(:), allocatable :: theta_source,phi_source
@@ -304,6 +305,7 @@ module specfem_par
   double precision, dimension(:), allocatable :: comp_dir_vect_source_E
   double precision, dimension(:), allocatable :: comp_dir_vect_source_N
   double precision, dimension(:), allocatable :: comp_dir_vect_source_Z_UP
+  double precision, dimension(:,:), allocatable :: comp_dir_vect_source
 
   !-----------------------------------------------------------------
   ! receivers

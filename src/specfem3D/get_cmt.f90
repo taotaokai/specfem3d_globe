@@ -383,6 +383,12 @@
 
   close(IIN)
 
+  ! !KTAO: change tau back to hdur
+  ! if (USE_ECEF_COORDINATE) then
+  !   ! tau instead of hdur is read from CMTSOLUTON_ECEF file
+  !   hdur = hdur * SOURCE_DECAY_MIMIC_TRIANGLE
+  ! endif
+
   ! noise simulations don't use the CMTSOLUTION source but a noise-spectrum source defined in S_squared
   if (NOISE_TOMOGRAPHY /= 0) hdur(:) = 0.d0
 

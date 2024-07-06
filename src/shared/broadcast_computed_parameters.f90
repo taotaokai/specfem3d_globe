@@ -37,7 +37,8 @@
   integer, parameter :: nparam_i = 49
   integer, dimension(nparam_i) :: bcast_integer
 
-  integer, parameter :: nparam_l = 73
+  ! integer, parameter :: nparam_l = 73 !KTAO: add flag USE_ECEF_COORDINATE
+  integer, parameter :: nparam_l = 74
   logical, dimension(nparam_l) :: bcast_logical
 
   integer, parameter :: nparam_dp = 42
@@ -109,7 +110,8 @@
             USE_MONOCHROMATIC_CMT_SOURCE, ABSORB_USING_GLOBAL_SPONGE, &
             OUTPUT_SEISMOS_3D_ARRAY, &
             REGIONAL_MESH_CUTOFF,REGIONAL_MESH_ADD_2ND_DOUBLING, &
-            EMC_MODEL /)
+            EMC_MODEL, &
+            USE_ECEF_COORDINATE/) !KTAO: add
 
     bcast_double_precision = (/ &
             DT, &
@@ -346,6 +348,7 @@
     REGIONAL_MESH_CUTOFF = bcast_logical(71)
     REGIONAL_MESH_ADD_2ND_DOUBLING = bcast_logical(72)
     EMC_MODEL = bcast_logical(73)
+    USE_ECEF_COORDINATE = bcast_logical(73) !KTAO: add
 
     ! double precisions
     DT = bcast_double_precision(1)

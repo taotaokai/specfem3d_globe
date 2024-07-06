@@ -27,8 +27,11 @@
 
   subroutine get_force(tshift_src,hdur,lat,long,depth,DT,NSOURCES, &
                        min_tshift_src_original,force_stf,factor_force_source, &
-                       comp_dir_vect_source_E,comp_dir_vect_source_N, &
-                       comp_dir_vect_source_Z_UP)
+                       !>>KTAO: modify
+                       ! comp_dir_vect_source_E,comp_dir_vect_source_N, &
+                       ! comp_dir_vect_source_Z_UP
+                       ,comp_dir_vect_source)
+                       !<<KTAO
 
   use constants, only: IIN,MAX_STRING_LEN,TINYVAL,mygroup,PI,GRAV
   use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS,R_PLANET,RHOAV
@@ -43,9 +46,12 @@
   integer, dimension(NSOURCES), intent(out) :: force_stf
   double precision, intent(out) :: min_tshift_src_original
   double precision, dimension(NSOURCES), intent(out) :: tshift_src,hdur,lat,long,depth,factor_force_source
-  double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_E
-  double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_N
-  double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_Z_UP
+  !>>KTAO
+  ! double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_E
+  ! double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_N
+  ! double precision, dimension(NSOURCES), intent(out) :: comp_dir_vect_source_Z_UP
+  double precision, dimension(3,NSOURCES), intent(out) :: comp_dir_vect_source
+  !<<KTAO
 
   ! local variables below
   integer :: isource,ier,ipos
@@ -68,9 +74,12 @@
 
   force_stf(:) = 0
   factor_force_source(:) = 0.d0
-  comp_dir_vect_source_E(:) = 0.d0
-  comp_dir_vect_source_N(:) = 0.d0
-  comp_dir_vect_source_Z_UP(:) = 0.d0
+  !>>KTAO: modify
+  ! comp_dir_vect_source_E(:) = 0.d0
+  ! comp_dir_vect_source_N(:) = 0.d0
+  ! comp_dir_vect_source_Z_UP(:) = 0.d0
+  comp_dir_vect_source(:,:) = 0.d0
+  !<<KTAO
 
 !
 !---- read info
@@ -179,27 +188,33 @@
     read(IIN,"(a)") string
     ipos = index(string,':')
     if (ipos > 1 .and. ipos < len_trim(string)) then
-      read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source_E(isource)
+      ! read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source_E(isource)
+      read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source(1,isource) !KTAO
     else
-      read(string(29:len_trim(string)),*) comp_dir_vect_source_E(isource)
+      ! read(string(29:len_trim(string)),*) comp_dir_vect_source_E(isource)
+      read(string(29:len_trim(string)),*) comp_dir_vect_source(1,isource) !KTAO
     endif
 
     ! read direction vector's North component
     read(IIN,"(a)") string
     ipos = index(string,':')
     if (ipos > 1 .and. ipos < len_trim(string)) then
-      read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source_N(isource)
+      ! read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source_N(isource)
+      read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source(2,isource) !KTAO
     else
-      read(string(29:len_trim(string)),*) comp_dir_vect_source_N(isource)
+      ! read(string(29:len_trim(string)),*) comp_dir_vect_source_N(isource)
+      read(string(29:len_trim(string)),*) comp_dir_vect_source(2,isource) !KTAO
     endif
 
     ! read direction vector's vertical component
     read(IIN,"(a)") string
     ipos = index(string,':')
     if (ipos > 1 .and. ipos < len_trim(string)) then
-      read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
+      ! read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
+      read(string(ipos+1:len_trim(string)),*) comp_dir_vect_source(3,isource) !KTAO
     else
-      read(string(32:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
+      ! read(string(32:len_trim(string)),*) comp_dir_vect_source_Z_UP(isource)
+      read(string(32:len_trim(string)),*) comp_dir_vect_source(3,isource) !KTAO
     endif
 
     ! checks half-duration
@@ -258,9 +273,12 @@
     if (hdur(isource) < TINYVAL) hdur(isource) = TINYVAL
 
     ! check (tilted) force source direction vector
-    length = sqrt( comp_dir_vect_source_E(isource)**2 &
-                 + comp_dir_vect_source_N(isource)**2 &
-                 + comp_dir_vect_source_Z_UP(isource)**2 )
+    !>>KTAO
+    ! length = sqrt( comp_dir_vect_source_E(isource)**2 &
+    !              + comp_dir_vect_source_N(isource)**2 &
+    !              + comp_dir_vect_source_Z_UP(isource)**2 )
+    length = sqrt(sum(comp_dir_vect_source(:,isource)**2))
+    !<<KTAO
     if (length < TINYVAL) then
       print *, 'normal length: ', length
       print *, 'isource: ',isource

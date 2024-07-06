@@ -663,13 +663,16 @@
            Mzz(NSOURCES), &
            Mxy(NSOURCES), &
            Mxz(NSOURCES), &
-           Myz(NSOURCES),stat=ier)
+           Myz(NSOURCES), &
+           xyz_used_source(NDIM,NSOURCES), & !KTAO: add
+           stat=ier)
   if (ier /= 0 ) call exit_MPI(myrank,'Error allocating source arrays')
   ! initializes arrays
   islice_selected_source(:) = -1
   ispec_selected_source(:) = 0
   Mxx(:) = 0.d0; Myy(:) = 0.d0; Mzz(:) = 0.d0
   Mxy(:) = 0.d0; Mxz(:) = 0.d0; Myz(:) = 0.d0
+  xyz_source_used(:,:) = 0.d0 !KTAO: add
 
   allocate(xi_source(NSOURCES), &
            eta_source(NSOURCES), &
@@ -695,15 +698,18 @@
   if (USE_FORCE_POINT_SOURCE) then
     allocate(force_stf(NSOURCES), &
              factor_force_source(NSOURCES), &
-             comp_dir_vect_source_E(NSOURCES), &
-             comp_dir_vect_source_N(NSOURCES), &
-             comp_dir_vect_source_Z_UP(NSOURCES),stat=ier)
+             ! comp_dir_vect_source_E(NSOURCES), & !KTAO: not used
+             ! comp_dir_vect_source_N(NSOURCES), &
+             ! comp_dir_vect_source_Z_UP(NSOURCES),
+             comp_dir_vect_source(3,NSOURCES), & ! KTAO: add
+             stat=ier)
     if (ier /= 0) stop 'error allocating arrays for force point sources'
     force_stf(:) = 0
     factor_force_source(:) = 0.d0
-    comp_dir_vect_source_E(:) = 0.d0
-    comp_dir_vect_source_N(:) = 0.d0
-    comp_dir_vect_source_Z_UP(:) = 0.d0
+    comp_dir_vect_source(:,:) = 0.d0
+    ! comp_dir_vect_source_E(:) = 0.d0 !KTAO: not used
+    ! comp_dir_vect_source_N(:) = 0.d0
+    ! comp_dir_vect_source_Z_UP(:) = 0.d0
   endif
 
   ! sources
@@ -810,8 +816,12 @@
     endif
   endif
 
-  ! convert the half duration for triangle STF to the one for Gaussian STF
-  hdur_Gaussian(:) = hdur(:)/SOURCE_DECAY_MIMIC_TRIANGLE
+  if (USE_ECEF_COORDINATE) then
+    hdur_Gaussian(:) = hdur(:) !KTAO: CMTSOLUTION_ECEF uses hdur_Gaussian directly 
+  else
+    ! convert the half duration for triangle STF to the one for Gaussian STF
+    hdur_Gaussian(:) = hdur(:)/SOURCE_DECAY_MIMIC_TRIANGLE
+  endif
 
   ! define t0 as the earliest start time
   if (USE_FORCE_POINT_SOURCE) then
@@ -1625,9 +1635,10 @@
               hlagrange = hxis(i) * hetas(j) * hgammas(k)
 
               ! elastic source
-              norm = sqrt( comp_dir_vect_source_E(isource)**2 &
-                         + comp_dir_vect_source_N(isource)**2 &
-                         + comp_dir_vect_source_Z_UP(isource)**2 )
+              ! norm = sqrt( comp_dir_vect_source_E(isource)**2 &
+              !            + comp_dir_vect_source_N(isource)**2 &
+              !            + comp_dir_vect_source_Z_UP(isource)**2 )
+              norm = sqrt(sum(comp_dir_vect_source(:,isource)**2)) !KTAO: modify
 
               ! checks norm of component vector
               if (norm < TINYVAL) then
@@ -1635,19 +1646,24 @@
               endif
 
               ! normalizes vector
-              comp_dir_vect_source_E(isource) = comp_dir_vect_source_E(isource) / norm
-              comp_dir_vect_source_N(isource) = comp_dir_vect_source_N(isource) / norm
-              comp_dir_vect_source_Z_UP(isource) = comp_dir_vect_source_Z_UP(isource) / norm
+              ! comp_dir_vect_source_E(isource) = comp_dir_vect_source_E(isource) / norm
+              ! comp_dir_vect_source_N(isource) = comp_dir_vect_source_N(isource) / norm
+              ! comp_dir_vect_source_Z_UP(isource) = comp_dir_vect_source_Z_UP(isource) / norm
+              comp_dir_vect_source = comp_dir_vect_source / norm !KTAO modified to use vector 
 
               ! we use a tilted force defined by its magnitude and the projections
               ! of an arbitrary (non-unitary) direction vector on the E/N/Z_UP basis
               !
               ! note: nu_source(iorientation,:,isource) is the rotation matrix from ECEF to local N-E-UP
               !       (defined in src/specfem3D/locate_sources.f90)
+              !sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * &
+              !                        ( nu_source(1,:,isource) * comp_dir_vect_source_N(isource) + &
+              !                          nu_source(2,:,isource) * comp_dir_vect_source_E(isource) + &
+              !                          nu_source(3,:,isource) * comp_dir_vect_source_Z_UP(isource) )
+              !KTAO: the rotation from N/E/Up to ECEF X/Y/Z of comp_dir_vect_source is done in locate_sources.f90 to account for USE_ECEF_COORDINATE
               sourcearrayd(:,i,j,k) = factor_force_source(isource) * hlagrange * &
-                                      ( nu_source(1,:,isource) * comp_dir_vect_source_N(isource) + &
-                                        nu_source(2,:,isource) * comp_dir_vect_source_E(isource) + &
-                                        nu_source(3,:,isource) * comp_dir_vect_source_Z_UP(isource) )
+                                      comp_dir_vect_source(:,isource)
+
             enddo
           enddo
         enddo

@@ -173,8 +173,19 @@
     cosp = cos(phi)
 
     ! compute epicentral distance
-    epidist(irec) = acos(cost*cos(theta_source) + &
-                         sint*sin(theta_source)*cos(phi-phi_source))*RADIANS_TO_DEGREES
+    !>>KTAO: may cause error because the terms inside acos could be larger
+    !>>KTAO: than 1 due to floating rounding error. Modification is done.
+    ! epidist(irec) = acos(cost*cos(theta_source) + &
+    !                      sint*sin(theta_source)*cos(phi-phi_source))*RADIANS_TO_DEGREES
+    epidist(irec) = cost*cos(theta_source) + &
+                    sint*sin(theta_source)*cos(phi-phi_source) ! cosine of angular dist
+    if (abs(epidist(irec)) >= 1.0) then
+      epidist(irec) = 0.0
+    else
+      epidist(irec) = acos(epidist(irec)) * RADIANS_TO_DEGREES
+    endif
+    !<<KTAO
+
 
     ! record three components for each station
     do iorientation = 1,3
@@ -208,6 +219,7 @@
       n(3) = sin(thetan)*sin(phin)
 
       !     get the Cartesian components of n in the model: nu
+      !KTAO: N-E-Up dot X-Y-Z, e.g. nu(1,1:3,irec) = North dot X-Y-Z for irec
       nu_rec(iorientation,1,irec) = n(1)*sint*cosp + n(2)*cost*cosp - n(3)*sinp
       nu_rec(iorientation,2,irec) = n(1)*sint*sinp + n(2)*cost*sinp + n(3)*cosp
       nu_rec(iorientation,3,irec) = n(1)*cost - n(2)*sint
@@ -728,8 +740,13 @@
       enddo
 
       ! reads in station information
-      read(line(1:len_trim(line)),*,iostat=ier) station_name(irec),network_name(irec), &
+      !>>KTAO: change the order to comply with IRIS, i.e. net.sta.loc.chan
+      ! read(line(1:len_trim(line)),*,iostat=ier) station_name(irec),network_name(irec), &
+      !                                           stlat(irec),stlon(irec),stele(irec),stbur(irec)
+      read(line(1:len_trim(line)),*,iostat=ier) network_name(irec),station_name(irec), &
                                                 stlat(irec),stlon(irec),stele(irec),stbur(irec)
+      !<<KTAO
+      if (ier /= 0) then
       if (ier /= 0) then
         write(IMAIN,*) 'Error reading in station ',irec
         call exit_MPI(myrank,'Error reading in station in STATIONS file')

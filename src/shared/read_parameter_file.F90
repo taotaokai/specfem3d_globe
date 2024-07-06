@@ -202,6 +202,10 @@
   call read_value_integer(NTSTEP_BETWEEN_OUTPUT_SAMPLE, 'NTSTEP_BETWEEN_OUTPUT_SAMPLE', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: NTSTEP_BETWEEN_OUTPUT_SAMPLE'
 
+  !KTAO: flag using geocentric source location 
+  call read_value_logical(USE_ECEF_COORDINATE, 'USE_ECEF_COORDINATE', ier)
+  if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_ECEF_COORDINATE'
+
   ! point force sourse
   call read_value_logical(USE_FORCE_POINT_SOURCE, 'USE_FORCE_POINT_SOURCE', ier)
   if (ier /= 0) stop 'an error occurred while reading the parameter file: USE_FORCE_POINT_SOURCE'
