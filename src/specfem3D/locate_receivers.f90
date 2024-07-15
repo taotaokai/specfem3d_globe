@@ -747,7 +747,6 @@
                                                 stlat(irec),stlon(irec),stele(irec),stbur(irec)
       !<<KTAO
       if (ier /= 0) then
-      if (ier /= 0) then
         write(IMAIN,*) 'Error reading in station ',irec
         call exit_MPI(myrank,'Error reading in station in STATIONS file')
       endif

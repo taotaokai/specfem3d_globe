@@ -46,7 +46,10 @@
     hdur,Mxx,Myy,Mzz,Mxy,Mxz,Myz,Mw,M0, &
     xi_source,eta_source,gamma_source,nu_source, &
     islice_selected_source,ispec_selected_source, &
-    tshift_src,theta_source,phi_source,source_final_distance_max
+    tshift_src,theta_source,phi_source,source_final_distance_max, &
+    xyz_used_source !KTAO: add
+
+  use shared_input_parameters, only: USE_ECEF_COORDINATE
 
   ! forces
   use specfem_par, only: &
@@ -550,8 +553,12 @@
         else
           ! moment tensor
           write(IMAIN,*) '  using moment tensor source: '
-          write(IMAIN,*) '    Mxx,Myy,Mzz,Mxy,Mxz,Myz: ',Mxx(isource),Myy(isource),Mzz(isource), &
-              Mxy(isource),Mxz(isource),Myz(isource)
+          write(IMAIN,*) '    Mxx: ',Mxx(isource)
+          write(IMAIN,*) '    Myy: ',Myy(isource)
+          write(IMAIN,*) '    Mzz: ',Mzz(isource)
+          write(IMAIN,*) '    Mxy: ',Mxy(isource)
+          write(IMAIN,*) '    Mxz: ',Mxz(isource)
+          write(IMAIN,*) '    Myz: ',Myz(isource)
         endif
         write(IMAIN,*)
 
@@ -622,7 +629,11 @@
               write(IMAIN,*)
             endif
             write(IMAIN,*)
-            write(IMAIN,*) '    half duration: ',hdur(isource),' seconds'
+            if (USE_ECEF_COORDINATE) then
+                write(IMAIN,*) '    tau: ',hdur(isource),' seconds'
+            else
+                write(IMAIN,*) '    half duration: ',hdur(isource),' seconds'
+            endif
           endif
         endif
         write(IMAIN,*) '    time shift: ',tshift_src(isource),' seconds'

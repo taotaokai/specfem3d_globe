@@ -30,7 +30,7 @@
                        !>>KTAO: modify
                        ! comp_dir_vect_source_E,comp_dir_vect_source_N, &
                        ! comp_dir_vect_source_Z_UP
-                       ,comp_dir_vect_source)
+                       comp_dir_vect_source)
                        !<<KTAO
 
   use constants, only: IIN,MAX_STRING_LEN,TINYVAL,mygroup,PI,GRAV

@@ -672,7 +672,7 @@
   ispec_selected_source(:) = 0
   Mxx(:) = 0.d0; Myy(:) = 0.d0; Mzz(:) = 0.d0
   Mxy(:) = 0.d0; Mxz(:) = 0.d0; Myz(:) = 0.d0
-  xyz_source_used(:,:) = 0.d0 !KTAO: add
+  xyz_used_source(:,:) = 0.d0 !KTAO: add
 
   allocate(xi_source(NSOURCES), &
            eta_source(NSOURCES), &

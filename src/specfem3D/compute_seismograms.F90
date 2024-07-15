@@ -106,6 +106,8 @@
     NDIM,NGLOB_CRUST_MANTLE,NSPEC_CRUST_MANTLE, &
     NSPEC_CRUST_MANTLE_STRAIN_ONLY,NSPEC_CRUST_MANTLE_STR_OR_ATT
 
+  use shared_input_parameters, only: USE_ECEF_COORDINATE
+
   use specfem_par, only: &
     NSTEP,NTSTEP_BETWEEN_OUTPUT_SAMPLE, &
     nlength_seismogram,seismo_current, &

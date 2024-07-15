@@ -1898,14 +1898,15 @@
   implicit none
 
   ! local parameters
-  real(kind=CUSTOM_REAL) :: scale_mass, scaleM !KTAO: add scaleM
+  ! real(kind=CUSTOM_REAL) :: scale_mass !KTAO: not used
+  double precision :: scaleM !KTAO: add scaleM
   integer :: irec_local
   integer :: irec_glob !KTAO: to output source location
   character(len=MAX_STRING_LEN) :: outputname
 
   ! scaling factor
-  scale_mass = RHOAV * (R_PLANET**3)
-  scaleM = 1.d7 * RHOAV * (R_PLANET**5) * PI * GRAV * RHOAV !KTAO: add
+  ! scale_mass = RHOAV * (R_PLANET**3)
+  scaleM = RHOAV * (R_PLANET**5) * PI * GRAV * RHOAV !KTAO: note overflow single precision
 
   ! computes derivatives
   do irec_local = 1, nrec_local
@@ -1913,16 +1914,17 @@
 
     !KTAO: handle USE_ECEF_COORDINATE 
     if (USE_ECEF_COORDINATE) then
-        sloc_der(:,irec_local) = sloc_der(:,irec_local) / scale_displ !KTAO: meters
+        sloc_der(:,irec_local) = real(sloc_der(:,irec_local) / scale_displ, kind=CUSTOM_REAL) !KTAO: meters
 
-        moment_der(:,:,irec_local) = moment_der(:,:,irec_local) / scaleM !KTAO: dyn*cm
+        moment_der(:,:,irec_local) = real(moment_der(:,:,irec_local) / scaleM, kind=CUSTOM_REAL) !KTAO: N*m
     else
         ! rotate and scale the location derivatives to correspond to dn,de,dz
-        sloc_der(:,irec_local) = matmul(transpose(nu_source(:,:,irec_local)),sloc_der(:,irec_local)) / scale_displ
+        sloc_der(:,irec_local) = real(matmul(transpose(nu_source(:,:,irec_local)),sloc_der(:,irec_local)) / scale_displ, &
+                                      kind=CUSTOM_REAL)
 
         ! rotate scale the moment derivatives to correspond to M[n,e,z][n,e,z]
-        moment_der(:,:,irec_local) = matmul(matmul(transpose(nu_source(:,:,irec_local)),moment_der(:,:,irec_local)), &
-                   nu_source(:,:,irec_local)) / scaleM
+        moment_der(:,:,irec_local) = real(matmul(matmul(transpose(nu_source(:,:,irec_local)),moment_der(:,:,irec_local)), &
+                   nu_source(:,:,irec_local)) / scaleM, kind=CUSTOM_REAL)
     endif
 
     ! *nu_source* is the rotation matrix from ECEF to local N-E-UP as defined in src/specfem3D/locate_sources.f90
@@ -1960,15 +1962,18 @@
           ! tshift_cmt, hdur_gaussian are not non-dimensionalized
           write(IOUT,'(E16.7,2X,E16.7,2X,"# t0(s)       dChi/dt0 ")') tshift_src(irec_glob), stshift_der(irec_local)
           write(IOUT,'(E16.7,2X,E16.7,2X,"# tau(s)      dChi/dtau")') hdur_Gaussian(irec_glob), shdur_der(irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# x(m)        dChi/dx  ")') xyz_used_source(irec_glob)*scale_displ, sloc_der(1,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# y(m)        dChi/dy  ")') xyz_used_source(irec_glob)*scale_displ, sloc_der(2,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# z(m)        dChi/dz  ")') xyz_used_source(irec_glob)*scale_displ, sloc_der(3,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxx(dyn*cm) dChi/dMxx")') Mxx(irec_glob)*scaleM, moment_der(1,1,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# Myy(dyn*cm) dChi/dMyy")') Myy(irec_glob)*scaleM, moment_der(2,2,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mzz(dyn*cm) dChi/dMzz")') Mzz(irec_glob)*scaleM, moment_der(3,3,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxy(dyn*cm) dChi/dMxy")') Mxy(irec_glob)*scaleM, 2*moment_der(1,2,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxz(dyn*cm) dChi/dMxz")') Mxz(irec_glob)*scaleM, 2*moment_der(1,3,irec_local)
-          write(IOUT,'(E16.7,2X,E16.7,2X,"# Myz(dyn*cm) dChi/dMyz")') Myz(irec_glob)*scaleM, 2*moment_der(2,3,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# x(m)        dChi/dx  ")') &
+              xyz_used_source(1,irec_glob)*scale_displ, sloc_der(1,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# y(m)        dChi/dy  ")') &
+              xyz_used_source(2,irec_glob)*scale_displ, sloc_der(2,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# z(m)        dChi/dz  ")') &
+              xyz_used_source(3,irec_glob)*scale_displ, sloc_der(3,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxx(N*m) dChi/dMxx")') Mxx(irec_glob)*scaleM, moment_der(1,1,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# Myy(N*m) dChi/dMyy")') Myy(irec_glob)*scaleM, moment_der(2,2,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mzz(N*m) dChi/dMzz")') Mzz(irec_glob)*scaleM, moment_der(3,3,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxy(N*m) dChi/dMxy")') Mxy(irec_glob)*scaleM, 2*moment_der(1,2,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# Mxz(N*m) dChi/dMxz")') Mxz(irec_glob)*scaleM, 2*moment_der(1,3,irec_local)
+          write(IOUT,'(E16.7,2X,E16.7,2X,"# Myz(N*m) dChi/dMyz")') Myz(irec_glob)*scaleM, 2*moment_der(2,3,irec_local)
         else
             !
             ! r -> z, theta -> -n, phi -> e, plus factor 2 for Mrt,Mrp,Mtp, and 1e-7 to dyne.cm

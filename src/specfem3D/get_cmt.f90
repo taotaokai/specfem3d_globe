@@ -34,6 +34,8 @@
 
   use shared_parameters, only: NUMBER_OF_SIMULTANEOUS_RUNS,NOISE_TOMOGRAPHY,R_PLANET,RHOAV
 
+  use shared_input_parameters, only: USE_ECEF_COORDINATE !KTAO: add
+
   implicit none
 
 !--- input or output arguments of the subroutine below
@@ -412,7 +414,13 @@
 ! thus 1 Newton = 100,000 dynes
 ! therefore 1 dyne.cm = 1e-7 Newton.m
 !
-  scaleM = 1.d7 * RHOAV * (R_PLANET**5) * PI*GRAV*RHOAV
+
+  if (USE_ECEF_COORDINATE) then
+    !KTAO: CMTSOLUTION_ECEF use N*m for moment tensor
+    scaleM = RHOAV * (R_PLANET**5) * PI*GRAV*RHOAV 
+  else
+    scaleM = 1.d7 * RHOAV * (R_PLANET**5) * PI*GRAV*RHOAV
+  endif
   moment_tensor(:,:) = moment_tensor(:,:) / scaleM
 
   contains
