@@ -54,15 +54,29 @@
   if (NGNOD /= 27) call exit_MPI(myrank,'elements should have 27 control nodes')
 
 ! generate the 3D shape functions and their derivatives (27 nodes)
+
+  !KTAO: The lagrange interpolation
+  !KTAO:   f(x,y,z) = sum(f(x_n,y_m,z_l) * lag_n(x) * lag_m(y) * lag_l(z), for (n,m,l) in {1,2,3}^3)
+  !KTAO:   , where lag_n(x) = prod((x - x_m)/(x_n - x_m), for m=1,2,3 and m!=n) is the lagrange polynomial
+  !KTAO:   and x_n, y_m, z_l = {-1, 0, 1} is the control nodes inside a cube 
+  !KTAO: 
+  !KTAO: To interpolate on GLL grids (xi,eta,gamma)
+  !KTAO    f(xi,eta,gamma) = sum(f(x_n,y_m,z_l) * shape3D(nml, xi,eta,gamma), for (n,m,l) in {1,2,3}^3)
+  !KTAO:   , where shape3D(nml, xi,eta,gamma) = lag_n(xi) * lag_m(eta) * lag_l(gamma)
+  !KTAO: 
+  !KTAO: The derivative of lagrange interpolation of f(xi,eta,gamma) is
+  !KTAO:   Df/Dxi = sum(f(x_n,y_m,z_l) * dershape3D(1, nml, xi,eta,gamma), for (n,m,l) in {1,2,3}^3))
+  !KTAO:   , where dershape3D(1, nml, xi,eta,gamma) = Dlag_n(xi)/Dxi * lag_m(eta) * lag_l(gamma)
+
   do i = 1,NGLLX
 
   xi=xigll(i)
 
-  l1xi=HALF*xi*(xi-ONE)
-  l2xi=ONE-xi**2
-  l3xi=HALF*xi*(xi+ONE)
+  l1xi=HALF*xi*(xi-ONE)    ! lag_1(xi) for control node x_1 = -1
+  l2xi=ONE-xi**2           ! lag_2(xi)                  x_2 = 0
+  l3xi=HALF*xi*(xi+ONE)    ! lag_3(xi)                  x_3 = 1
 
-  l1pxi=xi-HALF
+  l1pxi=xi-HALF            ! Dlag_1(xi)/Dxi
   l2pxi=-TWO*xi
   l3pxi=xi+HALF
 

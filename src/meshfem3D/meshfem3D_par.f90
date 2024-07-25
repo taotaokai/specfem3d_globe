@@ -243,7 +243,7 @@
   implicit none
 
   ! topology of the elements (for corners)
-  integer, dimension(NGNOD) :: iaddx_corner,iaddy_corner,iaddz_corner
+  double precision, dimension(NGNOD) :: iaddx_corner,iaddy_corner,iaddz_corner
 
   ! Gauss-Lobatto-Legendre points and weights of integration
   double precision, dimension(NGLLX) :: xigll,wxgll

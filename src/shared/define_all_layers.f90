@@ -95,7 +95,7 @@
   logical :: ADD_3RD_DOUBLING
 
   ! debugging
-  logical, parameter :: DEBUG = .false.
+  logical, parameter :: DEBUG = .true.
 
   ! initializes
   NUMBER_OF_MESH_LAYERS = 0
@@ -812,6 +812,12 @@
 
       ! inner core
       ner_mesh_layers(14) = NER_TOP_CENTRAL_CUBE_ICB
+
+      if (DEBUG) then
+        if (myrank == 0) then 
+          print *, "define_all_layers: ner_mesh_layers = ", ner_mesh_layers
+        endif
+      endif
 
       ! value of the doubling ratio in each radial region of the mesh
       ratio_sampling_array(1:2) = 1

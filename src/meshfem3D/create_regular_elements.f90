@@ -196,20 +196,32 @@
         iz_elem = iz + 1
 
         ! loop on all the corner nodes of this element
-        do ignod = 1,NGNOD_EIGHT_CORNERS
-          ! define topological coordinates of this mesh point
-          offset_x(ignod) = (ix_elem - 1) + iaddx_corner(ignod) * ratio_sampling_array(ilayer)
-          offset_y(ignod) = (iy_elem - 1) + iaddy_corner(ignod) * ratio_sampling_array(ilayer)
-          if (ilayer == 1 .and. CASE_3D) then
-            offset_z(ignod) = iaddz_corner(ignod)
-          else
-            offset_z(ignod) = (iz_elem - 1) + iaddz_corner(ignod)
-          endif
-        enddo
-        call add_missing_nodes(offset_x,offset_y,offset_z)
+        ! do ignod = 1,NGNOD_EIGHT_CORNERS
+        !   ! define topological coordinates of this mesh point
+        !   offset_x(ignod) = (ix_elem - 1) + iaddx_corner(ignod) * ratio_sampling_array(ilayer)
+        !   offset_y(ignod) = (iy_elem - 1) + iaddy_corner(ignod) * ratio_sampling_array(ilayer)
+        !   if (ilayer == 1 .and. CASE_3D) then
+        !     offset_z(ignod) = iaddz_corner(ignod)  !r_top,r_bottom are defined in stretch_tab(1:2, :)
+        !   else
+        !     offset_z(ignod) = (iz_elem - 1) + iaddz_corner(ignod) ! offset from r_bottom in numbers of elements 
+        !                                                           ! along vertical direction
+        !   endif
+        ! enddo
+        ! call add_missing_nodes(offset_x,offset_y,offset_z)
+        !!KTAO: use Fortran 90 array operation 
+        !!KTAO: iaddx_corner: coordinates of control nodes in the unit reference cube
+        !!KTAO: offset_x(:) gives offset as number of surface elements along xi direction (can be fractional number) 
+        offset_x(:) = (ix_elem - 1) + iaddx_corner(:) * ratio_sampling_array(ilayer)
+        offset_y(:) = (iy_elem - 1) + iaddy_corner(:) * ratio_sampling_array(ilayer)
+        if (ilayer == 1 .and. CASE_3D) then
+          offset_z(:) = iaddz_corner(:)  ! r_top,r_bottom are defined in stretch_tab(1:2, :) for each element layer
+        else
+          offset_z(:) = (iz_elem - 1) + iaddz_corner(:) ! offset from r_bottom in numbers of elements 
+                                                        ! along vertical direction
+        endif
 
         ! compute the actual position of all the grid points of that element
-        if (ilayer == 1 .and. CASE_3D .and. .not. SUPPRESS_CRUSTAL_MESH) then
+        if (ilayer == 1 .and. CASE_3D .and. .not. SUPPRESS_CRUSTAL_MESH) then !KTAO: ONE_CRUST = true
           ! crustal elements are stretched to be thinner in the upper crust than in lower crust in the 3D case
           ! max ratio between size of upper crust elements and
           ! lower crust elements is given by the param MAX_RATIO_STRETCHING
@@ -231,7 +243,7 @@
         endif
 
         ! add one spectral element to the list
-        ispec_loc = map_ispec(ielem)
+        ispec_loc = map_ispec(ielem) ! element index in this mesh region
         if (ispec_loc > nspec .or. ispec_loc < 1) then
           print *,'Error: invalid local ispec',ispec_loc,'nspec',nspec,'region',iregion_code,'layer',ilayer
           call exit_MPI(myrank,'invalid ispec_loc in mesh creation')
@@ -240,8 +252,8 @@
         ! new get_flag_boundaries
         ! xmin & xmax
         if (ix_elem == 1) then
-          if (NPROCTOT > 1) iMPIcut_xi(1,ispec_loc) = .true.
-          if (iproc_xi == 0) iboun(1,ispec_loc) = .true.
+          if (NPROCTOT > 1) iMPIcut_xi(1,ispec_loc) = .true.  ! element on the slice edge of minimum xi 
+          if (iproc_xi == 0) iboun(1,ispec_loc) = .true. ! element on the chunk edge of minimum xi
         endif
         if (ix_elem == (NEX_PER_PROC_XI-ratio_sampling_array(ilayer)+1)) then
           if (NPROCTOT > 1) iMPIcut_xi(2,ispec_loc) = .true.
@@ -256,7 +268,7 @@
           if (NPROCTOT > 1) iMPIcut_eta(2,ispec_loc) = .true.
           if (iproc_eta == NPROC_ETA-1) iboun(4,ispec_loc) = .true.
         endif
-        ! zmin & zmax
+        ! zmin(5) & zmax(6)
         if (iz_elem == ner_mesh_layers(ilayer) .and. ilayer == ifirst_region) then
           iboun(6,ispec_loc) = .true.
         endif

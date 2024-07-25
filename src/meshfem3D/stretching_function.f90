@@ -42,55 +42,87 @@
   double precision, dimension (2,ner),intent(inout) :: stretch_tab
 
   ! local parameters
-  double precision :: value
+  ! double precision :: value
   ! for increasing execution speed but have less precision in stretching, increase step
   ! not very effective algorithm, but sufficient : used once per proc for meshing.
   double precision, parameter :: step = 0.001
   integer :: i
+  double precision :: H, D, h1 !KTAO: thickness calculation
+  logical, parameter :: DEBUG = .true.
 
   ! safety check
   if (ner <= 1) call exit_MPI(myrank,'Invalid ner value for stretching_function() routine')
 
-  ! initializes array
-  ! for example: 2 element layers (ner=2)  for most probable resolutions (NEX < 1000) in the crust
-  !                      then stretch_tab(2,1) = 0.5 = stretch_tab(2,2)
-  do i = 1,ner
-    stretch_tab(2,i) = (1.d0/ner)
-  enddo
+  !>>KTAO: replace the following code block
+  !
+  ! ! initializes array
+  ! ! for example: 2 element layers (ner=2)  for most probable resolutions (NEX < 1000) in the crust
+  ! !                      then stretch_tab(2,1) = 0.5 = stretch_tab(2,2)
+  ! do i = 1,ner
+  !   stretch_tab(2,i) = (1.d0/ner)
+  ! enddo
+  !
+  ! ! fill with ratio of the layer one thickness for each element
+  ! do while((stretch_tab(2,1) / stretch_tab(2,ner)) > MAX_RATIO_CRUST_STRETCHING)
+  !   if (modulo(ner,2) /= 0) then
+  !     value = -floor(ner/2.d0)*step
+  !   else
+  !     value = (0.5d0-floor(ner/2.d0))*step
+  !   endif
+  !   do i = 1,ner
+  !     stretch_tab(2,i) = stretch_tab(2,i) + value
+  !     value = value + step
+  !   enddo
+  ! enddo
+  !
+  ! ! deduce r_top and r_bottom
+  ! ! r_top
+  ! stretch_tab(1,1) = r_top
+  ! do i = 2,ner
+  !   stretch_tab(1,i) = sum(stretch_tab(2,i:ner))*(r_top-r_bottom) + r_bottom
+  ! enddo
+  !
+  ! ! r_bottom
+  ! stretch_tab(2,ner) = r_bottom
+  ! do i = 1,ner-1
+  !   stretch_tab(2,i) = stretch_tab(1,i+1)
+  ! enddo
+  !<<KTAO
 
-  ! fill with ratio of the layer one thickness for each element
-  do while((stretch_tab(2,1) / stretch_tab(2,ner)) > MAX_RATIO_CRUST_STRETCHING)
-    if (modulo(ner,2) /= 0) then
-      value = -floor(ner/2.d0)*step
-    else
-      value = (0.5d0-floor(ner/2.d0))*step
+  !KTAO: divide from r_top to r_bottom into ner elements with increasing thickness such that:
+  !KTAO:    1. sum(h_i, i=1..N) = H, where H = r_top - r_bottom
+  !KTAO:    2. h_i+1 = h_i + D, i=1..N-1
+  !KTAO:    3. h_1 = F * h_N, where F = MAX_RATIO_CRUST_STRETCHING
+  !KTAO: after simple calculation we get:
+  !KTAO:    D = H/N/(N-1)/2 * (1-F)/(1+F), where F = MAX_RATIO_CRUST_STRETCHING
+  !KTAO:    h_1 = H/N - (N-1)*D/2
+
+  if (MAX_RATIO_CRUST_STRETCHING <= 0.d0) then
+    print *, 'WARNING: MAX_RATIO_CRUST_STRETCHING(',MAX_RATIO_CRUST_STRETCHING,') <= 0 detected, enforced to 1'
+    MAX_RATIO_CRUST_STRETCHING = 1.d0
+  endif
+
+  H = r_top - r_bottom
+  if (H <= 0.d0 ) call exit_MPI(myrank, "ERROR: r_top - r_bottom <= 0")
+
+  D = H / ner / (ner - 1.d0) * 2.d0 * (1.d0 - MAX_RATIO_CRUST_STRETCHING) / (1.d0 + MAX_RATIO_CRUST_STRETCHING)
+  h1 = H / ner - (ner - 1) * D / 2.0
+  stretch_tab(1, 1) = r_top
+  stretch_tab(2, 1) = r_top - h1
+  do i = 2, ner
+    stretch_tab(1, i) = stretch_tab(2, i-1)
+    stretch_tab(2, i) = stretch_tab(1, i) - h1 - (i-1)*D
+  enddo
+  stretch_tab(2, ner) = r_bottom
+
+  if (DEBUG) then
+    if (myrank == 0) then
+      print *,'DEBUG: stretch_tab r_top,r_bottom = ', r_top, r_bottom
+      do i = 1,ner
+        print *,'DEBUG: stretch_tab(1:2,',i,') = ',stretch_tab(:,i), ' thickness = ', stretch_tab(1,i)-stretch_tab(2,i)
+      enddo
     endif
-    do i = 1,ner
-      stretch_tab(2,i) = stretch_tab(2,i) + value
-      value = value + step
-    enddo
-  enddo
-
-  ! deduce r_top and r_bottom
-  ! r_top
-  stretch_tab(1,1) = r_top
-  do i = 2,ner
-    stretch_tab(1,i) = sum(stretch_tab(2,i:ner))*(r_top-r_bottom) + r_bottom
-  enddo
-
-  ! r_bottom
-  stretch_tab(2,ner) = r_bottom
-  do i = 1,ner-1
-    stretch_tab(2,i) = stretch_tab(1,i+1)
-  enddo
-
-  ! debug
-  !if (myrank == 0) then
-  !  print *,'debug: stretch tab top ',stretch_tab(1,:)
-  !  do i = 1,ner-1
-  !    print *,'debug: stretch layer ',i,'thickness',stretch_tab(1,i) - stretch_tab(2,i),'top/bottom',r_top,r_bottom
-  !  enddo
-  !endif
+  endif
 
   end subroutine stretching_function
 

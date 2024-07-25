@@ -142,7 +142,7 @@
     call flush_IMAIN()
   endif
 
-  ! create the name for the database of the current slide and region
+  ! create the name for the database of the current slice and region
   call create_name_database(prname,myrank,iregion_code,LOCAL_PATH)
 
   ! initializes arrays
@@ -939,7 +939,7 @@
     iregion_code,IREGION_CRUST_MANTLE, &
     R670,RMOHO,R400,RMIDDLE_CRUST, &
     ner_mesh_layers,r_top,r_bottom, &
-    CASE_3D
+    CASE_3D, myrank
 
   use meshfem_models_par, only: REGIONAL_MOHO_MESH
 
@@ -958,6 +958,7 @@
   integer :: i,ier,ibottom_layer
   ! topology of the elements
   integer, dimension(NGNOD) :: iaddx,iaddy,iaddz
+  logical, parameter :: DEBUG = .false.
 
   ! allocates array
   if (.not. allocated(dershape3D)) then
@@ -983,10 +984,11 @@
     call get_shape2D(shape2D_top,dershape2D_top,xigll,yigll,NGLLX,NGLLY)
 
     ! create the topology of the corner nodes of a regular mesh element
+    !!KTAO: now iaddx_corner(:) gives correct x coordinates for all the control nodes of the reference cube  
     call hex_nodes(iaddx,iaddy,iaddz)
-    iaddx_corner(:) = iaddx(:) / 2  ! reference element corner has size one here, not two
-    iaddy_corner(:) = iaddy(:) / 2
-    iaddz_corner(:) = iaddz(:) / 2
+    iaddx_corner(:) = dble(iaddx(:)) / 2.d0  ! reference element corner has size one here, not two
+    iaddy_corner(:) = dble(iaddy(:)) / 2.d0
+    iaddz_corner(:) = dble(iaddz(:)) / 2.d0
   endif
 
   ! initializes element layers
@@ -1023,7 +1025,7 @@
     else
       cpt = 1
     endif
-    if ((ilast_region-ifirst_region) >= 2) then
+    if ((ilast_region-ifirst_region) >= 2) then  !!KTAO: here assumes only two anisotropic mesh layers
       perm_layer(1) = first_layer_aniso
       perm_layer(2) = last_layer_aniso
     endif
@@ -1042,6 +1044,10 @@
   allocate(stretch_tab(2,ner_mesh_layers(1)),stat=ier)
   if (ier /= 0) stop 'Error in allocate 19'
   stretch_tab(:,:) = 0.d0
+
+  if (DEBUG) then
+    if (myrank == 0) print *, 'ner_mesh_layers = ', ner_mesh_layers
+  endif
 
   ! initializes stretch_tab - in case it would be used for USE_LOCAL_MESH
   if (REGIONAL_MESH_CUTOFF .and. USE_LOCAL_MESH) then
